@@ -33,17 +33,40 @@ export default function EditPatientPage({
       const resolvedParams = await params
       setDoctorId(resolvedParams.doctorId)
       setPatientId(resolvedParams.patientId)
-      
+
       // Load patient folder
       const folders = getDoctorPatientFolders(resolvedParams.doctorId)
       const folder = folders.find(f => f.patientId === resolvedParams.patientId)
       setPatientFolder(folder || null)
-      
+
       // Load patient data
-      const data = getPatientDataById(resolvedParams.patientId)
+      let data = getPatientDataById(resolvedParams.patientId)
+
+      // If not found, check stored patients directly
+      if (!data) {
+        const { getStoredPatients } = await import('@/lib/patient-storage')
+        const allPatients = getStoredPatients()
+        const patientRecord = allPatients.find(p => p.credentials.patientId === resolvedParams.patientId)
+        if (patientRecord) {
+          data = patientRecord.patientData
+        }
+      }
+
+      // Also check old format
+      if (!data) {
+        try {
+          const oldFormatData = localStorage.getItem(`patient_${resolvedParams.patientId}`)
+          if (oldFormatData) {
+            data = JSON.parse(oldFormatData)
+          }
+        } catch (error) {
+          console.error('Error reading old format data:', error)
+        }
+      }
+
       setPatientData(data)
       setEditedData(data || {})
-      
+
       setIsLoading(false)
     }
 
@@ -133,7 +156,7 @@ export default function EditPatientPage({
             <p className="text-gray-600">{patientFolder.fullName} - {patientFolder.patientId}</p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? (
@@ -157,7 +180,7 @@ export default function EditPatientPage({
           <User className="w-5 h-5 text-blue-600" />
           <h3 className="text-lg font-semibold">Basic Information</h3>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Full Name</label>
@@ -167,7 +190,7 @@ export default function EditPatientPage({
               placeholder="Enter full name"
             />
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Age</label>
             <Input
@@ -177,11 +200,11 @@ export default function EditPatientPage({
               placeholder="Enter age"
             />
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Gender</label>
-            <Select 
-              value={editedData.sex || ''} 
+            <Select
+              value={editedData.sex || ''}
               onValueChange={(value) => handleInputChange('sex', value)}
             >
               <SelectTrigger>
@@ -194,7 +217,7 @@ export default function EditPatientPage({
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Registration Date</label>
             <Input
@@ -212,7 +235,7 @@ export default function EditPatientPage({
           <Phone className="w-5 h-5 text-green-600" />
           <h3 className="text-lg font-semibold">Contact Information</h3>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Mobile Number</label>
@@ -222,7 +245,7 @@ export default function EditPatientPage({
               placeholder="Enter mobile number"
             />
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Email Address</label>
             <Input
@@ -241,13 +264,13 @@ export default function EditPatientPage({
           <Stethoscope className="w-5 h-5 text-purple-600" />
           <h3 className="text-lg font-semibold">Medical Information</h3>
         </div>
-        
+
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Primary Diagnosis</label>
-              <Select 
-                value={editedData.diagnosis?.primaryCategory || ''} 
+              <Select
+                value={editedData.diagnosis?.primaryCategory || ''}
                 onValueChange={(value) => handleNestedInputChange('diagnosis', 'primaryCategory', value)}
               >
                 <SelectTrigger>
@@ -262,7 +285,7 @@ export default function EditPatientPage({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Subtype</label>
               <Input
@@ -272,7 +295,7 @@ export default function EditPatientPage({
               />
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Medical History</label>
             <textarea
@@ -283,7 +306,7 @@ export default function EditPatientPage({
               placeholder="Enter medical history"
             />
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Additional Notes</label>
             <textarea
@@ -294,12 +317,12 @@ export default function EditPatientPage({
               placeholder="Enter additional notes"
             />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Smoking Status</label>
-              <Select 
-                value={editedData.smokingStatus || ''} 
+              <Select
+                value={editedData.smokingStatus || ''}
                 onValueChange={(value) => handleInputChange('smokingStatus', value)}
               >
                 <SelectTrigger>
@@ -312,7 +335,7 @@ export default function EditPatientPage({
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Pack Years</label>
               <Input
@@ -322,7 +345,7 @@ export default function EditPatientPage({
               />
             </div>
           </div>
-          
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Occupational Exposure</label>
             <Input

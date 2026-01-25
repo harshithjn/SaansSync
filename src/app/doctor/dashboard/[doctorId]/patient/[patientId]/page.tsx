@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PatientFolder, PrescribedMedication, DoctorInstruction, Alert } from "@/lib/monitoring-types"
 import { getDoctorPatientFolders } from "@/lib/doctor-patient-mapping"
 import { getPatientDataById } from "@/lib/patient-storage"
-import { ArrowLeft, User, Calendar, MapPin, Phone, Mail, AlertTriangle, Pill, FileText, TrendingUp, Download, Edit, Bell } from "lucide-react"
+import { ArrowLeft, User, Calendar, MapPin, Phone, Mail, AlertTriangle, Pill, FileText, TrendingUp, Download, Edit, Bell, MessageSquare, Trash2, Share, Import, MoreHorizontal } from "lucide-react"
 import Link from "next/link"
 
 export default function PatientDetailView({
@@ -25,6 +25,7 @@ export default function PatientDetailView({
   const [prescriptions, setPrescriptions] = useState<PrescribedMedication[]>([])
   const [instructions, setInstructions] = useState<DoctorInstruction[]>([])
   const [alerts, setAlerts] = useState<Alert[]>([])
+  const [messages, setMessages] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -32,42 +33,61 @@ export default function PatientDetailView({
       const resolvedParams = await params
       setDoctorId(resolvedParams.doctorId)
       setPatientId(resolvedParams.patientId)
-      
+
       console.log('Loading patient details for:', resolvedParams.patientId)
-      
+
       // Load patient folder
       const folders = getDoctorPatientFolders(resolvedParams.doctorId)
-      console.log('Doctor folders:', folders)
+      console.log('All doctor folders:', folders)
+      console.log('Looking for patientId:', resolvedParams.patientId)
       const folder = folders.find(f => f.patientId === resolvedParams.patientId)
       console.log('Found folder:', folder)
       setPatientFolder(folder || null)
-      
-      // Load patient data - try by patientId first, then by email
+
+      // Load patient data - use the correct storage method
       let data = getPatientDataById(resolvedParams.patientId)
-      
-      // If not found by patientId, try to find by email (for backward compatibility)
-      if (!data && folder) {
-        // Try to get patient data using email from stored patients
+      console.log('Patient data from getPatientDataById:', data)
+
+      // If not found, let's also check the stored patients directly
+      if (!data) {
         const { getStoredPatients } = await import('@/lib/patient-storage')
         const allPatients = getStoredPatients()
+        console.log('All stored patients:', allPatients)
         const patientRecord = allPatients.find(p => p.credentials.patientId === resolvedParams.patientId)
+        console.log('Found patient record:', patientRecord)
         if (patientRecord) {
           data = patientRecord.patientData
         }
       }
-      
-      console.log('Patient data:', data)
+
+      // Also check if data is stored in the old format (patient_${id})
+      if (!data) {
+        try {
+          const oldFormatData = localStorage.getItem(`patient_${resolvedParams.patientId}`)
+          if (oldFormatData) {
+            data = JSON.parse(oldFormatData)
+            console.log('Found patient data in old format:', data)
+          }
+        } catch (error) {
+          console.error('Error reading old format data:', error)
+        }
+      }
+
+      console.log('Final patient data:', data)
       setPatientData(data)
-      
+
       // Load prescriptions
       loadPrescriptions(resolvedParams.patientId)
-      
+
       // Load instructions
       loadInstructions(resolvedParams.patientId)
-      
+
       // Load alerts
       loadAlerts(resolvedParams.patientId)
-      
+
+      // Load messages
+      loadMessages(resolvedParams.patientId)
+
       setLoading(false)
     }
 
@@ -107,6 +127,17 @@ export default function PatientDetailView({
     }
   }
 
+  const loadMessages = (patientId: string) => {
+    try {
+      const stored = localStorage.getItem(`messages_${patientId}`)
+      if (stored) {
+        setMessages(JSON.parse(stored))
+      }
+    } catch (error) {
+      console.error("Error loading messages:", error)
+    }
+  }
+
   const getFolderGlowClass = (color: 'green' | 'yellow' | 'red') => {
     switch (color) {
       case 'green':
@@ -132,6 +163,156 @@ export default function PatientDetailView({
     if (score >= 7) return "High Risk"
     if (score >= 4) return "Moderate"
     return "Low Risk"
+  }
+
+  const handleDeletePatient = () => {
+    if (confirm(`Are you sure you want to delete patient ${patientFolder?.fullName}? This action cannot be undone.`)) {
+      try {
+        // Remove from doctor's patient folders
+        const folders = getDoctorPatientFolders(doctorId)
+        const updatedFolders = folders.filter(f => f.patientId !== patientId)
+        localStorage.setItem(`doctor_patients_${doctorId}`, JSON.stringify(updatedFolders))
+
+        // Remove patient data
+        localStorage.removeItem(`patient_${patientId}`)
+        localStorage.removeItem(`prescriptions_${patientId}`)
+        localStorage.removeItem(`instructions_${patientId}`)
+        localStorage.removeItem(`alerts_${patientId}`)
+        localStorage.removeItem(`messages_${patientId}`)
+
+        alert('Patient deleted successfully')
+        router.push(`/doctor/dashboard/${doctorId}`)
+      } catch (error) {
+        console.error('Error deleting patient:', error)
+        alert('Failed to delete patient')
+      }
+    }
+  }
+
+  const handleSendMessage = () => {
+    const message = prompt(`Send a message to ${patientFolder?.fullName}:`)
+    if (message && message.trim()) {
+      try {
+        // Store message in patient's messages
+        const existingMessages = JSON.parse(localStorage.getItem(`messages_${patientId}`) || '[]')
+        const newMessage = {
+          id: Date.now().toString(),
+          from: 'doctor',
+          doctorId,
+          message: message.trim(),
+          timestamp: new Date().toISOString(),
+          read: false
+        }
+        existingMessages.push(newMessage)
+        localStorage.setItem(`messages_${patientId}`, JSON.stringify(existingMessages))
+
+        // Update local state
+        setMessages(existingMessages)
+
+        alert('Message sent successfully')
+      } catch (error) {
+        console.error('Error sending message:', error)
+        alert('Failed to send message')
+      }
+    }
+  }
+
+  const handleExportPatient = () => {
+    try {
+      const exportData = {
+        patientFolder,
+        patientData,
+        prescriptions,
+        instructions,
+        alerts,
+        messages: JSON.parse(localStorage.getItem(`messages_${patientId}`) || '[]'),
+        exportedAt: new Date().toISOString(),
+        exportedBy: doctorId
+      }
+
+      const dataStr = JSON.stringify(exportData, null, 2)
+      const dataBlob = new Blob([dataStr], { type: 'application/json' })
+
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(dataBlob)
+      link.download = `patient_${patientFolder.fullName.replace(/\s+/g, '_')}_${patientId}.json`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      alert('Patient data exported successfully')
+    } catch (error) {
+      console.error('Error exporting patient:', error)
+      alert('Failed to export patient data')
+    }
+  }
+
+  const handleImportPatient = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.json'
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        const reader = new FileReader()
+        reader.onload = (e) => {
+          try {
+            const importData = JSON.parse(e.target?.result as string)
+
+            // Validate import data structure
+            if (!importData.patientFolder || !importData.patientData) {
+              throw new Error('Invalid patient data format')
+            }
+
+            // Generate new patient ID to avoid conflicts
+            const newPatientId = `PAT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
+
+            // Update patient data with new ID
+            const newPatientFolder = {
+              ...importData.patientFolder,
+              patientId: newPatientId,
+              doctorId: doctorId,
+              importedAt: new Date().toISOString(),
+              originalPatientId: importData.patientFolder.patientId
+            }
+
+            const newPatientData = {
+              ...importData.patientData,
+              patientId: newPatientId,
+              importedAt: new Date().toISOString()
+            }
+
+            // Store imported patient data
+            const folders = getDoctorPatientFolders(doctorId)
+            folders.push(newPatientFolder)
+            localStorage.setItem(`doctor_patients_${doctorId}`, JSON.stringify(folders))
+            localStorage.setItem(`patient_${newPatientId}`, JSON.stringify(newPatientData))
+
+            // Store related data with new patient ID
+            if (importData.prescriptions) {
+              localStorage.setItem(`prescriptions_${newPatientId}`, JSON.stringify(importData.prescriptions))
+            }
+            if (importData.instructions) {
+              localStorage.setItem(`instructions_${newPatientId}`, JSON.stringify(importData.instructions))
+            }
+            if (importData.alerts) {
+              localStorage.setItem(`alerts_${newPatientId}`, JSON.stringify(importData.alerts))
+            }
+            if (importData.messages) {
+              localStorage.setItem(`messages_${newPatientId}`, JSON.stringify(importData.messages))
+            }
+
+            alert(`Patient imported successfully with new ID: ${newPatientId}`)
+            router.push(`/doctor/dashboard/${doctorId}`)
+          } catch (error) {
+            console.error('Error importing patient:', error)
+            alert('Failed to import patient data. Please check the file format.')
+          }
+        }
+        reader.readAsText(file)
+      }
+    }
+    input.click()
   }
 
   if (loading) {
@@ -176,7 +357,7 @@ export default function PatientDetailView({
             <p className="text-gray-600">Patient ID: {patientFolder.patientId}</p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           <Badge className={`${getRiskBadgeClass(patientFolder.redFlagScore)} text-lg px-4 py-2`}>
             {getRiskLabel(patientFolder.redFlagScore)} ({patientFolder.redFlagScore}/10)
@@ -187,6 +368,60 @@ export default function PatientDetailView({
               {patientFolder.alertCount} Alerts
             </Badge>
           )}
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 ml-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSendMessage}
+              className="flex items-center gap-2"
+            >
+              <MessageSquare className="w-4 h-4" />
+              Send Message
+            </Button>
+
+            <Link href={`/doctor/dashboard/${doctorId}/patient/${patientId}/edit`}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2"
+              >
+                <Edit className="w-4 h-4" />
+                Edit Patient
+              </Button>
+            </Link>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportPatient}
+              className="flex items-center gap-2"
+            >
+              <Share className="w-4 h-4" />
+              Export Data
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleImportPatient}
+              className="flex items-center gap-2"
+            >
+              <Import className="w-4 h-4" />
+              Import Patient
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDeletePatient}
+              className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -238,13 +473,14 @@ export default function PatientDetailView({
 
       {/* Tabs for Different Views */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="medications">Medications</TabsTrigger>
           <TabsTrigger value="pft-history">PFT History</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="alerts">Alerts</TabsTrigger>
           <TabsTrigger value="instructions">Instructions</TabsTrigger>
+          <TabsTrigger value="messages">Messages</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -257,7 +493,7 @@ export default function PatientDetailView({
                 {patientData.diagnosis.subtype && (
                   <p><span className="font-medium">Subtype:</span> {patientData.diagnosis.subtype}</p>
                 )}
-              <p><span className="font-medium">Medical History:</span> {patientData.medicalHistory}</p>
+                <p><span className="font-medium">Medical History:</span> {patientData.medicalHistory}</p>
                 <p><span className="font-medium">Smoking Status:</span> {patientData.smokingStatus}</p>
                 {patientData.packYears && (
                   <p><span className="font-medium">Pack Years:</span> {patientData.packYears}</p>
@@ -504,6 +740,53 @@ export default function PatientDetailView({
               <Button>
                 <FileText className="w-4 h-4 mr-2" />
                 Add First Instruction
+              </Button>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="messages" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Messages</h3>
+            <Button onClick={handleSendMessage}>
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Send Message
+            </Button>
+          </div>
+
+          {messages.length > 0 ? (
+            <div className="space-y-3">
+              {messages.map((message) => (
+                <Card key={message.id} className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant={message.from === 'doctor' ? "default" : "secondary"}>
+                          {message.from === 'doctor' ? 'From Doctor' : 'From Patient'}
+                        </Badge>
+                        <span className="text-xs text-gray-600">
+                          {new Date(message.timestamp).toLocaleString()}
+                        </span>
+                        {!message.read && (
+                          <Badge variant="destructive" className="text-xs">
+                            Unread
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-900">{message.message}</p>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <Card className="p-8 text-center">
+              <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Messages</h3>
+              <p className="text-gray-600 mb-4">No messages have been sent to this patient yet.</p>
+              <Button onClick={handleSendMessage}>
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Send First Message
               </Button>
             </Card>
           )}

@@ -12,12 +12,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { fetchRealTimeAQI, getAQIColor, shouldAlertForAQI, forceRefreshAQI } from "@/lib/aqi-service"
 import { createDailyLog, canLogToday, getRemainingLogsToday } from "@/lib/patient-logging"
 import { calculateRedFlagScore } from "@/lib/red-flag-scoring"
-import { 
-    Wind, 
-    Activity, 
-    Thermometer, 
-    Droplets, 
-    AlertTriangle, 
+import {
+    Wind,
+    Activity,
+    Thermometer,
+    Droplets,
+    AlertTriangle,
     CheckCircle,
     Clock,
     Plus,
@@ -35,19 +35,19 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
     // AQI State
     const [aqiData, setAqiData] = useState<any>(null)
     const [aqiLoading, setAqiLoading] = useState(true)
-    
+
     // Logging State
     const [canLog, setCanLog] = useState(true)
     const [remainingLogs, setRemainingLogs] = useState(2)
     const [isSubmitting, setIsSubmitting] = useState(false)
-    
+
     // Form Data
     const [formData, setFormData] = useState({
         // Common Data
         spo2AtRest: 95,
         spo2OnExertion: 90,
         mMRCScale: 1,
-        
+
         // ILD Specific
         spo2BaselineDrop: 0,
         dryCoughSeverity: 3,
@@ -55,13 +55,13 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
         newChestPain: false,
         hemoptysis: false,
         fibroticProgression: false,
-        
+
         // Symptoms VAS
         breathlessness: 4,
         cough: 5,
         chestTightness: 3,
         fatigue: 6,
-        
+
         // Medications
         medications: [
             { name: 'Pirfenidone', taken: false },
@@ -69,7 +69,7 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
             { name: 'Prednisolone', taken: false },
             { name: 'N-Acetylcysteine', taken: false }
         ],
-        
+
         // Side Effects
         sideEffects: [] as string[],
         customSideEffect: ''
@@ -159,15 +159,15 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
             if (result.success) {
                 // Show success message
                 alert('Health log submitted successfully!')
-                
+
                 // Show alert if created
                 if (result.alert) {
                     alert(`Alert Generated: ${result.alert.message}`)
                 }
-                
+
                 // Update logging status
                 checkLoggingStatus()
-                
+
                 // Reset form or redirect
                 // resetForm()
             } else {
@@ -189,14 +189,14 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
 
     const handleSideEffectChange = (effect: string, checked: boolean) => {
         if (checked) {
-            setFormData(prev => ({ 
-                ...prev, 
-                sideEffects: [...prev.sideEffects, effect] 
+            setFormData(prev => ({
+                ...prev,
+                sideEffects: [...prev.sideEffects, effect]
             }))
         } else {
-            setFormData(prev => ({ 
-                ...prev, 
-                sideEffects: prev.sideEffects.filter(e => e !== effect) 
+            setFormData(prev => ({
+                ...prev,
+                sideEffects: prev.sideEffects.filter(e => e !== effect)
             }))
         }
     }
@@ -239,15 +239,20 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
             )}
 
             {/* AQI Display */}
-            <Card className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <Wind className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-lg font-semibold">Air Quality Index</h3>
+            <Card className="p-6 border-0 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <Wind className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold text-gray-900">Air Quality Index</h3>
+                            <p className="text-sm text-gray-500">Real-time environmental data</p>
+                        </div>
                     </div>
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
+                    <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={async () => {
                             setAqiLoading(true)
                             try {
@@ -260,6 +265,7 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
                             }
                         }}
                         disabled={aqiLoading}
+                        className="text-gray-600 hover:text-gray-900"
                     >
                         <RefreshCw className={`w-4 h-4 mr-2 ${aqiLoading ? 'animate-spin' : ''}`} />
                         Refresh
@@ -267,38 +273,43 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
                 </div>
 
                 {aqiLoading ? (
-                    <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <div className="text-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
                         <p className="text-sm text-gray-600">Loading air quality data...</p>
                     </div>
                 ) : aqiData ? (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="text-center p-4 rounded-lg" style={{ backgroundColor: `${getAQIColor(aqiData.aqi)}20` }}>
-                            <div className="text-3xl font-bold mb-1" style={{ color: getAQIColor(aqiData.aqi) }}>
-                                {aqiData.aqi}
-                            </div>
-                            <div className="text-sm font-medium">{aqiData.category}</div>
-                            <div className="text-xs text-gray-600 flex items-center justify-center gap-1 mt-1">
-                                <MapPin className="w-3 h-3" />
-                                {aqiData.location}
+                        <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6">
+                            <div className="absolute top-0 right-0 w-20 h-20 rounded-full opacity-10"
+                                style={{ backgroundColor: getAQIColor(aqiData.aqi) }}></div>
+                            <div className="relative">
+                                <div className="text-3xl font-bold text-gray-900 mb-2">
+                                    {aqiData.aqi}
+                                </div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">{aqiData.category}</div>
+                                <div className="flex items-center text-xs text-gray-500">
+                                    <MapPin className="w-3 h-3 mr-1" />
+                                    {aqiData.location}
+                                </div>
                             </div>
                         </div>
-                        
-                        <div className="text-center p-4 bg-gray-50 rounded-lg">
-                            <div className="text-2xl font-bold text-gray-700">{aqiData.pm25}</div>
-                            <div className="text-sm font-medium">PM2.5</div>
-                            <div className="text-xs text-gray-600">μg/m³</div>
+
+                        <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+                            <div className="text-2xl font-bold text-gray-900 mb-2">{aqiData.pm25}</div>
+                            <div className="text-sm font-medium text-gray-700 mb-1">PM2.5</div>
+                            <div className="text-xs text-gray-500">μg/m³</div>
                         </div>
-                        
-                        <div className="text-center p-4 bg-gray-50 rounded-lg">
-                            <div className="text-2xl font-bold text-gray-700">{aqiData.pm10}</div>
-                            <div className="text-sm font-medium">PM10</div>
-                            <div className="text-xs text-gray-600">μg/m³</div>
+
+                        <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+                            <div className="text-2xl font-bold text-gray-900 mb-2">{aqiData.pm10}</div>
+                            <div className="text-sm font-medium text-gray-700 mb-1">PM10</div>
+                            <div className="text-xs text-gray-500">μg/m³</div>
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center py-4 text-gray-600">
-                        Unable to load air quality data
+                    <div className="text-center py-8 text-gray-500">
+                        <Wind className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                        <p>Unable to load air quality data</p>
                     </div>
                 )}
             </Card>
@@ -315,7 +326,7 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
                 <TabsContent value="vitals" className="space-y-4">
                     <Card className="p-6">
                         <h3 className="text-lg font-semibold mb-4">Vital Signs</h3>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
                                 <div>
@@ -332,7 +343,7 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
                                         <span className="text-lg font-bold w-12">{formData.spo2AtRest}%</span>
                                     </div>
                                 </div>
-                                
+
                                 <div>
                                     <label className="text-sm font-medium mb-2 block">SpO₂ on Exertion (%)</label>
                                     <div className="flex items-center gap-4">
@@ -348,7 +359,7 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-sm font-medium mb-2 block">SpO₂ Drop from Baseline (%)</label>
@@ -364,7 +375,7 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
                                         <span className="text-lg font-bold w-12">{formData.spo2BaselineDrop}%</span>
                                     </div>
                                 </div>
-                                
+
                                 <div>
                                     <label className="text-sm font-medium mb-2 block">mMRC Breathlessness Scale</label>
                                     <Select value={formData.mMRCScale.toString()} onValueChange={(value) => setFormData(prev => ({ ...prev, mMRCScale: parseInt(value) }))}>
@@ -388,7 +399,7 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
                 <TabsContent value="symptoms" className="space-y-4">
                     <Card className="p-6">
                         <h3 className="text-lg font-semibold mb-4">Symptom Severity (0-10 Scale)</h3>
-                        
+
                         <div className="space-y-6">
                             {[
                                 { key: 'breathlessness', label: 'Breathlessness', icon: Activity },
@@ -421,7 +432,7 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
                 <TabsContent value="medications" className="space-y-4">
                     <Card className="p-6">
                         <h3 className="text-lg font-semibold mb-4">Today's Medications</h3>
-                        
+
                         <div className="space-y-4">
                             {formData.medications.map((med, index) => (
                                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -459,7 +470,7 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
                 <TabsContent value="ild-specific" className="space-y-4">
                     <Card className="p-6">
                         <h3 className="text-lg font-semibold mb-4">ILD Specific Assessment</h3>
-                        
+
                         <div className="space-y-6">
                             <div>
                                 <label className="text-sm font-medium mb-2 block">Dry Cough Severity (0-10)</label>
@@ -498,7 +509,7 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
                                     />
                                     <label className="text-sm font-medium">New or worsening chest pain</label>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-2">
                                     <Checkbox
                                         checked={formData.hemoptysis}
@@ -506,7 +517,7 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
                                     />
                                     <label className="text-sm font-medium">Blood in sputum (Hemoptysis)</label>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-2">
                                     <Checkbox
                                         checked={formData.fibroticProgression}
@@ -521,34 +532,37 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
             </Tabs>
 
             {/* Submit Button */}
-            <Card className="p-6 bg-green-50 border-green-200">
-                <div className="text-center space-y-4">
-                    <h3 className="text-lg font-semibold text-green-900">Ready to Submit?</h3>
-                    <p className="text-sm text-green-700">
-                        Please review all your entries above before submitting your daily health log.
+            <Card className="border-0 shadow-sm bg-white">
+                <div className="p-8 text-center">
+                    <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
+                        <CheckCircle className="w-8 h-8 text-green-600" />
+                    </div>
+
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">Ready to Submit</h3>
+                    <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                        Review your entries above, then submit your daily health log to your care team.
                     </p>
-                    
-                    <Button 
+
+                    <Button
                         onClick={handleSubmit}
                         disabled={!canLog || isSubmitting}
-                        className="w-full max-w-md bg-green-600 hover:bg-green-700 text-white"
+                        className="bg-gray-900 hover:bg-gray-800 text-white border-0 h-12 px-8 rounded-xl font-medium"
                         size="lg"
                     >
                         {isSubmitting ? (
                             <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-3"></div>
                                 Submitting...
                             </>
                         ) : (
                             <>
-                                <CheckCircle className="w-5 h-5 mr-2" />
                                 Submit Health Log
                             </>
                         )}
                     </Button>
-                    
+
                     {!canLog && (
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-gray-500 mt-4">
                             Daily logging limit reached. Come back tomorrow to log again.
                         </p>
                     )}
