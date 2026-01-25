@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SaansSync
 
-## Getting Started
+SaansSync is a remote respiratory health monitoring system designed for patients with chronic respiratory conditions. It focuses on producing reliable, stabilised physiological trends rather than raw, noisy readings.
 
-First, run the development server:
+## Overview
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+SaansSync collects SpO₂ readings, symptom scores, medication adherence data, and pulmonary rehabilitation activity from patients. These inputs are processed through a trend-based signal integrity pipeline to generate stable trends and early deterioration indicators for clinicians.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Key Capabilities
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Stabilised SpO₂ trend generation
+- Symptom-weighted and adherence-aware analysis
+- Multi-parameter data fusion for accurate deterioration detection
+- Data Quality Index (DQI) and Fusion Integrity Index (FI)
+- Role-based dashboards for patients and doctors
+- Early warning alerts to support timely intervention
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Problem Addressed
 
-## Learn More
+Most remote respiratory monitoring tools rely on isolated or noisy data points, leading to unreliable trends and delayed detection of exacerbations. Inconsistent patient adherence and missing data further reduce accuracy.
 
-To learn more about Next.js, take a look at the following resources:
+## SaansSync Solution
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+SaansSync integrates physiological data, symptoms, and adherence into a unified signal-stabilisation and trend-analysis engine. This enables clinicians to identify meaningful changes in patient condition earlier and with greater confidence.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Status
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+A functional prototype of SaansSync is available, including trend visualisation, alert workflows, and separate patient and doctor dashboards, tested using sample patient data.
