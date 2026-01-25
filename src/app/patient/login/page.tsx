@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { User, Lock, Eye, EyeOff, Users, Activity, Heart } from "lucide-react"
 import { LoginRequest } from "@/lib/auth-types"
 import { storeSession, getDashboardRoute, validatePatientLogin } from "@/lib/auth-utils"
-import { getPatientCredentials, getPatientData, initializeDemoPatients } from "@/lib/patient-storage"
+import { getPatientCredentials, getPatientDataArray, initializeDemoPatients } from "@/lib/patient-storage"
 import { Header } from '@/components/common/Header'
 
 export default function PatientLoginPage() {
@@ -38,7 +38,7 @@ export default function PatientLoginPage() {
         try {
             // Get stored patient credentials and data
             const patientCredentials = getPatientCredentials()
-            const patientData = getPatientData()
+            const patientData = getPatientDataArray()
 
             // Use the proper validation function
             const response = await validatePatientLogin(loginData, patientCredentials, patientData)

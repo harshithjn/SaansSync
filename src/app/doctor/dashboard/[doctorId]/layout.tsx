@@ -12,7 +12,6 @@ import {
   BarChart3,
   Settings,
   Download,
-  Calendar,
   Stethoscope,
   ChevronRight
 } from "lucide-react"
@@ -49,12 +48,6 @@ export default function Layout({
       href: `/doctor/dashboard/${doctorId}/analytics`,
       icon: BarChart3,
       isActive: pathname === `/doctor/dashboard/${doctorId}/analytics`
-    },
-    {
-      name: "Appointments",
-      href: `/doctor/dashboard/${doctorId}/appointments`,
-      icon: Calendar,
-      isActive: pathname === `/doctor/dashboard/${doctorId}/appointments`
     },
     {
       name: "Export Data",

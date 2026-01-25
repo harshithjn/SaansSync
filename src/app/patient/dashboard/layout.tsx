@@ -82,7 +82,7 @@ export default function PatientDashboardLayout({
                     {/* Sidebar Navigation */}
                     <aside className="lg:w-64 flex-shrink-0">
                         <nav className="bg-white rounded-lg shadow-sm p-4 space-y-2">
-                            <Link href={`/patient/dashboard/${getDashboardSlug(session.primaryDiagnosisCategory)}`}>
+                            <Link href={`/patient/dashboard/${getDashboardSlug(session.primaryDiagnosisCategory || 'ild')}`}>
                                 <Button variant="ghost" className="w-full justify-start text-left">
                                     🏠 Dashboard
                                 </Button>
@@ -123,6 +123,10 @@ function getDashboardSlug(category: string): string {
     switch (category) {
         case "Interstitial Lung Disease (ILD)":
             return "ild"
+        case "Bronchial Asthma":
+            return "asthma"
+        case "COPD (Chronic Obstructive Pulmonary Disease)":
+            return "oad"
         case "Obstructive Airway Disease (OAD)":
             return "oad"
         case "Bronchiectasis":
@@ -130,6 +134,6 @@ function getDashboardSlug(category: string): string {
         case "Post ICU Recovery":
             return "post-icu"
         default:
-            return "general"
+            return "ild" // Default to ILD dashboard
     }
 }

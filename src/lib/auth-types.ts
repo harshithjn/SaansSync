@@ -31,6 +31,8 @@ export interface LoginResponse {
 // Disease-specific routing map
 export const DISEASE_DASHBOARD_ROUTES = {
     "Interstitial Lung Disease (ILD)": "/patient/dashboard/ild",
+    "Bronchial Asthma": "/patient/dashboard/asthma",
+    "COPD (Chronic Obstructive Pulmonary Disease)": "/patient/dashboard/oad",
     "Obstructive Airway Disease (OAD)": "/patient/dashboard/oad",
     "Bronchiectasis": "/patient/dashboard/bronchiectasis",
     "Post ICU Recovery": "/patient/dashboard/post-icu"

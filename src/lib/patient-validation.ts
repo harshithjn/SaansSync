@@ -56,10 +56,6 @@ export const validateStep2 = (data: PatientData): StepValidation => {
         errors.push({ field: 'sarcoidosisStage', message: 'Sarcoidosis stage is required when subtype is Sarcoidosis' })
     }
 
-    if (!data.dateOfDiagnosis) {
-        errors.push({ field: 'dateOfDiagnosis', message: 'Date of diagnosis is required' })
-    }
-
     if (data.smokingStatus !== 'Never Smoked' && data.smokingStatus !== '') {
         const packYears = parseFloat(data.packYears)
         if (data.packYears && (isNaN(packYears) || packYears < 0)) {
@@ -80,8 +76,12 @@ export const validateMedications = (medications: Medication[]): ValidationError[
         if (!med.route) {
             errors.push({ field: `medication-${index}-route`, message: `Medication ${index + 1}: Route is required` })
         }
-        if (!med.drugName.trim()) {
+        if (!med.drugName) {
             errors.push({ field: `medication-${index}-drugName`, message: `Medication ${index + 1}: Drug name is required` })
+        }
+        // Validate custom drug name when "Other" is selected
+        if (med.drugName === "Other" && (!med.customDrugName || !med.customDrugName.trim())) {
+            errors.push({ field: `medication-${index}-customDrugName`, message: `Medication ${index + 1}: Custom drug name is required when "Other" is selected` })
         }
         if (!med.dose.trim()) {
             errors.push({ field: `medication-${index}-dose`, message: `Medication ${index + 1}: Dose is required` })
@@ -104,6 +104,14 @@ export const validateMedications = (medications: Medication[]): ValidationError[
 }
 
 export const validateStep3 = (data: PatientData): StepValidation => {
+    // Medications are optional - if no medications are added, validation passes
+    if (data.medications.length === 0) {
+        return {
+            isValid: true,
+            errors: []
+        }
+    }
+
     const errors = validateMedications(data.medications)
 
     return {

@@ -81,8 +81,8 @@ export const getPatientCredentials = (): PatientCredentials[] => {
     return patients.map(p => p.credentials)
 }
 
-// Get patient data for login
-export const getPatientData = (): PatientData[] => {
+// Get patient data for login (returns array)
+export const getPatientDataArray = (): PatientData[] => {
     const patients = getStoredPatients()
     return patients.map(p => p.patientData)
 }
@@ -91,8 +91,8 @@ export const getPatientData = (): PatientData[] => {
 export const initializeDemoPatients = (): void => {
     if (typeof window === 'undefined') return
 
-    const existingPatients = getStoredPatients()
-    if (existingPatients.length > 0) return // Already have patients
+    // Clear existing patients for fresh demo
+    clearStoredPatients()
 
     // Create demo patients
     const demoPatients = [
@@ -111,15 +111,24 @@ export const initializeDemoPatients = (): void => {
             age: "52",
             sex: "Female",
             mobileNumber: "9876543211",
-            primaryDiagnosisCategory: "Obstructive Airway Disease (OAD)",
-            subtype: "COPD"
+            primaryDiagnosisCategory: "Bronchial Asthma",
+            subtype: "Moderate persistent asthma"
+        },
+        {
+            email: "mike.johnson@example.com",
+            fullName: "Mike Johnson",
+            age: "58",
+            sex: "Male",
+            mobileNumber: "9876543212",
+            primaryDiagnosisCategory: "COPD (Chronic Obstructive Pulmonary Disease)",
+            subtype: "Moderate COPD"
         },
         {
             email: "bob.wilson@example.com",
             fullName: "Bob Wilson",
             age: "38",
             sex: "Male",
-            mobileNumber: "9876543212",
+            mobileNumber: "9876543213",
             primaryDiagnosisCategory: "Bronchiectasis",
             subtype: "Idiopathic"
         },
@@ -128,7 +137,7 @@ export const initializeDemoPatients = (): void => {
             fullName: "Alice Brown",
             age: "41",
             sex: "Female",
-            mobileNumber: "9876543213",
+            mobileNumber: "9876543214",
             primaryDiagnosisCategory: "Post ICU Recovery",
             subtype: "ARDS Recovery"
         }
@@ -152,11 +161,10 @@ export const initializeDemoPatients = (): void => {
                     ctdType: "",
                     sarcoidosisStage: ""
                 },
-                dateOfDiagnosis: new Date().toISOString().split('T')[0],
                 medicalHistory: "Demo patient for testing",
                 comorbidities: [],
+                customComorbidity: "",
                 occupationalExposure: "",
-                familyHistory: "",
                 additionalNotes: "",
                 smokingStatus: "Never Smoked",
                 packYears: "",
@@ -199,6 +207,11 @@ export const initializeDemoPatients = (): void => {
             }
 
             storePatient(credentials, patientData)
+            
+            // Also create patient folder for demo doctor
+            import('./doctor-patient-mapping').then(({ createPatientFolder }) => {
+                createPatientFolder(patientData, "doctor@gmail.com", credentials.patientId, Math.floor(Math.random() * 10) + 1, Math.floor(Math.random() * 3))
+            })
         })
     })
 }
@@ -213,4 +226,34 @@ export const clearStoredPatients = (): void => {
 // Get patient count
 export const getPatientCount = (): number => {
     return getStoredPatients().length
+}
+
+// Update patient data
+export const updatePatientData = (patientId: string, updatedData: PatientData): boolean => {
+    if (typeof window === 'undefined') return false
+
+    try {
+        const patients = getStoredPatients()
+        const patientIndex = patients.findIndex(p => p.credentials.patientId === patientId)
+        
+        if (patientIndex >= 0) {
+            patients[patientIndex].patientData = updatedData
+            patients[patientIndex].updatedAt = new Date().toISOString()
+            localStorage.setItem(PATIENTS_STORAGE_KEY, JSON.stringify(patients))
+            console.log('Patient data updated successfully:', patientId)
+            return true
+        }
+        
+        console.error('Patient not found for update:', patientId)
+        return false
+    } catch (error) {
+        console.error('Error updating patient data:', error)
+        return false
+    }
+}
+
+// Get single patient data by ID
+export const getPatientDataById = (patientId: string): PatientData | null => {
+    const patient = findPatientById(patientId)
+    return patient ? patient.patientData : null
 }

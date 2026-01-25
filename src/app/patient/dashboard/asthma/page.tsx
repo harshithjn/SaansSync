@@ -4,9 +4,9 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { AuthSession } from "@/lib/auth-types"
 import { getStoredSession } from "@/lib/auth-utils"
-import CleanBronchiectasisDashboard from "@/components/patient/CleanBronchiectasisDashboard"
+import CleanAsthmaDashboard from "@/components/patient/CleanAsthmaDashboard"
 
-export default function BronchiectasisDashboard() {
+export default function AsthmaDashboard() {
     const router = useRouter()
     const [session, setSession] = useState<AuthSession | null>(null)
     const [isLoading, setIsLoading] = useState(true)
@@ -36,5 +36,5 @@ export default function BronchiectasisDashboard() {
         return null
     }
 
-    return <CleanBronchiectasisDashboard patientId={session.patientId} />
+    return <CleanAsthmaDashboard patientId={session.patientId} />
 }

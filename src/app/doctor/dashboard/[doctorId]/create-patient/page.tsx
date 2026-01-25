@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,6 +24,7 @@ import {
     CO_MORBIDITIES_LIST,
     ROUTE_OPTIONS,
     FREQUENCY_LIST,
+    DRUG_NAME_OPTIONS,
     PFT_RANGES
 } from '@/lib/patient-types'
 
@@ -52,11 +53,10 @@ const initialPatientData: PatientData = {
         ctdType: "",
         sarcoidosisStage: ""
     },
-    dateOfDiagnosis: new Date().toISOString().split('T')[0],
     medicalHistory: "",
     comorbidities: [],
+    customComorbidity: "",
     occupationalExposure: "",
-    familyHistory: "",
     additionalNotes: "",
     smokingStatus: "",
     packYears: "",
@@ -110,6 +110,11 @@ export default function CreatePatientPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({})
 
+    // Clear validation errors when step changes
+    useEffect(() => {
+        setValidationErrors({})
+    }, [currentStep])
+
     const updatePatientData = (field: string, value: any) => {
         setPatientData(prev => ({ ...prev, [field]: value }))
         // Clear validation error for this field
@@ -152,22 +157,35 @@ export default function CreatePatientPage() {
         }
     }
 
-    const getSubtypeOptions = () => {
-        switch (patientData.diagnosis.primaryCategory) {
-            case "Interstitial Lung Disease (ILD)":
-                return ILD_SUBTYPES
-            case "Obstructive Airway Disease (OAD)":
-                return OAD_SUBTYPES
-            case "Bronchiectasis":
-                return BRONCHIECTASIS_SUBTYPES
-            case "Post ICU Recovery":
-                return POST_ICU_SUBTYPES
-            default:
-                return []
-        }
-    }
+   const getSubtypeOptions = () => {
+  switch (patientData.diagnosis.primaryCategory) {
+    case "Interstitial Lung Disease (ILD)":
+      return ILD_SUBTYPES
+
+    case "Bronchial Asthma":
+      return OAD_SUBTYPES
+
+    case "COPD (Chronic Obstructive Pulmonary Disease)":
+      return OAD_SUBTYPES
+
+    case "Bronchiectasis":
+      return BRONCHIECTASIS_SUBTYPES
+
+    case "Post ICU Recovery":
+      return POST_ICU_SUBTYPES
+
+    default:
+      return []
+  }
+}
+
 
     const validateCurrentStep = () => {
+        // Step 6 is read-only preview - no validation needed
+        if (currentStep === 6) {
+            return true
+        }
+
         let validation
         switch (currentStep) {
             case 1:
@@ -177,10 +195,13 @@ export default function CreatePatientPage() {
                 validation = validateStep2(patientData)
                 break
             case 3:
-                validation = validateStep3(patientData)
+                validation = validateStep4(patientData) // PFT
                 break
             case 4:
-                validation = validateStep4(patientData)
+                validation = { isValid: true, errors: [] } // Respiratory Support - no validation needed
+                break
+            case 5:
+                validation = validateStep3(patientData) // Medications
                 break
             default:
                 validation = { isValid: true, errors: [] }
@@ -196,12 +217,32 @@ export default function CreatePatientPage() {
     }
 
     const handleNext = () => {
+        // Clean up incomplete medications before validation
+        if (currentStep === 5) {
+            const completeMedications = patientData.medications.filter(med => 
+                med.route && med.drugName && med.dose && med.frequency && med.startDate
+            )
+            if (completeMedications.length !== patientData.medications.length) {
+                setPatientData(prev => ({
+                    ...prev,
+                    medications: completeMedications
+                }))
+            }
+        }
+
         if (validateCurrentStep()) {
-            setCurrentStep(prev => prev + 1)
+            setCurrentStep(prev => {
+                const nextStep = prev + 1
+                // Clear validation errors when moving to any new step
+                setValidationErrors({})
+                return nextStep
+            })
         }
     }
 
     const handleBack = () => {
+        // Clear validation errors when going back
+        setValidationErrors({})
         setCurrentStep(prev => Math.max(1, prev - 1))
     }
     const addMedication = () => {
@@ -209,6 +250,7 @@ export default function CreatePatientPage() {
             id: Date.now().toString(),
             route: "",
             drugName: "",
+            customDrugName: "",
             dose: "",
             frequency: "",
             startDate: "",
@@ -228,9 +270,20 @@ export default function CreatePatientPage() {
                 if (med.id === id) {
                     const updatedMed = { ...med, [field]: value }
 
-                    // Auto-format drug name to uppercase
+                    // Handle drug name selection logic
                     if (field === 'drugName') {
-                        updatedMed.drugName = value.toUpperCase()
+                        if (value === 'Other') {
+                            // Keep the "Other" selection but clear custom name
+                            updatedMed.customDrugName = ""
+                        } else {
+                            // Clear custom name when selecting predefined drug
+                            updatedMed.customDrugName = ""
+                        }
+                    }
+
+                    // Auto-format custom drug name to uppercase
+                    if (field === 'customDrugName') {
+                        updatedMed.customDrugName = value.toUpperCase()
                     }
 
                     // Update active status based on end date
@@ -320,12 +373,20 @@ export default function CreatePatientPage() {
             // Import auth utilities and storage
             const { createPatientCredentials } = await import('@/lib/auth-utils')
             const { storePatient } = await import('@/lib/patient-storage')
+            const { createPatientFolder } = await import('@/lib/doctor-patient-mapping')
 
             // Create patient credentials
             const credentials = createPatientCredentials(patientData.emailId)
 
             // Store patient in local storage
             storePatient(credentials, patientData)
+
+            // Get current doctor ID from URL
+            const pathParts = window.location.pathname.split('/')
+            const doctorId = pathParts[3] // /doctor/dashboard/[doctorId]/create-patient
+
+            // Create patient folder and doctor-patient mapping
+            createPatientFolder(patientData, doctorId, credentials.patientId, 1, 0) // Initial score of 1, no alerts
 
             // Combine patient data with credentials
             const patientWithCredentials = {
@@ -345,7 +406,7 @@ export default function CreatePatientPage() {
             // Simulate API call
             await new Promise(resolve => setTimeout(resolve, 2000))
 
-            alert(`Patient created successfully!\n\nPatient ID: ${credentials.patientId}\nLogin Email: ${credentials.email}\nDefault Password: patient123\n\n✅ The patient can now log in at:\n🔗 http://localhost:3000/patient/login\n\nUse the email and password above to test the patient login.`)
+            alert(`Patient created successfully!\n\nPatient ID: ${credentials.patientId}\nLogin Email: ${credentials.email}\nDefault Password: patient123\n\n✅ The patient can now log in at:\n🔗 http://localhost:3000/patient/login\n\nUse the email and password above to test the patient login.\n\n🏥 Patient has been assigned to your dashboard and will appear in your patient folder view.`)
             setPatientData(initialPatientData)
             setCurrentStep(1)
         } catch (error) {
@@ -582,19 +643,6 @@ export default function CreatePatientPage() {
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-sm font-medium">Date of Diagnosis *</label>
-                    <Input
-                        type="date"
-                        value={patientData.dateOfDiagnosis}
-                        onChange={(e) => updatePatientData("dateOfDiagnosis", e.target.value)}
-                        className={validationErrors.dateOfDiagnosis ? "border-red-500" : ""}
-                    />
-                    {validationErrors.dateOfDiagnosis && (
-                        <p className="text-xs text-red-500">{validationErrors.dateOfDiagnosis}</p>
-                    )}
-                </div>
-
-                <div className="space-y-2">
                     <label className="text-sm font-medium">Medical History</label>
                     <textarea
                         className="w-full p-2 border rounded-md resize-none"
@@ -619,6 +667,18 @@ export default function CreatePatientPage() {
                             </div>
                         ))}
                     </div>
+                    
+                    {/* Custom Comorbidity Input - Only show when "Other" is selected */}
+                    {patientData.comorbidities.includes("Other") && (
+                        <div className="space-y-2 mt-3">
+                            <label className="text-sm font-medium">Specify Other Comorbidity</label>
+                            <Input
+                                value={patientData.customComorbidity}
+                                onChange={(e) => updatePatientData("customComorbidity", e.target.value)}
+                                placeholder="Enter custom comorbidity"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -630,17 +690,6 @@ export default function CreatePatientPage() {
                             value={patientData.occupationalExposure}
                             onChange={(e) => updatePatientData("occupationalExposure", e.target.value)}
                             placeholder="Describe any occupational exposures..."
-                        />
-                    </div>
-
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Family History of Respiratory Disease</label>
-                        <textarea
-                            className="w-full p-2 border rounded-md resize-none"
-                            rows={2}
-                            value={patientData.familyHistory}
-                            onChange={(e) => updatePatientData("familyHistory", e.target.value)}
-                            placeholder="Describe family history..."
                         />
                     </div>
                 </div>
@@ -702,7 +751,7 @@ export default function CreatePatientPage() {
     // Step 3: Medication History & Prescription (unchanged)
     const renderStep3 = () => (
         <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Step 3: Medication History & Prescription</h3>
+            <h3 className="text-lg font-semibold mb-4">Step 5: Medication History & Prescription</h3>
 
             <div className="space-y-4">
                 <div className="flex justify-between items-center">
@@ -788,13 +837,33 @@ export default function CreatePatientPage() {
 
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Drug Name *</label>
-                                <Input
+                                <Select
                                     value={medication.drugName}
-                                    onChange={(e) => updateMedication(medication.id, "drugName", e.target.value)}
-                                    placeholder="Enter drug name"
-                                    className="uppercase"
-                                />
+                                    onValueChange={(value) => updateMedication(medication.id, "drugName", value)}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select drug name" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {DRUG_NAME_OPTIONS.map(drug => (
+                                            <SelectItem key={drug} value={drug}>{drug}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
+
+                            {/* Custom Drug Name Input - Only show when "Other" is selected */}
+                            {medication.drugName === "Other" && (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">Custom Drug Name *</label>
+                                    <Input
+                                        value={medication.customDrugName || ""}
+                                        onChange={(e) => updateMedication(medication.id, "customDrugName", e.target.value)}
+                                        placeholder="Enter custom drug name"
+                                        className="uppercase"
+                                    />
+                                </div>
+                            )}
 
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Dose *</label>
@@ -854,10 +923,10 @@ export default function CreatePatientPage() {
             </div>
         </Card>
     )
-    // Step 4: Pulmonary Function Tests (unchanged)
+    // Step 4: Pulmonary Function Tests (moved from step 4)
     const renderStep4 = () => (
         <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Step 4: Pulmonary Function Tests (PFT) - Clinical Grade</h3>
+            <h3 className="text-lg font-semibold mb-4">Step 3: Pulmonary Function Tests (PFT) - Clinical Grade</h3>
 
             <div className="space-y-4">
                 <div className="flex justify-between items-center">
@@ -1036,10 +1105,10 @@ export default function CreatePatientPage() {
             </div>
         </Card>
     )
-    // Step 5: Respiratory Support & Oxygen Status (unchanged)
+    // Step 5: Respiratory Support & Oxygen Status (moved from step 5)
     const renderStep5 = () => (
         <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Step 5: Respiratory Support & Oxygen Status</h3>
+            <h3 className="text-lg font-semibold mb-4">Step 4: Respiratory Support & Oxygen Status</h3>
 
             <div className="space-y-6">
                 <div className="space-y-2">
@@ -1401,7 +1470,13 @@ export default function CreatePatientPage() {
     // Step 6: Updated Review & Create Patient
     const renderStep6 = () => (
         <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Step 6: Review & Create Patient</h3>
+            <div className="mb-6">
+                <h3 className="text-lg font-semibold mb-2">Step 6: Doctor Review & Final Preview</h3>
+                <p className="text-sm text-gray-600">
+                    Please review all patient information below. This is a read-only preview of the data you've entered.
+                    Click "Create Patient" when you're ready to save this patient record.
+                </p>
+            </div>
 
             <div className="space-y-6">
                 {/* Updated Basic Details - Removed occupation, address, emergency contacts */}
@@ -1425,7 +1500,6 @@ export default function CreatePatientPage() {
                             <Badge variant="default" className="text-lg px-3 py-1">
                                 {formatDiagnosisDisplay()}
                             </Badge>
-                            <span className="text-sm text-gray-500">Diagnosed: {patientData.dateOfDiagnosis}</span>
                         </div>
 
                         {patientData.comorbidities.length > 0 && (
@@ -1457,13 +1531,6 @@ export default function CreatePatientPage() {
                             <div>
                                 <span className="font-medium text-sm">Occupational Exposure:</span>
                                 <p className="text-sm text-gray-700 mt-1">{patientData.occupationalExposure}</p>
-                            </div>
-                        )}
-
-                        {patientData.familyHistory && (
-                            <div>
-                                <span className="font-medium text-sm">Family History:</span>
-                                <p className="text-sm text-gray-700 mt-1">{patientData.familyHistory}</p>
                             </div>
                         )}
 
@@ -1524,7 +1591,9 @@ export default function CreatePatientPage() {
                                         {patientData.medications.map((med) => (
                                             <tr key={med.id} className="border-b">
                                                 <td className="py-2">{med.route}</td>
-                                                <td className="py-2 font-medium">{med.drugName}</td>
+                                                <td className="py-2 font-medium">
+                                                    {med.drugName === "Other" ? med.customDrugName : med.drugName}
+                                                </td>
                                                 <td className="py-2">{med.dose}</td>
                                                 <td className="py-2">{med.frequency}</td>
                                                 <td className="py-2">{med.startDate}</td>
@@ -1593,22 +1662,23 @@ export default function CreatePatientPage() {
         </Card>
     )
 
-    const renderCurrentStep = () => {
-        switch (currentStep) {
-            case 1: return renderStep1()
-            case 2: return renderStep2()
-            case 3: return renderStep3()
-            case 4: return renderStep4()
-            case 5: return renderStep5()
-            case 6: return renderStep6()
-            default: return renderStep1()
-        }
-    }
+   const renderCurrentStep = () => {
+  switch (currentStep) {
+    case 1: return renderStep1()       // Basic
+    case 2: return renderStep2()       // Diagnosis
+    case 3: return renderStep4()       // PFT
+    case 4: return renderStep5()       // Respiratory Support
+    case 5: return renderStep3()       // Medications
+    case 6: return renderStep6()       // Final Preview
+    default: return renderStep1()
+  }
+}
+
 
     return (
         <>
             <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Create New Patient - Updated Structured Diagnosis</h1>
+                <h1 className="text-2xl font-bold">Create New Patient - Updated Multi-Step Form</h1>
                 <div className="flex space-x-2">
                     {[1, 2, 3, 4, 5, 6].map((step) => (
                         <div

@@ -1,7 +1,8 @@
 // Primary Diagnosis Categories
 export const PRIMARY_DIAGNOSIS_CATEGORIES = [
     "Interstitial Lung Disease (ILD)",
-    "Obstructive Airway Disease (OAD)",
+    "Bronchial Asthma",
+    "COPD (Chronic Obstructive Pulmonary Disease)",
     "Bronchiectasis",
     "Post ICU Recovery"
 ]
@@ -27,11 +28,15 @@ export const ILD_SUBTYPES = [
 ]
 
 export const OAD_SUBTYPES = [
-    "COPD",
-    "Asthma",
+    "Mild persistent asthma",
+    "Moderate persistent asthma", 
+    "Severe persistent asthma",
+    "Mild COPD",
+    "Moderate COPD",
+    "Severe COPD",
+    "Very severe COPD",
     "Asthma-COPD Overlap (ACO)",
-    "Bronchiolitis Obliterans",
-    "Other OAD"
+    "Other"
 ]
 
 export const BRONCHIECTASIS_SUBTYPES = [
@@ -83,7 +88,10 @@ export const CO_MORBIDITIES_LIST = [
     "Depression/Anxiety",
     "Pulmonary Hypertension",
     "Venous Thromboembolism",
-    "Past Pulmonary TB"
+    "Past Pulmonary TB",
+    "ABPA (Allergic Bronchopulmonary Aspergillosis)",
+    "CCPA (Chronic Cavitary Pulmonary Aspergillosis)",
+    "Other"
 ]
 
 export const ROUTE_OPTIONS = [
@@ -110,6 +118,20 @@ export const FREQUENCY_LIST = [
     "Weekly",
     "Monthly",
     "Stat (Single dose)"
+]
+
+// Medication Drug Name Options
+export const DRUG_NAME_OPTIONS = [
+    "Myxolone",
+    "MMF (Mycophenolate Mofetil)",
+    "Azathioprine",
+    "Methotrexate",
+    "Rituximab",
+    "Nintedanib",
+    "Pirfenidone",
+    "Bronchodilator",
+    "IVIG",
+    "Other"
 ]
 
 // PFT Normal Ranges
@@ -142,11 +164,10 @@ export interface PatientData {
 
     // Step 2: Diagnosis & Medical History (Updated)
     diagnosis: StructuredDiagnosis
-    dateOfDiagnosis: string
     medicalHistory: string
     comorbidities: string[]
+    customComorbidity: string
     occupationalExposure: string
-    familyHistory: string
     additionalNotes: string
     smokingStatus: string
     packYears: string
@@ -163,12 +184,16 @@ export interface PatientData {
     bipap: BiPAPConfig
     invasiveVentilation: InvasiveVentilationConfig
     tracheostomy: TracheostomyConfig
+
+    // Patient Vitals (for patient dashboard)
+    vitals?: PatientVitals
 }
 
 export interface Medication {
     id: string
     route: string
     drugName: string
+    customDrugName?: string
     dose: string
     frequency: string
     startDate: string
@@ -228,6 +253,20 @@ export interface TracheostomyConfig {
     respiratoryRate: string
     tidalVolume: string
     fiO2: string
+}
+
+// Patient Vitals and Respiratory Status (for patient dashboard)
+export interface PatientVitals {
+    spo2: string
+    respiratoryStatus: {
+        isStatic: boolean
+        hasWorsening: boolean
+        hasImprovement: boolean
+        oxygenIncreaseAmount: string
+        oxygenDecreaseAmount: string
+        baselineOxygen: string
+        lastUpdated: string
+    }
 }
 
 export interface ValidationError {
