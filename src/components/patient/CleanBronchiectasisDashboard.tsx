@@ -66,10 +66,38 @@ export default function CleanBronchiectasisDashboard({ patientId }: CleanBronchi
 
         // Medications
         medications: [
-            { name: 'Azithromycin', taken: false },
-            { name: 'Hypertonic Saline', taken: false },
-            { name: 'Bronchodilator', taken: false },
-            { name: 'Mucolytic', taken: false }
+            {
+                medicationId: 'azithromycin-1',
+                drugName: 'Azithromycin',
+                dose: '250mg',
+                frequency: 'three times weekly',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            },
+            {
+                medicationId: 'hypertonic-saline-1',
+                drugName: 'Hypertonic Saline',
+                dose: '4ml',
+                frequency: 'twice daily',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            },
+            {
+                medicationId: 'bronchodilator-bronch-1',
+                drugName: 'Bronchodilator',
+                dose: '2 puffs',
+                frequency: 'as needed',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            },
+            {
+                medicationId: 'mucolytic-bronch-1',
+                drugName: 'Mucolytic',
+                dose: '600mg',
+                frequency: 'twice daily',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            }
         ],
 
         // Side Effects
@@ -438,7 +466,10 @@ export default function CleanBronchiectasisDashboard({ patientId }: CleanBronchi
                         <div className="space-y-4">
                             {formData.medications.map((med, index) => (
                                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span className="font-medium">{med.name}</span>
+                                    <div>
+                                        <span className="font-medium">{med.drugName}</span>
+                                        <p className="text-sm text-gray-600">{med.dose} - {med.frequency}</p>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                         <Checkbox
                                             checked={med.taken}
@@ -630,5 +661,4 @@ export default function CleanBronchiectasisDashboard({ patientId }: CleanBronchi
             )}
         </div>
     )
-}
 }

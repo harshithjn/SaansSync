@@ -64,10 +64,38 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
 
         // Medications
         medications: [
-            { name: 'Pirfenidone', taken: false },
-            { name: 'Nintedanib', taken: false },
-            { name: 'Prednisolone', taken: false },
-            { name: 'N-Acetylcysteine', taken: false }
+            {
+                medicationId: 'pirfenidone-1',
+                drugName: 'Pirfenidone',
+                dose: '267mg',
+                frequency: 'three times daily',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            },
+            {
+                medicationId: 'nintedanib-1',
+                drugName: 'Nintedanib',
+                dose: '150mg',
+                frequency: 'twice daily',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            },
+            {
+                medicationId: 'prednisolone-1',
+                drugName: 'Prednisolone',
+                dose: '10mg',
+                frequency: 'once daily',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            },
+            {
+                medicationId: 'n-acetylcysteine-1',
+                drugName: 'N-Acetylcysteine',
+                dose: '600mg',
+                frequency: 'twice daily',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            }
         ],
 
         // Side Effects
@@ -465,7 +493,10 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
                         <div className="space-y-4">
                             {formData.medications.map((med, index) => (
                                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span className="font-medium">{med.name}</span>
+                                    <div>
+                                        <span className="font-medium">{med.drugName}</span>
+                                        <p className="text-sm text-gray-600">{med.dose} - {med.frequency}</p>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                         <Checkbox
                                             checked={med.taken}

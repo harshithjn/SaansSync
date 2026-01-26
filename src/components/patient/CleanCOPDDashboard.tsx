@@ -65,9 +65,30 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
 
         // Medications
         medications: [
-            { name: 'Salbutamol Inhaler', taken: false },
-            { name: 'Tiotropium', taken: false },
-            { name: 'Budesonide/Formoterol', taken: false }
+            {
+                medicationId: 'salbutamol-copd-1',
+                drugName: 'Salbutamol Inhaler',
+                dose: '2 puffs',
+                frequency: 'as needed',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            },
+            {
+                medicationId: 'tiotropium-1',
+                drugName: 'Tiotropium',
+                dose: '18mcg',
+                frequency: 'once daily',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            },
+            {
+                medicationId: 'budesonide-formoterol-copd-1',
+                drugName: 'Budesonide/Formoterol',
+                dose: '2 puffs',
+                frequency: 'twice daily',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            }
         ],
 
         // Side Effects
@@ -453,7 +474,10 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
                         <div className="space-y-4">
                             {formData.medications.map((med, index) => (
                                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span className="font-medium">{med.name}</span>
+                                    <div>
+                                        <span className="font-medium">{med.drugName}</span>
+                                        <p className="text-sm text-gray-600">{med.dose} - {med.frequency}</p>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                         <Checkbox
                                             checked={med.taken}

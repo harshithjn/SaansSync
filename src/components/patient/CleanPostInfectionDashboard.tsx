@@ -69,10 +69,38 @@ export default function CleanPostInfectionDashboard({ patientId }: CleanPostInfe
 
         // Medications
         medications: [
-            { name: 'Bronchodilator', taken: false },
-            { name: 'Mucolytic', taken: false },
-            { name: 'Anti-inflammatory', taken: false },
-            { name: 'Cough Suppressant', taken: false }
+            {
+                medicationId: 'bronchodilator-1',
+                drugName: 'Bronchodilator',
+                dose: '2 puffs',
+                frequency: 'twice daily',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            },
+            {
+                medicationId: 'mucolytic-1',
+                drugName: 'Mucolytic',
+                dose: '600mg',
+                frequency: 'once daily',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            },
+            {
+                medicationId: 'anti-inflammatory-1',
+                drugName: 'Anti-inflammatory',
+                dose: '10mg',
+                frequency: 'once daily',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            },
+            {
+                medicationId: 'cough-suppressant-1',
+                drugName: 'Cough Suppressant',
+                dose: '15ml',
+                frequency: 'as needed',
+                dateTaken: new Date().toISOString().split('T')[0],
+                taken: false
+            }
         ],
 
         // Side Effects
@@ -456,7 +484,10 @@ export default function CleanPostInfectionDashboard({ patientId }: CleanPostInfe
                         <div className="space-y-4">
                             {formData.medications.map((med, index) => (
                                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                                    <span className="font-medium">{med.name}</span>
+                                    <div>
+                                        <span className="font-medium">{med.drugName}</span>
+                                        <p className="text-sm text-gray-600">{med.dose} - {med.frequency}</p>
+                                    </div>
                                     <div className="flex items-center gap-2">
                                         <Checkbox
                                             checked={med.taken}
@@ -691,5 +722,4 @@ export default function CleanPostInfectionDashboard({ patientId }: CleanPostInfe
             )}
         </div>
     )
-}
 }
