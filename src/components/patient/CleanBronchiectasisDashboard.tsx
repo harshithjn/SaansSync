@@ -629,7 +629,6 @@ export default function CleanBronchiectasisDashboard({ patientId }: CleanBronchi
                 </p>
             )}
         </div>
-            </Card >
-        </div >
     )
+}
 }

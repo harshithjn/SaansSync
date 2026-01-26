@@ -690,7 +690,6 @@ export default function CleanPostInfectionDashboard({ patientId }: CleanPostInfe
                 </p>
             )}
         </div>
-            </Card >
-        </div >
     )
+}
 }
