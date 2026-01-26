@@ -60,7 +60,7 @@ const CACHE_DURATION = 30 * 60 * 1000 // 30 minutes for more frequent updates
 
 export async function requestLocationPermission(): Promise<LocationCoords | null> {
     if (typeof window === 'undefined' || !navigator.geolocation) {
-        console.warn('Geolocation not supported')
+        console.info('Geolocation not supported by this browser')
         return null
     }
 
@@ -72,13 +72,28 @@ export async function requestLocationPermission(): Promise<LocationCoords | null
                     longitude: position.coords.longitude,
                     timestamp: new Date().toISOString()
                 }
-                
+
                 // Store location
                 localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(coords))
+                console.info('Location access granted, using precise AQI data')
                 resolve(coords)
             },
             (error) => {
-                console.error('Location permission denied:', error)
+                // Handle different error types more gracefully
+                let errorMessage = 'Location access not available'
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = 'Location access denied by user - using general area data'
+                        break
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = 'Location information unavailable - using general area data'
+                        break
+                    case error.TIMEOUT:
+                        errorMessage = 'Location request timed out - using general area data'
+                        break
+                }
+
+                console.info(errorMessage)
                 resolve(null)
             },
             {
@@ -115,14 +130,19 @@ export async function fetchRealTimeAQI(coords?: LocationCoords): Promise<AQIData
 
         // Try to get user location if not provided
         if (!coords) {
+            console.info('Requesting location for accurate AQI data...')
             const requestedCoords = await requestLocationPermission()
             coords = requestedCoords || undefined
+
+            if (!coords) {
+                console.info('Using IP-based location for AQI data')
+            }
         }
 
         // Try WAQI API with real token
         try {
             let apiUrl: string
-            
+
             if (coords) {
                 // Use coordinates for nearest station
                 apiUrl = `${WAQI_BASE_URL}/feed/geo:${coords.latitude};${coords.longitude}/?token=${WAQI_API_TOKEN}`
@@ -131,11 +151,11 @@ export async function fetchRealTimeAQI(coords?: LocationCoords): Promise<AQIData
                 apiUrl = `${WAQI_BASE_URL}/feed/here/?token=${WAQI_API_TOKEN}`
             }
 
-            console.log('Fetching AQI from:', apiUrl)
+            console.info('Fetching AQI from WAQI API:', coords ? 'using GPS coordinates' : 'using IP location')
             const response = await fetch(apiUrl)
             const data: WAQIResponse = await response.json()
 
-            console.log('WAQI API Response:', data)
+            console.info('WAQI API Response status:', data.status)
 
             if (data.status === 'ok' && data.data && data.data.aqi > 0) {
                 aqiData = {
@@ -148,18 +168,18 @@ export async function fetchRealTimeAQI(coords?: LocationCoords): Promise<AQIData
                     fetchedAt: new Date().toISOString(),
                     coordinates: coords ? [coords.latitude, coords.longitude] : data.data.city?.geo || [0, 0]
                 }
-                
-                console.log('Successfully fetched live AQI:', aqiData)
+
+                console.info('Successfully fetched live AQI data for:', aqiData.location)
             } else {
-                console.warn('WAQI API returned invalid data:', data)
+                console.info('WAQI API returned no data, using fallback')
             }
         } catch (error) {
-            console.error('WAQI API failed:', error)
+            console.info('WAQI API unavailable, using fallback data')
         }
 
         // If API failed, use location-based realistic data as fallback
         if (!aqiData) {
-            console.log('Using location-based fallback AQI data')
+            console.info('Using location-based AQI estimation')
             aqiData = getLocationBasedAQI(coords)
         }
 
@@ -168,17 +188,17 @@ export async function fetchRealTimeAQI(coords?: LocationCoords): Promise<AQIData
         return aqiData
 
     } catch (error) {
-        console.error('Error fetching real-time AQI:', error)
-        
+        console.info('AQI service temporarily unavailable, using cached or estimated data')
+
         // Return cached data if available, otherwise fallback
         const cached = getCachedAQI()
         if (cached) {
-            console.log('Returning cached AQI data')
+            console.info('Using cached AQI data')
             return cached
         }
-        
+
         // Ultimate fallback with current location estimate
-        console.log('Using ultimate fallback AQI data')
+        console.info('Using estimated AQI data')
         return getLocationBasedAQI()
     }
 }
@@ -200,7 +220,7 @@ function getLocationBasedAQI(coords?: LocationCoords | null): AQIData {
                 coordinates: [coords.latitude, coords.longitude]
             }
         }
-        
+
         // China coordinates (moderate to high pollution)
         if (coords.latitude >= 18 && coords.latitude <= 54 && coords.longitude >= 73 && coords.longitude <= 135) {
             return {
@@ -214,7 +234,7 @@ function getLocationBasedAQI(coords?: LocationCoords | null): AQIData {
                 coordinates: [coords.latitude, coords.longitude]
             }
         }
-        
+
         // US/Europe coordinates (generally better air quality)
         if ((coords.latitude >= 25 && coords.latitude <= 49 && coords.longitude >= -125 && coords.longitude <= -66) ||
             (coords.latitude >= 35 && coords.latitude <= 71 && coords.longitude >= -10 && coords.longitude <= 40)) {
@@ -305,7 +325,7 @@ function getHealthImplications(aqi: number): string {
 
 export function getAQIHealthAdvice(aqi: number, diseaseType?: string): string {
     const category = getAQICategory(aqi)
-    
+
     const baseAdvice = {
         'Good': 'Air quality is good. Normal outdoor activities are safe.',
         'Moderate': 'Air quality is acceptable. Sensitive individuals should consider limiting prolonged outdoor exertion.',
@@ -347,21 +367,21 @@ export function storeAQIData(patientId: string, aqiData: AQIData): void {
     try {
         const stored = localStorage.getItem(AQI_HISTORY_KEY)
         const allData = stored ? JSON.parse(stored) : {}
-        
+
         if (!allData[patientId]) {
             allData[patientId] = []
         }
-        
+
         allData[patientId].push(aqiData)
-        
+
         // Keep only last 30 days of data
         const thirtyDaysAgo = new Date()
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-        
-        allData[patientId] = allData[patientId].filter((data: AQIData) => 
+
+        allData[patientId] = allData[patientId].filter((data: AQIData) =>
             new Date(data.fetchedAt) > thirtyDaysAgo
         )
-        
+
         localStorage.setItem(AQI_HISTORY_KEY, JSON.stringify(allData))
     } catch (error) {
         console.error('Error storing AQI data:', error)
@@ -388,19 +408,19 @@ export async function initializePatientAQI(patientId: string, forceRefresh: bool
         if (forceRefresh) {
             localStorage.removeItem(AQI_CACHE_KEY)
         }
-        
+
         // Request location permission
         const coords = await requestLocationPermission()
-        
+
         // Fetch AQI data
         const aqiData = await fetchRealTimeAQI(coords || undefined)
-        
+
         // Store for history
         storeAQIData(patientId, aqiData)
-        
+
         return aqiData
     } catch (error) {
-        console.error('Error initializing patient AQI:', error)
+        console.info('Unable to initialize live AQI data, using estimated values')
         return getLocationBasedAQI()
     }
 }
@@ -415,11 +435,11 @@ export function hasLocationChangedSignificantly(oldCoords: LocationCoords, newCo
     const R = 6371 // Earth's radius in km
     const dLat = (newCoords.latitude - oldCoords.latitude) * Math.PI / 180
     const dLon = (newCoords.longitude - oldCoords.longitude) * Math.PI / 180
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(oldCoords.latitude * Math.PI / 180) * Math.cos(newCoords.latitude * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2)
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(oldCoords.latitude * Math.PI / 180) * Math.cos(newCoords.latitude * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
     const distance = R * c
-    
+
     return distance > 5 // 5km threshold
 }

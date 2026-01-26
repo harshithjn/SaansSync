@@ -38,19 +38,19 @@ export default function DoctorDashboard({
     const initializeParams = async () => {
       const resolvedParams = await params
       setDoctorId(resolvedParams.doctorId)
-      
+
       // Initialize demo patients if none exist
       const { initializeDemoPatients } = await import('@/lib/patient-storage')
       initializeDemoPatients()
-      
+
       // Initialize demo alerts
       initializeDemoAlerts()
-      
+
       // Load patient folders for this doctor
       const folders = getDoctorPatientFolders(resolvedParams.doctorId)
       setPatientFolders(folders)
       setFilteredPatients(folders)
-      
+
       // Load alert counts
       const counts = getDoctorAlertCounts(resolvedParams.doctorId)
       setAlertCounts(counts)
@@ -72,7 +72,7 @@ export default function DoctorDashboard({
 
     // Disease filter
     if (selectedDisease !== "all") {
-      filtered = filtered.filter(patient => 
+      filtered = filtered.filter(patient =>
         patient.diseaseType.toLowerCase() === selectedDisease.toLowerCase()
       )
     }
@@ -248,9 +248,9 @@ export default function DoctorDashboard({
               Add Patient
             </Button>
           </Link>
-          
-          <Button 
-            variant="outline" 
+
+          <Button
+            variant="outline"
             onClick={() => setShowImportModal(true)}
             className="border-green-600 text-green-600 hover:bg-green-50"
           >
@@ -285,17 +285,16 @@ export default function DoctorDashboard({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredPatients.map((patient) => (
             <div key={patient.patientId} className="relative group">
-              <Card 
+              <Card
                 className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${getFolderGlowClass(patient.folderColor)}`}
               >
                 <Link href={`/doctor/dashboard/${doctorId}/patient/${patient.patientId}`}>
                   <div className="p-4">
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-2">
-                        <div className={`w-4 h-4 rounded-full ${
-                          patient.folderColor === 'green' ? 'bg-green-500' :
+                        <div className={`w-4 h-4 rounded-full ${patient.folderColor === 'green' ? 'bg-green-500' :
                           patient.folderColor === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'
-                        }`} />
+                          }`} />
                         <h4 className="font-semibold text-gray-900">{patient.fullName}</h4>
                       </div>
                       <Badge className={`text-xs ${getRiskBadgeClass(patient.redFlagScore)}`}>
@@ -314,11 +313,10 @@ export default function DoctorDashboard({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-600">Risk Level:</span>
-                        <span className={`font-medium ${
-                          patient.redFlagScore >= 9 ? 'text-red-600' :
+                        <span className={`font-medium ${patient.redFlagScore >= 9 ? 'text-red-600' :
                           patient.redFlagScore >= 7 ? 'text-red-500' :
-                          patient.redFlagScore >= 4 ? 'text-yellow-600' : 'text-green-600'
-                        }`}>
+                            patient.redFlagScore >= 4 ? 'text-yellow-600' : 'text-green-600'
+                          }`}>
                           {getRiskLabel(patient.redFlagScore)}
                         </span>
                       </div>
@@ -344,7 +342,7 @@ export default function DoctorDashboard({
                   </div>
                 </Link>
               </Card>
-              
+
               {/* Action Buttons */}
               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <Link href={`/doctor/dashboard/${doctorId}/patient/${patient.patientId}/edit`}>
@@ -377,7 +375,7 @@ export default function DoctorDashboard({
           </Card>
         )}
       </div>
-      
+
       {/* Import Patient Modal */}
       <ImportPatientModal
         doctorId={doctorId}

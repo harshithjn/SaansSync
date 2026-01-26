@@ -281,38 +281,67 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
                         <p className="text-sm text-gray-600">Loading air quality data...</p>
                     </div>
                 ) : aqiData ? (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6">
-                            <div className="absolute top-0 right-0 w-20 h-20 rounded-full opacity-10"
-                                style={{ backgroundColor: getAQIColor(aqiData.aqi) }}></div>
-                            <div className="relative">
-                                <div className="text-3xl font-bold text-gray-900 mb-2">
-                                    {aqiData.aqi}
-                                </div>
-                                <div className="text-sm font-medium text-gray-700 mb-1">{aqiData.category}</div>
-                                <div className="flex items-center text-xs text-gray-500">
-                                    <MapPin className="w-3 h-3 mr-1" />
-                                    {aqiData.location}
+                    <div>
+                        {/* Location info message */}
+                        {aqiData.location.includes('Estimated') && (
+                            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <div className="flex items-start gap-2">
+                                    <MapPin className="w-4 h-4 text-blue-600 mt-0.5" />
+                                    <div className="text-sm">
+                                        <p className="text-blue-800 font-medium">Using estimated location data</p>
+                                        <p className="text-blue-600 mt-1">
+                                            For more accurate air quality data, you can allow location access when prompted by your browser.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
-                        <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
-                            <div className="text-2xl font-bold text-gray-900 mb-2">{aqiData.pm25}</div>
-                            <div className="text-sm font-medium text-gray-700 mb-1">PM2.5</div>
-                            <div className="text-xs text-gray-500">μg/m³</div>
-                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6">
+                                <div className="absolute top-0 right-0 w-20 h-20 rounded-full opacity-10"
+                                    style={{ backgroundColor: getAQIColor(aqiData.aqi) }}></div>
+                                <div className="relative">
+                                    <div className="text-3xl font-bold text-gray-900 mb-2">
+                                        {aqiData.aqi}
+                                    </div>
+                                    <div className="text-sm font-medium text-gray-700 mb-1">{aqiData.category}</div>
+                                    <div className="flex items-center text-xs text-gray-500">
+                                        <MapPin className="w-3 h-3 mr-1" />
+                                        {aqiData.location}
+                                    </div>
+                                </div>
+                            </div>
 
-                        <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
-                            <div className="text-2xl font-bold text-gray-900 mb-2">{aqiData.pm10}</div>
-                            <div className="text-sm font-medium text-gray-700 mb-1">PM10</div>
-                            <div className="text-xs text-gray-500">μg/m³</div>
+                            <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+                                <div className="text-2xl font-bold text-gray-900 mb-2">{aqiData.pm25}</div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">PM2.5</div>
+                                <div className="text-xs text-gray-500">μg/m³</div>
+                            </div>
+
+                            <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+                                <div className="text-2xl font-bold text-gray-900 mb-2">{aqiData.pm10}</div>
+                                <div className="text-sm font-medium text-gray-700 mb-1">PM10</div>
+                                <div className="text-xs text-gray-500">μg/m³</div>
+                            </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center py-8 text-gray-500">
-                        <Wind className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                        <p>Unable to load air quality data</p>
+                    <div className="text-center py-8">
+                        <Wind className="w-8 h-8 mx-auto mb-3 text-gray-400" />
+                        <p className="text-gray-600 font-medium mb-2">Air quality data temporarily unavailable</p>
+                        <p className="text-sm text-gray-500 mb-4">
+                            We're using estimated values based on your general area.
+                        </p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => initializeDashboard()}
+                            className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                        >
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            Try Again
+                        </Button>
                     </div>
                 )}
             </Card>

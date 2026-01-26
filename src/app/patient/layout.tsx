@@ -25,7 +25,17 @@ export default function PatientLayout({
     const [session, setSession] = useState<AuthSession | null>(null)
     const [isLoading, setIsLoading] = useState(true)
 
-    // Skip layout for login page
+    useEffect(() => {
+        const storedSession = getStoredSession()
+        if (!storedSession || storedSession.role !== "PATIENT") {
+            router.push("/patient/login")
+            return
+        }
+        setSession(storedSession)
+        setIsLoading(false)
+    }, [router])
+
+    // Skip layout for login page - moved after hooks
     if (pathname === '/patient/login') {
         return <>{children}</>
     }
@@ -56,16 +66,6 @@ export default function PatientLayout({
             isActive: pathname === `/patient/help`
         }
     ]
-
-    useEffect(() => {
-        const storedSession = getStoredSession()
-        if (!storedSession || storedSession.role !== "PATIENT") {
-            router.push("/patient/login")
-            return
-        }
-        setSession(storedSession)
-        setIsLoading(false)
-    }, [router])
 
     const handleLogout = () => {
         clearSession()

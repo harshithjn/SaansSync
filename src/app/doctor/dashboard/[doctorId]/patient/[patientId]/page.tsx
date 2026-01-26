@@ -38,23 +38,17 @@ export default function PatientDetailView({
 
       // Load patient folder
       const folders = getDoctorPatientFolders(resolvedParams.doctorId)
-      console.log('All doctor folders:', folders)
-      console.log('Looking for patientId:', resolvedParams.patientId)
       const folder = folders.find(f => f.patientId === resolvedParams.patientId)
-      console.log('Found folder:', folder)
       setPatientFolder(folder || null)
 
-      // Load patient data - use the correct storage method
+      // Load patient data
       let data = getPatientDataById(resolvedParams.patientId)
-      console.log('Patient data from getPatientDataById:', data)
 
-      // If not found, let's also check the stored patients directly
+      // If not found, check stored patients directly
       if (!data) {
         const { getStoredPatients } = await import('@/lib/patient-storage')
         const allPatients = getStoredPatients()
-        console.log('All stored patients:', allPatients)
         const patientRecord = allPatients.find(p => p.credentials.patientId === resolvedParams.patientId)
-        console.log('Found patient record:', patientRecord)
         if (patientRecord) {
           data = patientRecord.patientData
         }
@@ -66,14 +60,12 @@ export default function PatientDetailView({
           const oldFormatData = localStorage.getItem(`patient_${resolvedParams.patientId}`)
           if (oldFormatData) {
             data = JSON.parse(oldFormatData)
-            console.log('Found patient data in old format:', data)
           }
         } catch (error) {
           console.error('Error reading old format data:', error)
         }
       }
 
-      console.log('Final patient data:', data)
       setPatientData(data)
 
       // Load prescriptions

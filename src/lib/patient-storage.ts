@@ -91,8 +91,14 @@ export const getPatientDataArray = (): PatientData[] => {
 export const initializeDemoPatients = (): void => {
     if (typeof window === 'undefined') return
 
-    // Clear existing patients for fresh demo
-    clearStoredPatients()
+    // Only initialize if no patients exist
+    const existingPatients = getStoredPatients()
+    if (existingPatients.length > 0) {
+        console.log('Patients already exist, skipping demo initialization')
+        return
+    }
+
+    console.log('No patients found, initializing demo patients')
 
     // Create demo patients
     const demoPatients = [
@@ -207,7 +213,7 @@ export const initializeDemoPatients = (): void => {
             }
 
             storePatient(credentials, patientData)
-            
+
             // Also create patient folder for demo doctor
             import('./doctor-patient-mapping').then(({ createPatientFolder }) => {
                 createPatientFolder(patientData, "doctor@gmail.com", credentials.patientId, Math.floor(Math.random() * 10) + 1, Math.floor(Math.random() * 3))
@@ -235,7 +241,7 @@ export const updatePatientData = (patientId: string, updatedData: PatientData): 
     try {
         const patients = getStoredPatients()
         const patientIndex = patients.findIndex(p => p.credentials.patientId === patientId)
-        
+
         if (patientIndex >= 0) {
             patients[patientIndex].patientData = updatedData
             patients[patientIndex].updatedAt = new Date().toISOString()
@@ -243,7 +249,7 @@ export const updatePatientData = (patientId: string, updatedData: PatientData): 
             console.log('Patient data updated successfully:', patientId)
             return true
         }
-        
+
         console.error('Patient not found for update:', patientId)
         return false
     } catch (error) {
