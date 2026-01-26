@@ -12,12 +12,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { fetchRealTimeAQI, getAQIColor, shouldAlertForAQI, forceRefreshAQI } from "@/lib/aqi-service"
 import { createDailyLog, canLogToday, getRemainingLogsToday } from "@/lib/patient-logging"
 import { calculateRedFlagScore } from "@/lib/red-flag-scoring"
-import { 
-    Wind, 
-    Activity, 
-    Thermometer, 
-    Droplets, 
-    AlertTriangle, 
+import {
+    Wind,
+    Activity,
+    Thermometer,
+    Droplets,
+    AlertTriangle,
     CheckCircle,
     Clock,
     Plus,
@@ -35,19 +35,19 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
     // AQI State
     const [aqiData, setAqiData] = useState<any>(null)
     const [aqiLoading, setAqiLoading] = useState(true)
-    
+
     // Logging State
     const [canLog, setCanLog] = useState(true)
     const [remainingLogs, setRemainingLogs] = useState(2)
     const [isSubmitting, setIsSubmitting] = useState(false)
-    
+
     // Form Data
     const [formData, setFormData] = useState({
         // Common Data
         spo2AtRest: 98,
         spo2OnExertion: 95,
         mMRCScale: 0,
-        
+
         // Asthma Specific
         peakFlowPercent: 85,
         nightWaking: false,
@@ -56,20 +56,20 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
         relieverUse: false,
         activityLimitation: false,
         controlLevel: 'well-controlled' as 'well-controlled' | 'partly-controlled' | 'uncontrolled',
-        
+
         // Symptoms VAS
         breathlessness: 2,
         cough: 1,
         chestTightness: 1,
         wheezing: 2,
-        
+
         // Medications
         medications: [
             { name: 'Salbutamol Inhaler (Rescue)', taken: false },
             { name: 'Budesonide/Formoterol', taken: false },
             { name: 'Montelukast', taken: false }
         ],
-        
+
         // Side Effects
         sideEffects: [] as string[],
         customSideEffect: ''
@@ -160,15 +160,15 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
             if (result.success) {
                 // Show success message
                 alert('Health log submitted successfully!')
-                
+
                 // Show alert if created
                 if (result.alert) {
                     alert(`Alert Generated: ${result.alert.message}`)
                 }
-                
+
                 // Update logging status
                 checkLoggingStatus()
-                
+
                 // Reset form or redirect
                 // resetForm()
             } else {
@@ -190,14 +190,14 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
 
     const handleSideEffectChange = (effect: string, checked: boolean) => {
         if (checked) {
-            setFormData(prev => ({ 
-                ...prev, 
-                sideEffects: [...prev.sideEffects, effect] 
+            setFormData(prev => ({
+                ...prev,
+                sideEffects: [...prev.sideEffects, effect]
             }))
         } else {
-            setFormData(prev => ({ 
-                ...prev, 
-                sideEffects: prev.sideEffects.filter(e => e !== effect) 
+            setFormData(prev => ({
+                ...prev,
+                sideEffects: prev.sideEffects.filter(e => e !== effect)
             }))
         }
     }
@@ -246,9 +246,9 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                         <Wind className="w-5 h-5 text-blue-600" />
                         <h3 className="text-lg font-semibold">Air Quality Index</h3>
                     </div>
-                    <Button 
-                        variant="outline" 
-                        size="sm" 
+                    <Button
+                        variant="outline"
+                        size="sm"
                         onClick={async () => {
                             setAqiLoading(true)
                             try {
@@ -284,13 +284,13 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                                 {aqiData.location}
                             </div>
                         </div>
-                        
+
                         <div className="text-center p-4 bg-gray-50 rounded-lg">
                             <div className="text-2xl font-bold text-gray-700">{aqiData.pm25}</div>
                             <div className="text-sm font-medium">PM2.5</div>
                             <div className="text-xs text-gray-600">μg/m³</div>
                         </div>
-                        
+
                         <div className="text-center p-4 bg-gray-50 rounded-lg">
                             <div className="text-2xl font-bold text-gray-700">{aqiData.pm10}</div>
                             <div className="text-sm font-medium">PM10</div>
@@ -316,7 +316,7 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                 <TabsContent value="vitals" className="space-y-4">
                     <Card className="p-6">
                         <h3 className="text-lg font-semibold mb-4">Vital Signs</h3>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
                                 <div>
@@ -333,7 +333,7 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                                         <span className="text-lg font-bold w-12">{formData.spo2AtRest}%</span>
                                     </div>
                                 </div>
-                                
+
                                 <div>
                                     <label className="text-sm font-medium mb-2 block">SpO₂ on Exertion (%)</label>
                                     <div className="flex items-center gap-4">
@@ -349,7 +349,7 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-sm font-medium mb-2 block">Peak Flow (% of personal best)</label>
@@ -365,7 +365,7 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                                         <span className="text-lg font-bold w-12">{formData.peakFlowPercent}%</span>
                                     </div>
                                 </div>
-                                
+
                                 <div>
                                     <label className="text-sm font-medium mb-2 block">mMRC Breathlessness Scale</label>
                                     <Select value={formData.mMRCScale.toString()} onValueChange={(value) => setFormData(prev => ({ ...prev, mMRCScale: parseInt(value) }))}>
@@ -389,7 +389,7 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                 <TabsContent value="symptoms" className="space-y-4">
                     <Card className="p-6">
                         <h3 className="text-lg font-semibold mb-4">Symptom Severity (0-10 Scale)</h3>
-                        
+
                         <div className="space-y-6">
                             {[
                                 { key: 'breathlessness', label: 'Breathlessness', icon: Activity },
@@ -422,7 +422,7 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                 <TabsContent value="medications" className="space-y-4">
                     <Card className="p-6">
                         <h3 className="text-lg font-semibold mb-4">Today's Medications</h3>
-                        
+
                         <div className="space-y-4">
                             {formData.medications.map((med, index) => (
                                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -460,7 +460,7 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                 <TabsContent value="asthma-specific" className="space-y-4">
                     <Card className="p-6">
                         <h3 className="text-lg font-semibold mb-4">Asthma Control Assessment</h3>
-                        
+
                         <div className="space-y-6">
                             <div>
                                 <label className="text-sm font-medium mb-2 block">Rescue Inhaler Puffs (last 24 hours)</label>
@@ -488,7 +488,7 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                                         <label className="text-sm font-medium">Night waking due to asthma symptoms</label>
                                     </div>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-2">
                                     <Checkbox
                                         checked={formData.daytimeSymptoms}
@@ -496,7 +496,7 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                                     />
                                     <label className="text-sm font-medium">Daytime symptoms (more than twice a week)</label>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-2">
                                     <Checkbox
                                         checked={formData.activityLimitation}
@@ -504,7 +504,7 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                                     />
                                     <label className="text-sm font-medium">Activity limitation due to asthma</label>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-2">
                                     <Checkbox
                                         checked={formData.relieverUse}
@@ -539,8 +539,8 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                     <p className="text-sm text-green-700">
                         Please review all your entries above before submitting your daily health log.
                     </p>
-                    
-                    <Button 
+
+                    <Button
                         onClick={handleSubmit}
                         disabled={!canLog || isSubmitting}
                         className="w-full max-w-md bg-green-600 hover:bg-green-700 text-white"
@@ -558,7 +558,7 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                             </>
                         )}
                     </Button>
-                    
+
                     {!canLog && (
                         <p className="text-sm text-gray-600">
                             Daily logging limit reached. Come back tomorrow to log again.
@@ -568,4 +568,5 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
             </Card>
         </div>
     )
+}
 }
