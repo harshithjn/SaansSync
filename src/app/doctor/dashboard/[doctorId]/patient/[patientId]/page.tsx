@@ -227,7 +227,7 @@ export default function PatientDetailView({
 
       const link = document.createElement('a')
       link.href = URL.createObjectURL(dataBlob)
-      link.download = `patient_${patientFolder.fullName.replace(/\s+/g, '_')}_${patientId}.json`
+      link.download = `patient_${patientFolder?.fullName?.replace(/\s+/g, '_') || 'unknown'}_${patientId}.json`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
