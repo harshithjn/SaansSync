@@ -624,4 +624,3 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
         </div>
     )
 }
-}

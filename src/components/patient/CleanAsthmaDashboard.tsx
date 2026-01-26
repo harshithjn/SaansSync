@@ -569,4 +569,3 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
         </div>
     )
 }
-}
