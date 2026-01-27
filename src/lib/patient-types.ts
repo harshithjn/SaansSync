@@ -24,38 +24,50 @@ export const ILD_SUBTYPES = [
     "LIP",
     "LCH",
     "LAM",
-    "Eosinophilic pneumonia"
+    "Eosinophilic pneumonia",
+    "Others"
 ]
 
 export const OAD_SUBTYPES = [
     "Mild persistent asthma",
-    "Moderate persistent asthma", 
+    "Moderate persistent asthma",
     "Severe persistent asthma",
+    "Asthma-COPD Overlap (ACO)",
+    "Others"
+]
+
+export const COPD_SUBTYPES = [
     "Mild COPD",
     "Moderate COPD",
     "Severe COPD",
     "Very severe COPD",
     "Asthma-COPD Overlap (ACO)",
-    "Other"
+    "Others"
 ]
 
 export const BRONCHIECTASIS_SUBTYPES = [
     "Post-infectious",
+    "Post-Tubercular",
     "Cystic Fibrosis related",
     "ABPA related",
     "Primary Ciliary Dyskinesia",
     "Idiopathic",
-    "Other"
+    "Others"
 ]
 
 export const POST_ICU_SUBTYPES = [
+    "Asthma",
+    "COPD",
+    "ILD",
+    "Bronchiectasis",
+    "Post-infection recovery",
     "ARDS recovery",
     "Sepsis recovery",
     "COVID ICU recovery",
     "Post ventilation lung injury",
     "Post surgical ICU recovery",
     "Neuromuscular ICU recovery",
-    "Other Post ICU conditions"
+    "Others"
 ]
 
 export const CTD_TYPES = [
@@ -91,7 +103,13 @@ export const CO_MORBIDITIES_LIST = [
     "Past Pulmonary TB",
     "ABPA (Allergic Bronchopulmonary Aspergillosis)",
     "CCPA (Chronic Cavitary Pulmonary Aspergillosis)",
-    "Other"
+    "Allergic Rhinitis",
+    "Hepatitis A",
+    "Hepatitis B",
+    "Hepatitis C",
+    "HIV",
+    "Cor Pulmonale",
+    "Others"
 ]
 
 export const ROUTE_OPTIONS = [
@@ -150,6 +168,8 @@ export interface StructuredDiagnosis {
     subtype: string
     ctdType?: string
     sarcoidosisStage?: string
+    fibroticiLD?: string  // For ILD: "Yes" or "No"
+    customSubtype?: string // For "Others" option with free text
 }
 
 // Types
@@ -157,6 +177,7 @@ export interface PatientData {
     // Step 1: Basic Information (Updated)
     fullName: string
     mobileNumber: string
+    alternateMobileNumber?: string
     emailId: string
     age: string
     sex: string
@@ -168,7 +189,6 @@ export interface PatientData {
     comorbidities: string[]
     customComorbidity: string
     occupationalExposure: string
-    additionalNotes: string
     smokingStatus: string
     packYears: string
 
@@ -187,6 +207,9 @@ export interface PatientData {
 
     // Patient Vitals (for patient dashboard)
     vitals?: PatientVitals
+
+    // Additional Notes
+    additionalNotes?: string
 }
 
 export interface Medication {
@@ -206,6 +229,8 @@ export interface PFTRecord {
     // Spirometry
     fvc: string
     fev1: string
+    fvcLitres: string  // FVC in litres - numeric input
+    fev1Litres: string // FEV1 in litres - numeric input
     // Diffusion
     dlco: string
     // Exercise
@@ -278,3 +303,62 @@ export interface StepValidation {
     isValid: boolean
     errors: ValidationError[]
 }
+
+// Prescription Types
+export interface Prescription {
+    id: string
+    patientId: string
+    doctorId: string
+    patientName: string
+    doctorName: string
+    date: string
+    medications: PrescriptionMedication[]
+    personalizedAlerts: PersonalizedAlert[]
+    diagnosis: string
+    instructions?: string
+}
+
+export interface PrescriptionMedication {
+    drugName: string
+    dose: string
+    frequency: string
+    duration?: string
+    instructions?: string
+}
+
+export interface PersonalizedAlert {
+    id: string
+    type: 'pulmonary-rehabilitation' | 'chest-physiotherapy' | 'suctioning' | 'custom'
+    name: string
+    frequency: string // "1 time a day", "2 times a day", etc.
+    interval?: string // "every 6 hours", "every 4 hours", etc.
+    instructions?: string
+    isActive: boolean
+}
+
+// Alert frequency options
+export const PERSONALIZED_ALERT_TYPES = [
+    {
+        type: 'pulmonary-rehabilitation',
+        name: 'Pulmonary Rehabilitation',
+        frequencies: ['1 time a day', '2 times a day']
+    },
+    {
+        type: 'chest-physiotherapy',
+        name: 'Chest Physiotherapy',
+        frequencies: ['1 time', '2 times', '3 times', '4 times'],
+        intervals: ['every 6 hours', 'every 4 hours']
+    },
+    {
+        type: 'suctioning',
+        name: 'Suctioning',
+        frequencies: ['1 time', '2 times', '3 times', '4 times'],
+        intervals: ['every 6 hours', 'every 4 hours']
+    },
+    {
+        type: 'custom',
+        name: 'Custom Alert',
+        frequencies: ['1 time a day', '2 times a day', '3 times a day', '4 times a day'],
+        intervals: ['every 6 hours', 'every 4 hours', 'every 8 hours', 'every 12 hours']
+    }
+]

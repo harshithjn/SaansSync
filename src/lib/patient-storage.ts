@@ -100,124 +100,126 @@ export const initializeDemoPatients = (): void => {
 
     console.log('No patients found, initializing demo patients')
 
-    // Create demo patients
-    const demoPatients = [
-        {
-            email: "john.doe@example.com",
-            fullName: "John Doe",
-            age: "45",
-            sex: "Male",
-            mobileNumber: "9876543210",
-            primaryDiagnosisCategory: "Interstitial Lung Disease (ILD)",
-            subtype: "UIP"
-        },
-        {
-            email: "jane.smith@example.com",
-            fullName: "Jane Smith",
-            age: "52",
-            sex: "Female",
-            mobileNumber: "9876543211",
-            primaryDiagnosisCategory: "Bronchial Asthma",
-            subtype: "Moderate persistent asthma"
-        },
-        {
-            email: "mike.johnson@example.com",
-            fullName: "Mike Johnson",
-            age: "58",
-            sex: "Male",
-            mobileNumber: "9876543212",
-            primaryDiagnosisCategory: "COPD (Chronic Obstructive Pulmonary Disease)",
-            subtype: "Moderate COPD"
-        },
-        {
-            email: "bob.wilson@example.com",
-            fullName: "Bob Wilson",
-            age: "38",
-            sex: "Male",
-            mobileNumber: "9876543213",
-            primaryDiagnosisCategory: "Bronchiectasis",
-            subtype: "Idiopathic"
-        },
-        {
-            email: "alice.brown@example.com",
-            fullName: "Alice Brown",
-            age: "41",
-            sex: "Female",
-            mobileNumber: "9876543214",
-            primaryDiagnosisCategory: "Post ICU Recovery",
-            subtype: "ARDS Recovery"
-        }
-    ]
-
-    demoPatients.forEach(demo => {
-        // Import auth utilities
-        import('./auth-utils').then(({ createPatientCredentials }) => {
-            const credentials = createPatientCredentials(demo.email)
-
-            const patientData: PatientData = {
-                fullName: demo.fullName,
-                mobileNumber: demo.mobileNumber,
-                emailId: demo.email,
-                age: demo.age,
-                sex: demo.sex,
-                registrationDate: new Date().toISOString().split('T')[0],
-                diagnosis: {
-                    primaryCategory: demo.primaryDiagnosisCategory,
-                    subtype: demo.subtype,
-                    ctdType: "",
-                    sarcoidosisStage: ""
+    // Import required functions
+    import('./auth-utils').then(({ createPatientCredentials }) => {
+        import('./doctor-patient-mapping').then(({ createPatientFolder }) => {
+            // Create demo patients
+            const demoPatients = [
+                {
+                    email: "john.doe@example.com",
+                    fullName: "John Doe",
+                    age: "45",
+                    sex: "Male",
+                    mobileNumber: "9876543210",
+                    primaryDiagnosisCategory: "Interstitial Lung Disease (ILD)",
+                    subtype: "UIP"
                 },
-                medicalHistory: "Demo patient for testing",
-                comorbidities: [],
-                customComorbidity: "",
-                occupationalExposure: "",
-                additionalNotes: "",
-                smokingStatus: "Never Smoked",
-                packYears: "",
-                medications: [],
-                pftRecords: [],
-                requiresRespiratorySupport: "No",
-                ltot: { enabled: false, oxygenLitres: "" },
-                bipap: {
-                    enabled: false,
-                    overnightUse: false,
-                    allTimeUse: false,
-                    requiresOxygen: false,
-                    oxygenLitres: "",
-                    ipap: "",
-                    epap: "",
-                    pressureSupport: "",
-                    respiratoryRate: ""
+                {
+                    email: "jane.smith@example.com",
+                    fullName: "Jane Smith",
+                    age: "52",
+                    sex: "Female",
+                    mobileNumber: "9876543211",
+                    primaryDiagnosisCategory: "Bronchial Asthma",
+                    subtype: "Moderate persistent asthma"
                 },
-                invasiveVentilation: {
-                    enabled: false,
-                    ipap: "",
-                    epap: "",
-                    pressureSupport: "",
-                    respiratoryRate: "",
-                    fiO2: ""
+                {
+                    email: "mike.johnson@example.com",
+                    fullName: "Mike Johnson",
+                    age: "58",
+                    sex: "Male",
+                    mobileNumber: "9876543212",
+                    primaryDiagnosisCategory: "COPD (Chronic Obstructive Pulmonary Disease)",
+                    subtype: "Moderate COPD"
                 },
-                tracheostomy: {
-                    enabled: false,
-                    airwayPatencyRequired: true,
-                    oxygenViaTrach: false,
-                    oxygenLitres: "",
-                    requiresVentilator: false,
-                    ipap: "",
-                    epap: "",
-                    pressureSupport: "",
-                    respiratoryRate: "",
-                    tidalVolume: "",
-                    fiO2: ""
+                {
+                    email: "bob.wilson@example.com",
+                    fullName: "Bob Wilson",
+                    age: "38",
+                    sex: "Male",
+                    mobileNumber: "9876543213",
+                    primaryDiagnosisCategory: "Bronchiectasis",
+                    subtype: "Idiopathic"
+                },
+                {
+                    email: "alice.brown@example.com",
+                    fullName: "Alice Brown",
+                    age: "41",
+                    sex: "Female",
+                    mobileNumber: "9876543214",
+                    primaryDiagnosisCategory: "Post ICU Recovery",
+                    subtype: "ARDS Recovery"
                 }
-            }
+            ]
 
-            storePatient(credentials, patientData)
+            demoPatients.forEach(demo => {
+                const credentials = createPatientCredentials(demo.email)
 
-            // Also create patient folder for demo doctor
-            import('./doctor-patient-mapping').then(({ createPatientFolder }) => {
+                const patientData: PatientData = {
+                    fullName: demo.fullName,
+                    mobileNumber: demo.mobileNumber,
+                    emailId: demo.email,
+                    age: demo.age,
+                    sex: demo.sex,
+                    registrationDate: new Date().toISOString().split('T')[0],
+                    diagnosis: {
+                        primaryCategory: demo.primaryDiagnosisCategory,
+                        subtype: demo.subtype,
+                        ctdType: "",
+                        sarcoidosisStage: ""
+                    },
+                    medicalHistory: "Demo patient for testing",
+                    comorbidities: [],
+                    customComorbidity: "",
+                    occupationalExposure: "",
+                    additionalNotes: "",
+                    smokingStatus: "Never Smoked",
+                    packYears: "",
+                    medications: [],
+                    pftRecords: [],
+                    requiresRespiratorySupport: "No",
+                    ltot: { enabled: false, oxygenLitres: "" },
+                    bipap: {
+                        enabled: false,
+                        overnightUse: false,
+                        allTimeUse: false,
+                        requiresOxygen: false,
+                        oxygenLitres: "",
+                        ipap: "",
+                        epap: "",
+                        pressureSupport: "",
+                        respiratoryRate: ""
+                    },
+                    invasiveVentilation: {
+                        enabled: false,
+                        ipap: "",
+                        epap: "",
+                        pressureSupport: "",
+                        respiratoryRate: "",
+                        fiO2: ""
+                    },
+                    tracheostomy: {
+                        enabled: false,
+                        airwayPatencyRequired: true,
+                        oxygenViaTrach: false,
+                        oxygenLitres: "",
+                        requiresVentilator: false,
+                        ipap: "",
+                        epap: "",
+                        pressureSupport: "",
+                        respiratoryRate: "",
+                        tidalVolume: "",
+                        fiO2: ""
+                    }
+                }
+
+                storePatient(credentials, patientData)
+
+                // Also create patient folder for demo doctor
                 createPatientFolder(patientData, "doctor@gmail.com", credentials.patientId, Math.floor(Math.random() * 10) + 1, Math.floor(Math.random() * 3))
             })
+
+            console.log('Demo patients initialized successfully')
         })
     })
 }
@@ -227,6 +229,137 @@ export const clearStoredPatients = (): void => {
     if (typeof window === 'undefined') return
     localStorage.removeItem(PATIENTS_STORAGE_KEY)
     console.log('All stored patients cleared')
+}
+
+// Force reinitialize demo patients (for testing)
+export const forceInitializeDemoPatients = (): void => {
+    if (typeof window === 'undefined') return
+    
+    clearStoredPatients()
+    console.log('Forcing demo patient initialization...')
+    
+    // Import required functions
+    import('./auth-utils').then(({ createPatientCredentials }) => {
+        import('./doctor-patient-mapping').then(({ createPatientFolder }) => {
+            // Create demo patients
+            const demoPatients = [
+                {
+                    email: "john.doe@example.com",
+                    fullName: "John Doe",
+                    age: "45",
+                    sex: "Male",
+                    mobileNumber: "9876543210",
+                    primaryDiagnosisCategory: "Interstitial Lung Disease (ILD)",
+                    subtype: "UIP"
+                },
+                {
+                    email: "jane.smith@example.com",
+                    fullName: "Jane Smith",
+                    age: "52",
+                    sex: "Female",
+                    mobileNumber: "9876543211",
+                    primaryDiagnosisCategory: "Bronchial Asthma",
+                    subtype: "Moderate persistent asthma"
+                },
+                {
+                    email: "mike.johnson@example.com",
+                    fullName: "Mike Johnson",
+                    age: "58",
+                    sex: "Male",
+                    mobileNumber: "9876543212",
+                    primaryDiagnosisCategory: "COPD (Chronic Obstructive Pulmonary Disease)",
+                    subtype: "Moderate COPD"
+                },
+                {
+                    email: "bob.wilson@example.com",
+                    fullName: "Bob Wilson",
+                    age: "38",
+                    sex: "Male",
+                    mobileNumber: "9876543213",
+                    primaryDiagnosisCategory: "Bronchiectasis",
+                    subtype: "Idiopathic"
+                },
+                {
+                    email: "alice.brown@example.com",
+                    fullName: "Alice Brown",
+                    age: "41",
+                    sex: "Female",
+                    mobileNumber: "9876543214",
+                    primaryDiagnosisCategory: "Post ICU Recovery",
+                    subtype: "ARDS Recovery"
+                }
+            ]
+
+            demoPatients.forEach(demo => {
+                const credentials = createPatientCredentials(demo.email)
+
+                const patientData: PatientData = {
+                    fullName: demo.fullName,
+                    mobileNumber: demo.mobileNumber,
+                    emailId: demo.email,
+                    age: demo.age,
+                    sex: demo.sex,
+                    registrationDate: new Date().toISOString().split('T')[0],
+                    diagnosis: {
+                        primaryCategory: demo.primaryDiagnosisCategory,
+                        subtype: demo.subtype,
+                        ctdType: "",
+                        sarcoidosisStage: ""
+                    },
+                    medicalHistory: "Demo patient for testing",
+                    comorbidities: [],
+                    customComorbidity: "",
+                    occupationalExposure: "",
+                    additionalNotes: "",
+                    smokingStatus: "Never Smoked",
+                    packYears: "",
+                    medications: [],
+                    pftRecords: [],
+                    requiresRespiratorySupport: "No",
+                    ltot: { enabled: false, oxygenLitres: "" },
+                    bipap: {
+                        enabled: false,
+                        overnightUse: false,
+                        allTimeUse: false,
+                        requiresOxygen: false,
+                        oxygenLitres: "",
+                        ipap: "",
+                        epap: "",
+                        pressureSupport: "",
+                        respiratoryRate: ""
+                    },
+                    invasiveVentilation: {
+                        enabled: false,
+                        ipap: "",
+                        epap: "",
+                        pressureSupport: "",
+                        respiratoryRate: "",
+                        fiO2: ""
+                    },
+                    tracheostomy: {
+                        enabled: false,
+                        airwayPatencyRequired: true,
+                        oxygenViaTrach: false,
+                        oxygenLitres: "",
+                        requiresVentilator: false,
+                        ipap: "",
+                        epap: "",
+                        pressureSupport: "",
+                        respiratoryRate: "",
+                        tidalVolume: "",
+                        fiO2: ""
+                    }
+                }
+
+                storePatient(credentials, patientData)
+
+                // Also create patient folder for demo doctor
+                createPatientFolder(patientData, "doctor@gmail.com", credentials.patientId, Math.floor(Math.random() * 10) + 1, Math.floor(Math.random() * 3))
+            })
+
+            console.log('Demo patients force initialized successfully')
+        })
+    })
 }
 
 // Get patient count

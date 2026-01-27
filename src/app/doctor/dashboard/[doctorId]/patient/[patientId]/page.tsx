@@ -9,8 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PatientFolder, PrescribedMedication, DoctorInstruction, Alert } from "@/lib/monitoring-types"
 import { getDoctorPatientFolders } from "@/lib/doctor-patient-mapping"
 import { getPatientDataById } from "@/lib/patient-storage"
-import { ArrowLeft, User, Calendar, MapPin, Phone, Mail, AlertTriangle, Pill, FileText, TrendingUp, Download, Edit, Bell, MessageSquare, Trash2, Share, Import, MoreHorizontal } from "lucide-react"
+import { ArrowLeft, User, Calendar, MapPin, Phone, Mail, AlertTriangle, Pill, FileText, TrendingUp, Download, Edit, Bell, MessageSquare, Trash2, Share, Import, MoreHorizontal, FileOutput } from "lucide-react"
 import Link from "next/link"
+import PrescriptionModal from "@/components/doctor/PrescriptionModal"
 
 export default function PatientDetailView({
   params,
@@ -27,12 +28,19 @@ export default function PatientDetailView({
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [messages, setMessages] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [showPrescriptionModal, setShowPrescriptionModal] = useState(false)
+  const [doctorSession, setDoctorSession] = useState<any>(null)
 
   useEffect(() => {
     const initializeParams = async () => {
       const resolvedParams = await params
       setDoctorId(resolvedParams.doctorId)
       setPatientId(resolvedParams.patientId)
+
+      // Load doctor session
+      const { getDoctorBySession } = await import('@/lib/doctor-session')
+      const session = getDoctorBySession()
+      setDoctorSession(session)
 
       console.log('Loading patient details for:', resolvedParams.patientId)
 
@@ -548,14 +556,61 @@ export default function PatientDetailView({
         <TabsContent value="medications" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Medication Management</h3>
-            <Button>
-              <Pill className="w-4 h-4 mr-2" />
-              Add Prescription
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setShowPrescriptionModal(true)}>
+                <FileOutput className="w-4 h-4 mr-2" />
+                Generate Prescription
+              </Button>
+              <Button variant="outline">
+                <Pill className="w-4 h-4 mr-2" />
+                Add Medication
+              </Button>
+            </div>
           </div>
 
+          {/* Current Medications from Patient Data */}
+          {patientData.medications && patientData.medications.length > 0 && (
+            <Card className="p-4">
+              <h4 className="font-medium mb-3">Current Medications</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-2">Route</th>
+                      <th className="text-left p-2">Drug Name</th>
+                      <th className="text-left p-2">Dose</th>
+                      <th className="text-left p-2">Frequency</th>
+                      <th className="text-left p-2">Start Date</th>
+                      <th className="text-left p-2">End Date</th>
+                      <th className="text-left p-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {patientData.medications.map((med: any, index: number) => (
+                      <tr key={med.id || index} className="border-b">
+                        <td className="p-2">{med.route}</td>
+                        <td className="p-2">{med.customDrugName || med.drugName}</td>
+                        <td className="p-2">{med.dose}</td>
+                        <td className="p-2">{med.frequency}</td>
+                        <td className="p-2">{new Date(med.startDate).toLocaleDateString()}</td>
+                        <td className="p-2">{med.endDate ? new Date(med.endDate).toLocaleDateString() : 'Ongoing'}</td>
+                        <td className="p-2">
+                          <Badge variant={med.isActive ? "default" : "secondary"}>
+                            {med.isActive ? "Active" : "Past"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
+
+          {/* Prescribed Medications */}
           {prescriptions.length > 0 ? (
             <Card className="p-4">
+              <h4 className="font-medium mb-3">Prescribed Medications</h4>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -596,15 +651,17 @@ export default function PatientDetailView({
               </div>
             </Card>
           ) : (
-            <Card className="p-8 text-center">
-              <Pill className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Medications</h3>
-              <p className="text-gray-600 mb-4">No prescriptions have been added for this patient yet.</p>
-              <Button>
-                <Pill className="w-4 h-4 mr-2" />
-                Add First Prescription
-              </Button>
-            </Card>
+            (!patientData.medications || patientData.medications.length === 0) && (
+              <Card className="p-8 text-center">
+                <Pill className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Medications</h3>
+                <p className="text-gray-600 mb-4">No medications have been added for this patient yet.</p>
+                <Button onClick={() => setShowPrescriptionModal(true)}>
+                  <FileOutput className="w-4 h-4 mr-2" />
+                  Generate First Prescription
+                </Button>
+              </Card>
+            )
           )}
         </TabsContent>
 
@@ -784,6 +841,15 @@ export default function PatientDetailView({
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Prescription Modal */}
+      <PrescriptionModal
+        isOpen={showPrescriptionModal}
+        onClose={() => setShowPrescriptionModal(false)}
+        patientData={patientData}
+        doctorId={doctorId}
+        doctorName={doctorSession?.name || "Dr. Unknown"}
+      />
     </div>
   )
 }

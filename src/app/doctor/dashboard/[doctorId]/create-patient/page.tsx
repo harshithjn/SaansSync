@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +18,7 @@ import {
     PRIMARY_DIAGNOSIS_CATEGORIES,
     ILD_SUBTYPES,
     OAD_SUBTYPES,
+    COPD_SUBTYPES,
     BRONCHIECTASIS_SUBTYPES,
     POST_ICU_SUBTYPES,
     CTD_TYPES,
@@ -41,6 +43,7 @@ const initialPatientData: PatientData = {
     // Step 1 - Updated Basic Information
     fullName: "",
     mobileNumber: "",
+    alternateMobileNumber: "",
     emailId: "",
     age: "",
     sex: "",
@@ -51,13 +54,14 @@ const initialPatientData: PatientData = {
         primaryCategory: "",
         subtype: "",
         ctdType: "",
-        sarcoidosisStage: ""
+        sarcoidosisStage: "",
+        fibroticiLD: "",
+        customSubtype: ""
     },
     medicalHistory: "",
     comorbidities: [],
     customComorbidity: "",
     occupationalExposure: "",
-    additionalNotes: "",
     smokingStatus: "",
     packYears: "",
 
@@ -105,6 +109,7 @@ const initialPatientData: PatientData = {
 }
 
 export default function CreatePatientPage() {
+    const router = useRouter()
     const [currentStep, setCurrentStep] = useState(1)
     const [patientData, setPatientData] = useState<PatientData>(initialPatientData)
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -137,12 +142,15 @@ export default function CreatePatientPage() {
                 ...(field === 'primaryCategory' && {
                     subtype: "",
                     ctdType: "",
-                    sarcoidosisStage: ""
+                    sarcoidosisStage: "",
+                    fibroticiLD: "",
+                    customSubtype: ""
                 }),
                 // Reset conditional fields when subtype changes
                 ...(field === 'subtype' && {
                     ctdType: "",
-                    sarcoidosisStage: ""
+                    sarcoidosisStage: "",
+                    customSubtype: ""
                 })
             }
         }))
@@ -157,27 +165,27 @@ export default function CreatePatientPage() {
         }
     }
 
-   const getSubtypeOptions = () => {
-  switch (patientData.diagnosis.primaryCategory) {
-    case "Interstitial Lung Disease (ILD)":
-      return ILD_SUBTYPES
+    const getSubtypeOptions = () => {
+        switch (patientData.diagnosis.primaryCategory) {
+            case "Interstitial Lung Disease (ILD)":
+                return ILD_SUBTYPES
 
-    case "Bronchial Asthma":
-      return OAD_SUBTYPES
+            case "Bronchial Asthma":
+                return OAD_SUBTYPES
 
-    case "COPD (Chronic Obstructive Pulmonary Disease)":
-      return OAD_SUBTYPES
+            case "COPD (Chronic Obstructive Pulmonary Disease)":
+                return COPD_SUBTYPES
 
-    case "Bronchiectasis":
-      return BRONCHIECTASIS_SUBTYPES
+            case "Bronchiectasis":
+                return BRONCHIECTASIS_SUBTYPES
 
-    case "Post ICU Recovery":
-      return POST_ICU_SUBTYPES
+            case "Post ICU Recovery":
+                return POST_ICU_SUBTYPES
 
-    default:
-      return []
-  }
-}
+            default:
+                return []
+        }
+    }
 
 
     const validateCurrentStep = () => {
@@ -219,7 +227,7 @@ export default function CreatePatientPage() {
     const handleNext = () => {
         // Clean up incomplete medications before validation
         if (currentStep === 5) {
-            const completeMedications = patientData.medications.filter(med => 
+            const completeMedications = patientData.medications.filter(med =>
                 med.route && med.drugName && med.dose && med.frequency && med.startDate
             )
             if (completeMedications.length !== patientData.medications.length) {
@@ -312,6 +320,8 @@ export default function CreatePatientPage() {
             id: Date.now().toString(),
             fvc: "",
             fev1: "",
+            fvcLitres: "",
+            fev1Litres: "",
             dlco: "",
             sixMWD: "",
             minSpO2: "",
@@ -407,8 +417,15 @@ export default function CreatePatientPage() {
             await new Promise(resolve => setTimeout(resolve, 2000))
 
             alert(`Patient created successfully!\n\nPatient ID: ${credentials.patientId}\nLogin Email: ${credentials.email}\nDefault Password: patient123\n\n✅ The patient can now log in at:\n🔗 http://localhost:3000/patient/login\n\nUse the email and password above to test the patient login.\n\n🏥 Patient has been assigned to your dashboard and will appear in your patient folder view.`)
+
+            // Reset form and navigate back to dashboard
             setPatientData(initialPatientData)
             setCurrentStep(1)
+
+            // Navigate back to dashboard after a short delay
+            setTimeout(() => {
+                router.push(`/doctor/dashboard/${doctorId}`)
+            }, 1000)
         } catch (error) {
             alert("Error creating patient. Please try again.")
         } finally {
@@ -427,13 +444,20 @@ export default function CreatePatientPage() {
     const formatDiagnosisDisplay = () => {
         let display = patientData.diagnosis.primaryCategory
         if (patientData.diagnosis.subtype) {
-            display += ` / ${patientData.diagnosis.subtype}`
+            if (patientData.diagnosis.subtype === "Others" && patientData.diagnosis.customSubtype) {
+                display += ` / ${patientData.diagnosis.customSubtype}`
+            } else {
+                display += ` / ${patientData.diagnosis.subtype}`
+            }
         }
         if (patientData.diagnosis.ctdType) {
             display += ` / ${patientData.diagnosis.ctdType}`
         }
         if (patientData.diagnosis.sarcoidosisStage) {
             display += ` / ${patientData.diagnosis.sarcoidosisStage}`
+        }
+        if (patientData.diagnosis.fibroticiLD) {
+            display += ` / Fibrotic: ${patientData.diagnosis.fibroticiLD}`
         }
         return display
     }
@@ -467,6 +491,16 @@ export default function CreatePatientPage() {
                     {validationErrors.mobileNumber && (
                         <p className="text-xs text-red-500">{validationErrors.mobileNumber}</p>
                     )}
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-sm font-medium">Alternate Mobile Number</label>
+                    <Input
+                        value={patientData.alternateMobileNumber || ""}
+                        onChange={(e) => updatePatientData("alternateMobileNumber", formatMobileNumber(e.target.value))}
+                        placeholder="Enter alternate mobile number (optional)"
+                    />
+                    <p className="text-xs text-gray-500">Optional: For backup contact</p>
                 </div>
 
                 <div className="space-y-2">
@@ -633,6 +667,44 @@ export default function CreatePatientPage() {
                         </div>
                     )}
 
+                    {/* Conditional ILD Fibrotic Field */}
+                    {patientData.diagnosis.primaryCategory === "Interstitial Lung Disease (ILD)" && (
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Fibrotic ILD *</label>
+                            <Select
+                                value={patientData.diagnosis.fibroticiLD || ""}
+                                onValueChange={(value) => updateDiagnosis("fibroticiLD", value)}
+                            >
+                                <SelectTrigger className={validationErrors.fibroticiLD ? "border-red-500" : ""}>
+                                    <SelectValue placeholder="Select fibrotic status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Yes">Yes</SelectItem>
+                                    <SelectItem value="No">No</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {validationErrors.fibroticiLD && (
+                                <p className="text-xs text-red-500">{validationErrors.fibroticiLD}</p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Custom Subtype Input - Only show when "Others" is selected */}
+                    {patientData.diagnosis.subtype === "Others" && (
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Specify Other Subtype *</label>
+                            <Input
+                                value={patientData.diagnosis.customSubtype || ""}
+                                onChange={(e) => updateDiagnosis("customSubtype", e.target.value)}
+                                placeholder="Enter custom subtype"
+                                className={validationErrors.customSubtype ? "border-red-500" : ""}
+                            />
+                            {validationErrors.customSubtype && (
+                                <p className="text-xs text-red-500">{validationErrors.customSubtype}</p>
+                            )}
+                        </div>
+                    )}
+
                     {/* Diagnosis Preview */}
                     {patientData.diagnosis.primaryCategory && patientData.diagnosis.subtype && (
                         <div className="p-3 bg-white border rounded-lg">
@@ -667,9 +739,9 @@ export default function CreatePatientPage() {
                             </div>
                         ))}
                     </div>
-                    
-                    {/* Custom Comorbidity Input - Only show when "Other" is selected */}
-                    {patientData.comorbidities.includes("Other") && (
+
+                    {/* Custom Comorbidity Input - Only show when "Others" is selected */}
+                    {patientData.comorbidities.includes("Others") && (
                         <div className="space-y-2 mt-3">
                             <label className="text-sm font-medium">Specify Other Comorbidity</label>
                             <Input
@@ -692,17 +764,6 @@ export default function CreatePatientPage() {
                             placeholder="Describe any occupational exposures..."
                         />
                     </div>
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Additional Clinical Notes</label>
-                    <textarea
-                        className="w-full p-2 border rounded-md resize-none"
-                        rows={3}
-                        value={patientData.additionalNotes}
-                        onChange={(e) => updatePatientData("additionalNotes", e.target.value)}
-                        placeholder="Any additional clinical notes..."
-                    />
                 </div>
 
                 <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
@@ -993,6 +1054,18 @@ export default function CreatePatientPage() {
                                 </div>
 
                                 <div className="space-y-2">
+                                    <label className="text-sm font-medium">FVC (in litres)</label>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={record.fvcLitres}
+                                        onChange={(e) => updatePFTRecord(record.id, "fvcLitres", e.target.value)}
+                                        placeholder="e.g., 3.50"
+                                    />
+                                    <p className="text-xs text-gray-500">Numeric input in litres</p>
+                                </div>
+
+                                <div className="space-y-2">
                                     <label className="text-sm font-medium flex items-center space-x-1">
                                         <span>FEV1 (% predicted)</span>
                                         {record.fev1 && isValueAbnormal('FEV1', record.fev1) && (
@@ -1008,6 +1081,18 @@ export default function CreatePatientPage() {
                                         className={record.fev1 && isValueAbnormal('FEV1', record.fev1) ? "border-red-300" : ""}
                                     />
                                     <p className="text-xs text-gray-500">Normal: 80-120%</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium">FEV1 (in litres)</label>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={record.fev1Litres}
+                                        onChange={(e) => updatePFTRecord(record.id, "fev1Litres", e.target.value)}
+                                        placeholder="e.g., 2.80"
+                                    />
+                                    <p className="text-xs text-gray-500">Numeric input in litres</p>
                                 </div>
                             </div>
 
@@ -1533,13 +1618,6 @@ export default function CreatePatientPage() {
                                 <p className="text-sm text-gray-700 mt-1">{patientData.occupationalExposure}</p>
                             </div>
                         )}
-
-                        {patientData.additionalNotes && (
-                            <div>
-                                <span className="font-medium text-sm">Additional Notes:</span>
-                                <p className="text-sm text-gray-700 mt-1">{patientData.additionalNotes}</p>
-                            </div>
-                        )}
                     </div>
                 </div>
 
@@ -1662,17 +1740,17 @@ export default function CreatePatientPage() {
         </Card>
     )
 
-   const renderCurrentStep = () => {
-  switch (currentStep) {
-    case 1: return renderStep1()       // Basic
-    case 2: return renderStep2()       // Diagnosis
-    case 3: return renderStep4()       // PFT
-    case 4: return renderStep5()       // Respiratory Support
-    case 5: return renderStep3()       // Medications
-    case 6: return renderStep6()       // Final Preview
-    default: return renderStep1()
-  }
-}
+    const renderCurrentStep = () => {
+        switch (currentStep) {
+            case 1: return renderStep1()       // Basic
+            case 2: return renderStep2()       // Diagnosis
+            case 3: return renderStep4()       // PFT
+            case 4: return renderStep5()       // Respiratory Support
+            case 5: return renderStep3()       // Medications
+            case 6: return renderStep6()       // Final Preview
+            default: return renderStep1()
+        }
+    }
 
 
     return (

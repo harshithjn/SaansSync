@@ -12,6 +12,15 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { fetchRealTimeAQI, getAQIColor, shouldAlertForAQI, forceRefreshAQI } from "@/lib/aqi-service"
 import { createDailyLog, canLogToday, getRemainingLogsToday } from "@/lib/patient-logging"
 import { calculateRedFlagScore } from "@/lib/red-flag-scoring"
+import { getPatientDataById } from "@/lib/patient-storage"
+import { PatientData } from "@/lib/patient-types"
+import {
+    calculateAlert,
+    getAlertColor,
+    getAlertBackgroundColor,
+    AlertResult,
+    PatientLogData
+} from "@/lib/enhanced-alert-system"
 import {
     Wind,
     Activity,
@@ -22,7 +31,10 @@ import {
     Clock,
     Plus,
     RefreshCw,
-    MapPin
+    MapPin,
+    User,
+    Phone,
+    Stethoscope
 } from "lucide-react"
 
 interface CleanCOPDDashboardProps {
@@ -30,6 +42,9 @@ interface CleanCOPDDashboardProps {
 }
 
 export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProps) {
+    // Patient Data State
+    const [patientData, setPatientData] = useState<PatientData | null>(null)
+
     // AQI State
     const [aqiData, setAqiData] = useState<any>(null)
     const [aqiLoading, setAqiLoading] = useState(true)
@@ -97,9 +112,16 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
     })
 
     useEffect(() => {
+        loadPatientData()
         initializeDashboard()
         checkLoggingStatus()
     }, [patientId])
+
+    const loadPatientData = () => {
+        const data = getPatientDataById(patientId)
+        setPatientData(data)
+        console.log('Loaded patient data:', data)
+    }
 
     const initializeDashboard = async () => {
         try {
@@ -229,7 +251,24 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
         <div className="space-y-6 max-w-4xl mx-auto p-4">
             {/* Header */}
             <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">COPD Dashboard</h1>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                    <User className="w-6 h-6 text-blue-600" />
+                    <h1 className="text-2xl font-bold text-gray-900">
+                        {patientData?.fullName || 'Patient Dashboard'}
+                    </h1>
+                </div>
+                {patientData?.mobileNumber && (
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                        <Phone className="w-4 h-4 text-gray-500" />
+                        <p className="text-sm text-gray-600">{patientData.mobileNumber}</p>
+                    </div>
+                )}
+                <div className="flex items-center justify-center gap-2 mb-2">
+                    <Stethoscope className="w-5 h-5 text-green-600" />
+                    <p className="text-lg text-gray-700 font-medium">
+                        {patientData?.diagnosis.primaryCategory || 'COPD Dashboard'}
+                    </p>
+                </div>
                 <p className="text-gray-600">Chronic Obstructive Pulmonary Disease Monitoring</p>
                 <Badge variant="outline" className="mt-2">
                     Patient ID: {patientId}

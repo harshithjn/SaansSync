@@ -12,6 +12,17 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { fetchRealTimeAQI, getAQIColor, shouldAlertForAQI, forceRefreshAQI } from "@/lib/aqi-service"
 import { createDailyLog, canLogToday, getRemainingLogsToday } from "@/lib/patient-logging"
 import { calculateRedFlagScore } from "@/lib/red-flag-scoring"
+import { getPatientDataById } from "@/lib/patient-storage"
+import { PatientData } from "@/lib/patient-types"
+import { useLanguage } from "@/lib/language-context"
+import { getPersonalizedAlerts, getCurrentAlerts } from "@/lib/personalized-alerts"
+import {
+    calculateAlert,
+    getAlertColor,
+    getAlertBackgroundColor,
+    AlertResult,
+    PatientLogData
+} from "@/lib/enhanced-alert-system"
 import {
     Wind,
     Activity,
@@ -24,14 +35,25 @@ import {
     RefreshCw,
     MapPin,
     Moon,
-    Zap
+    Zap,
+    User,
+    Stethoscope,
+    Phone,
+    Play
 } from "lucide-react"
 
 interface CleanAsthmaDashboardProps {
     patientId: string
+    patientName?: string
+    diagnosis?: string
 }
 
-export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboardProps) {
+export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis }: CleanAsthmaDashboardProps) {
+    const { t, language } = useLanguage()
+
+    // Patient Data State
+    const [patientData, setPatientData] = useState<PatientData | null>(null)
+
     // AQI State
     const [aqiData, setAqiData] = useState<any>(null)
     const [aqiLoading, setAqiLoading] = useState(true)
@@ -41,12 +63,27 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
     const [remainingLogs, setRemainingLogs] = useState(2)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
+    // Personalized Alerts
+    const [personalizedAlerts, setPersonalizedAlerts] = useState<any[]>([])
+
+    // Alert System
+    const [currentAlert, setCurrentAlert] = useState<AlertResult | null>(null)
+
     // Form Data
     const [formData, setFormData] = useState({
         // Common Data
         spo2AtRest: 98,
         spo2OnExertion: 95,
         mMRCScale: 0,
+
+        // Oxygenation Status
+        oxygenationStatus: 'Room Air', // Default
+        oxygenationChange: '',
+        oxygenationImprovement: '',
+        oxygenationWorsening: '',
+        oxygenDecreased: '',
+        oxygenIncreased: '',
+        saturationLow: '',
 
         // Asthma Specific
         peakFlowPercent: 85,
@@ -55,13 +92,21 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
         daytimeSymptoms: false,
         relieverUse: false,
         activityLimitation: false,
-        controlLevel: 'well-controlled' as 'well-controlled' | 'partly-controlled' | 'uncontrolled',
+        controlLevel: 'well-controlled' as 'well-controlled' | 'partly-controlled' | 'poorly-controlled',
 
-        // Symptoms VAS
-        breathlessness: 2,
+        // Updated Symptoms
         cough: 1,
-        chestTightness: 1,
+        fever: 0,
+        feverTemperature: '',
+        expectoration: 0,
+        chestPain: 0,
         wheezing: 2,
+        stridor: 0,
+        weakness: 0,
+        pedalEdema: 0,
+        breathlessness: 2,
+        chestTightness: 1,
+        otherSymptoms: '',
 
         // Medications
         medications: [
@@ -91,15 +136,23 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
             }
         ],
 
-        // Side Effects
+        // Updated Side Effects
         sideEffects: [] as string[],
         customSideEffect: ''
     })
 
     useEffect(() => {
+        loadPatientData()
         initializeDashboard()
         checkLoggingStatus()
+        loadPersonalizedAlerts()
     }, [patientId])
+
+    const loadPatientData = () => {
+        const data = getPatientDataById(patientId)
+        setPatientData(data)
+        console.log('Loaded patient data:', data)
+    }
 
     const initializeDashboard = async () => {
         try {
@@ -118,11 +171,120 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
         setRemainingLogs(getRemainingLogsToday(patientId))
     }
 
+    const loadPersonalizedAlerts = () => {
+        const alerts = getPersonalizedAlerts(patientId)
+        setPersonalizedAlerts(alerts)
+    }
+
+    // Auto-calculate control status based on symptoms
+    const calculateControlStatus = () => {
+        let checkedItems = 0
+
+        if (formData.nightWaking) checkedItems++
+        if (formData.daytimeSymptoms) checkedItems++
+        if (formData.activityLimitation) checkedItems++
+        if (formData.relieverUse) checkedItems++
+
+        if (checkedItems === 0) return 'well-controlled'
+        if (checkedItems <= 2) return 'partly-controlled'
+        return 'poorly-controlled'
+    }
+
+    // Update control level automatically
+    useEffect(() => {
+        const newControlLevel = calculateControlStatus()
+        if (newControlLevel !== formData.controlLevel) {
+            setFormData(prev => ({ ...prev, controlLevel: newControlLevel as any }))
+        }
+    }, [formData.nightWaking, formData.daytimeSymptoms, formData.activityLimitation, formData.relieverUse])
+
+    // Real-time alert calculation
+    useEffect(() => {
+        const alertLogData: PatientLogData = {
+            patientId,
+            logDate: new Date().toISOString().split('T')[0],
+            diseaseType: 'ASTHMA',
+            spo2AtRest: formData.spo2AtRest,
+            spo2OnExertion: formData.spo2OnExertion,
+            mMRCScale: formData.mMRCScale,
+            breathlessness: formData.breathlessness,
+            cough: formData.cough,
+            chestPain: formData.chestPain,
+            fever: formData.fever,
+            pedalEdema: formData.pedalEdema,
+            wheezing: formData.wheezing,
+            peakFlowPercent: formData.peakFlowPercent,
+            rescueInhalerPuffs: formData.rescueInhalerPuffs,
+            nightWaking: formData.nightWaking,
+            daytimeSymptoms: formData.daytimeSymptoms,
+            activityLimitation: formData.activityLimitation,
+            relieverUse: formData.relieverUse,
+            medicationCompliance: formData.medications.some(med => med.taken),
+            newRash: formData.sideEffects.includes('Itching') || formData.sideEffects.includes('Others'),
+            severeDiarrhea: formData.sideEffects.includes('Nausea'),
+            breathlessnessComparison: formData.breathlessness <= 3 ? 'better' :
+                formData.breathlessness <= 6 ? 'same' : 'worse'
+        }
+
+        const alertResult = calculateAlert(alertLogData)
+        setCurrentAlert(alertResult)
+    }, [
+        patientId,
+        formData.spo2AtRest,
+        formData.spo2OnExertion,
+        formData.mMRCScale,
+        formData.breathlessness,
+        formData.cough,
+        formData.chestPain,
+        formData.fever,
+        formData.pedalEdema,
+        formData.wheezing,
+        formData.peakFlowPercent,
+        formData.rescueInhalerPuffs,
+        formData.nightWaking,
+        formData.daytimeSymptoms,
+        formData.activityLimitation,
+        formData.relieverUse,
+        formData.medications,
+        formData.sideEffects
+    ])
+
     const handleSubmit = async () => {
         if (!canLog) return
 
         setIsSubmitting(true)
         try {
+            // Calculate alert before submitting
+            const alertLogData: PatientLogData = {
+                patientId,
+                logDate: new Date().toISOString().split('T')[0],
+                diseaseType: 'ASTHMA',
+                spo2AtRest: formData.spo2AtRest,
+                spo2OnExertion: formData.spo2OnExertion,
+                mMRCScale: formData.mMRCScale,
+                breathlessness: formData.breathlessness,
+                cough: formData.cough,
+                chestPain: formData.chestPain,
+                fever: formData.fever,
+                pedalEdema: formData.pedalEdema,
+                wheezing: formData.wheezing,
+                peakFlowPercent: formData.peakFlowPercent,
+                rescueInhalerPuffs: formData.rescueInhalerPuffs,
+                nightWaking: formData.nightWaking,
+                daytimeSymptoms: formData.daytimeSymptoms,
+                activityLimitation: formData.activityLimitation,
+                relieverUse: formData.relieverUse,
+                medicationCompliance: formData.medications.some(med => med.taken),
+                newRash: formData.sideEffects.includes('Itching') || formData.sideEffects.includes('Others'),
+                severeDiarrhea: formData.sideEffects.includes('Nausea'),
+                breathlessnessComparison: formData.breathlessness <= 3 ? 'better' :
+                    formData.breathlessness <= 6 ? 'same' : 'worse'
+            }
+
+            // Calculate alert
+            const alertResult = calculateAlert(alertLogData)
+            setCurrentAlert(alertResult)
+
             // Prepare common data
             const commonData = {
                 patientId,
@@ -153,7 +315,8 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                     { id: '2', name: 'Cough', score: formData.cough, loggedAt: new Date().toISOString() },
                     { id: '3', name: 'Chest Tightness', score: formData.chestTightness, loggedAt: new Date().toISOString() },
                     { id: '4', name: 'Wheezing', score: formData.wheezing, loggedAt: new Date().toISOString() }
-                ]
+                ],
+                alert: alertResult
             }
 
             // Prepare Asthma specific data
@@ -183,8 +346,8 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                 alert('Health log submitted successfully!')
 
                 // Show alert if created
-                if (result.alert) {
-                    alert(`Alert Generated: ${result.alert.message}`)
+                if (alertResult.level !== 'GREEN') {
+                    alert(`Alert Generated (${alertResult.level}): ${alertResult.triggers.join(', ')}`)
                 }
 
                 // Update logging status
@@ -225,14 +388,115 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto p-4">
-            {/* Header */}
+            {/* Header with Patient Info */}
             <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">Asthma Dashboard</h1>
-                <p className="text-gray-600">Bronchial Asthma Monitoring</p>
+                <div className="flex items-center justify-center gap-2 mb-2">
+                    <User className="w-6 h-6 text-blue-600" />
+                    <h1 className="text-2xl font-bold text-gray-900">
+                        {patientData?.fullName || patientName || 'Patient Dashboard'}
+                    </h1>
+                </div>
+                {patientData?.mobileNumber && (
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                        <Phone className="w-4 h-4 text-gray-500" />
+                        <p className="text-sm text-gray-600">{patientData.mobileNumber}</p>
+                    </div>
+                )}
+                <div className="flex items-center justify-center gap-2 mb-2">
+                    <Stethoscope className="w-5 h-5 text-green-600" />
+                    <p className="text-lg text-gray-700 font-medium">
+                        {patientData?.diagnosis.primaryCategory || diagnosis || 'Bronchial Asthma'}
+                    </p>
+                </div>
+                <p className="text-gray-600">{t('dashboard.title')} - {language === 'hi' ? 'दमा निगरानी' : 'Asthma Monitoring'}</p>
                 <Badge variant="outline" className="mt-2">
                     Patient ID: {patientId}
                 </Badge>
             </div>
+
+            {/* Personalized Alerts */}
+            {personalizedAlerts.length > 0 && (
+                <Card className="p-4 bg-blue-50 border-blue-200">
+                    <div className="flex items-center gap-2 mb-3">
+                        <AlertTriangle className="w-5 h-5 text-blue-600" />
+                        <h3 className="font-medium text-blue-900">Personalized Reminders</h3>
+                    </div>
+                    <div className="space-y-2">
+                        {personalizedAlerts.filter(alert => alert.isActive).map((alert, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
+                                <span className="text-sm">{alert.name}</span>
+                                <Badge variant="outline" className="text-xs">
+                                    {alert.frequency} {alert.interval && alert.interval}
+                                </Badge>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+            )}
+
+            {/* Current Alert Display */}
+            {currentAlert && currentAlert.level !== 'GREEN' && (
+                <Card
+                    className="p-4 border-2"
+                    style={{
+                        backgroundColor: getAlertBackgroundColor(currentAlert.level),
+                        borderColor: getAlertColor(currentAlert.level)
+                    }}
+                >
+                    <div className="flex items-center gap-2 mb-3">
+                        <AlertTriangle
+                            className="w-5 h-5"
+                            style={{ color: getAlertColor(currentAlert.level) }}
+                        />
+                        <h3
+                            className="font-medium"
+                            style={{ color: getAlertColor(currentAlert.level) }}
+                        >
+                            {currentAlert.level} Alert - Score: {currentAlert.finalScore.toFixed(1)}
+                        </h3>
+                    </div>
+                    <div className="space-y-2">
+                        <div>
+                            <h4 className="text-sm font-medium mb-1">Triggers:</h4>
+                            <ul className="text-sm space-y-1">
+                                {currentAlert.triggers.map((trigger, index) => (
+                                    <li key={index} className="flex items-start gap-2">
+                                        <span className="text-red-500 mt-1">•</span>
+                                        <span>{trigger}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="text-sm font-medium mb-1">Recommendations:</h4>
+                            <ul className="text-sm space-y-1">
+                                {currentAlert.recommendations.map((rec, index) => (
+                                    <li key={index} className="flex items-start gap-2">
+                                        <span className="text-green-600 mt-1">•</span>
+                                        <span>{rec}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </Card>
+            )}
+
+            {/* Virtual Pulmonary Rehabilitation */}
+            <Card className="p-4 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Play className="w-6 h-6 text-green-600" />
+                        <div>
+                            <h3 className="font-medium text-green-900">{t('rehabilitation.title')}</h3>
+                            <p className="text-sm text-green-700">{t('rehabilitation.description')}</p>
+                        </div>
+                    </div>
+                    <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
+                        {t('rehabilitation.start')}
+                    </Button>
+                </div>
+            </Card>
 
             {/* Logging Status */}
             <Card className="p-4 bg-blue-50 border-blue-200">
@@ -336,12 +600,12 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
 
                 <TabsContent value="vitals" className="space-y-4">
                     <Card className="p-6">
-                        <h3 className="text-lg font-semibold mb-4">Vital Signs</h3>
+                        <h3 className="text-lg font-semibold mb-4">{t('dashboard.vitals')}</h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-sm font-medium mb-2 block">SpO₂ at Rest (%)</label>
+                                    <label className="text-sm font-medium mb-2 block">{t('vitals.spo2')} at Rest (%)</label>
                                     <div className="flex items-center gap-4">
                                         <Slider
                                             value={[formData.spo2AtRest]}
@@ -356,7 +620,7 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium mb-2 block">SpO₂ on Exertion (%)</label>
+                                    <label className="text-sm font-medium mb-2 block">{t('vitals.spo2')} on Exertion (%)</label>
                                     <div className="flex items-center gap-4">
                                         <Slider
                                             value={[formData.spo2OnExertion]}
@@ -367,6 +631,109 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                                             className="flex-1"
                                         />
                                         <span className="text-lg font-bold w-12">{formData.spo2OnExertion}%</span>
+                                    </div>
+                                </div>
+
+                                {/* Oxygenation Status */}
+                                <div>
+                                    <label className="text-sm font-medium mb-2 block">{t('dashboard.oxygenation')}</label>
+                                    <div className="p-3 bg-blue-50 rounded-lg">
+                                        <p className="text-sm font-medium text-blue-900">
+                                            {formData.oxygenationStatus || t('dashboard.roomAir')}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* SpO2 Follow-up Questions */}
+                                <div className="space-y-3 p-4 bg-gray-50 rounded-lg">
+                                    <div>
+                                        <label className="text-sm font-medium mb-2 block">{t('vitals.oxygenationChange')}</label>
+                                        <Select
+                                            value={formData.oxygenationChange}
+                                            onValueChange={(value) => setFormData(prev => ({ ...prev, oxygenationChange: value }))}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select option" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="yes">{t('common.yes')}</SelectItem>
+                                                <SelectItem value="no">{t('common.no')}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {formData.oxygenationChange === 'yes' && (
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="text-sm font-medium mb-2 block">Type of Change</label>
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <Checkbox
+                                                            checked={formData.oxygenationImprovement === 'yes'}
+                                                            onCheckedChange={(checked) => {
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    oxygenationImprovement: checked ? 'yes' : '',
+                                                                    oxygenationWorsening: checked ? '' : prev.oxygenationWorsening
+                                                                }))
+                                                            }}
+                                                        />
+                                                        <label className="text-sm">{t('vitals.improvement')}</label>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Checkbox
+                                                            checked={formData.oxygenationWorsening === 'yes'}
+                                                            onCheckedChange={(checked) => {
+                                                                setFormData(prev => ({
+                                                                    ...prev,
+                                                                    oxygenationWorsening: checked ? 'yes' : '',
+                                                                    oxygenationImprovement: checked ? '' : prev.oxygenationImprovement
+                                                                }))
+                                                            }}
+                                                        />
+                                                        <label className="text-sm">{t('vitals.worsening')}</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {formData.oxygenationImprovement === 'yes' && (
+                                                <div>
+                                                    <label className="text-sm font-medium mb-2 block">{t('vitals.oxygenDecreased')}</label>
+                                                    <Input
+                                                        value={formData.oxygenDecreased}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, oxygenDecreased: e.target.value }))}
+                                                        placeholder="Enter amount (e.g., 1L/min)"
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {formData.oxygenationWorsening === 'yes' && (
+                                                <div>
+                                                    <label className="text-sm font-medium mb-2 block">{t('vitals.oxygenIncreased')}</label>
+                                                    <Input
+                                                        value={formData.oxygenIncreased}
+                                                        onChange={(e) => setFormData(prev => ({ ...prev, oxygenIncreased: e.target.value }))}
+                                                        placeholder="Enter amount (e.g., 2L/min)"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="text-sm font-medium mb-2 block">{t('vitals.saturationLow')}</label>
+                                        <Select
+                                            value={formData.saturationLow}
+                                            onValueChange={(value) => setFormData(prev => ({ ...prev, saturationLow: value }))}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select option" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="yes">{t('common.yes')}</SelectItem>
+                                                <SelectItem value="no">{t('common.no')}</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 </div>
                             </div>
@@ -388,17 +755,17 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium mb-2 block">mMRC Breathlessness Scale</label>
+                                    <label className="text-sm font-medium mb-2 block">{t('mmrc.title')}</label>
                                     <Select value={formData.mMRCScale.toString()} onValueChange={(value) => setFormData(prev => ({ ...prev, mMRCScale: parseInt(value) }))}>
                                         <SelectTrigger>
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="0">0 - Only breathless with strenuous exercise</SelectItem>
-                                            <SelectItem value="1">1 - Breathless when hurrying or walking up a slight hill</SelectItem>
-                                            <SelectItem value="2">2 - Walks slower than people of same age due to breathlessness</SelectItem>
-                                            <SelectItem value="3">3 - Stops for breath after walking about 100 yards</SelectItem>
-                                            <SelectItem value="4">4 - Too breathless to leave the house</SelectItem>
+                                            <SelectItem value="0">0 - {t('mmrc.grade0')}</SelectItem>
+                                            <SelectItem value="1">1 - {t('mmrc.grade1')}</SelectItem>
+                                            <SelectItem value="2">2 - {t('mmrc.grade2')}</SelectItem>
+                                            <SelectItem value="3">3 - {t('mmrc.grade3')}</SelectItem>
+                                            <SelectItem value="4">4 - {t('mmrc.grade4')}</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -409,14 +776,20 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
 
                 <TabsContent value="symptoms" className="space-y-4">
                     <Card className="p-6">
-                        <h3 className="text-lg font-semibold mb-4">Symptom Severity (0-10 Scale)</h3>
+                        <h3 className="text-lg font-semibold mb-4">{t('dashboard.symptoms')} (0-10 Scale)</h3>
 
                         <div className="space-y-6">
                             {[
+                                { key: 'cough', label: t('symptoms.cough'), icon: Wind },
+                                { key: 'fever', label: t('symptoms.fever'), icon: Thermometer },
+                                { key: 'expectoration', label: t('symptoms.expectoration'), icon: Droplets },
+                                { key: 'chestPain', label: t('symptoms.chestPain'), icon: Activity },
+                                { key: 'wheezing', label: t('symptoms.wheezing'), icon: Zap },
+                                { key: 'stridor', label: t('symptoms.stridor'), icon: Wind },
+                                { key: 'weakness', label: t('symptoms.weakness'), icon: Activity },
+                                { key: 'pedalEdema', label: t('symptoms.pedalEdema'), icon: Droplets },
                                 { key: 'breathlessness', label: 'Breathlessness', icon: Activity },
-                                { key: 'cough', label: 'Cough', icon: Wind },
-                                { key: 'chestTightness', label: 'Chest Tightness', icon: Activity },
-                                { key: 'wheezing', label: 'Wheezing', icon: Zap }
+                                { key: 'chestTightness', label: 'Chest Tightness', icon: Activity }
                             ].map(({ key, label, icon: Icon }) => (
                                 <div key={key} className="space-y-2">
                                     <div className="flex items-center justify-between">
@@ -434,8 +807,39 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                                         step={1}
                                         className="w-full"
                                     />
+
+                                    {/* Temperature input for fever */}
+                                    {key === 'fever' && formData.fever > 0 && (
+                                        <div className="ml-6 mt-2">
+                                            <label className="text-xs text-gray-600 mb-1 block">
+                                                {t('common.temperature')} ({t('common.fahrenheit')})
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                value={formData.feverTemperature}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, feverTemperature: e.target.value }))}
+                                                placeholder="e.g., 101.5"
+                                                className="w-32 text-sm"
+                                                step="0.1"
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             ))}
+
+                            {/* Others with text input */}
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <Plus className="w-4 h-4 text-blue-600" />
+                                    <label className="text-sm font-medium">{t('common.others')}</label>
+                                </div>
+                                <Input
+                                    value={formData.otherSymptoms}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, otherSymptoms: e.target.value }))}
+                                    placeholder="Describe any other symptoms..."
+                                    className="w-full"
+                                />
+                            </div>
                         </div>
                     </Card>
                 </TabsContent>
@@ -465,9 +869,18 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                         </div>
 
                         <div className="mt-6">
-                            <h4 className="font-medium mb-3">Side Effects (if any)</h4>
+                            <h4 className="font-medium mb-3">{t('sideEffects.title')}</h4>
                             <div className="grid grid-cols-2 gap-2">
-                                {['Dry mouth', 'Headache', 'Nausea', 'Dizziness', 'Tremor', 'Palpitations'].map((effect) => (
+                                {[
+                                    t('sideEffects.fever'),
+                                    t('sideEffects.dizziness'),
+                                    t('sideEffects.itching'),
+                                    'Dry mouth',
+                                    'Headache',
+                                    'Nausea',
+                                    'Tremor',
+                                    'Palpitations'
+                                ].map((effect) => (
                                     <div key={effect} className="flex items-center gap-2">
                                         <Checkbox
                                             checked={formData.sideEffects.includes(effect)}
@@ -476,6 +889,36 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                                         <span className="text-sm">{effect}</span>
                                     </div>
                                 ))}
+                            </div>
+
+                            {/* Others with text input */}
+                            <div className="mt-3 space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <Checkbox
+                                        checked={formData.sideEffects.includes('Others')}
+                                        onCheckedChange={(checked) => {
+                                            if (checked) {
+                                                setFormData(prev => ({ ...prev, sideEffects: [...prev.sideEffects, 'Others'] }))
+                                            } else {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    sideEffects: prev.sideEffects.filter(e => e !== 'Others'),
+                                                    customSideEffect: ''
+                                                }))
+                                            }
+                                        }}
+                                    />
+                                    <span className="text-sm">{t('common.others')}</span>
+                                </div>
+
+                                {formData.sideEffects.includes('Others') && (
+                                    <Input
+                                        value={formData.customSideEffect}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, customSideEffect: e.target.value }))}
+                                        placeholder="Describe other side effects..."
+                                        className="ml-6 w-full"
+                                    />
+                                )}
                             </div>
                         </div>
                     </Card>
@@ -539,17 +982,25 @@ export default function CleanAsthmaDashboard({ patientId }: CleanAsthmaDashboard
                             </div>
 
                             <div>
-                                <label className="text-sm font-medium mb-2 block">Current Control Level</label>
-                                <Select value={formData.controlLevel} onValueChange={(value: any) => setFormData(prev => ({ ...prev, controlLevel: value }))}>
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="well-controlled">Well Controlled</SelectItem>
-                                        <SelectItem value="partly-controlled">Partly Controlled</SelectItem>
-                                        <SelectItem value="uncontrolled">Uncontrolled</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                                <label className="text-sm font-medium mb-2 block">Current Control Level (Auto-calculated)</label>
+                                <div className="p-3 rounded-lg border-2" style={{
+                                    backgroundColor: formData.controlLevel === 'well-controlled' ? '#dcfce7' :
+                                        formData.controlLevel === 'partly-controlled' ? '#fef3c7' : '#fee2e2',
+                                    borderColor: formData.controlLevel === 'well-controlled' ? '#16a34a' :
+                                        formData.controlLevel === 'partly-controlled' ? '#d97706' : '#dc2626'
+                                }}>
+                                    <span className="font-medium" style={{
+                                        color: formData.controlLevel === 'well-controlled' ? '#16a34a' :
+                                            formData.controlLevel === 'partly-controlled' ? '#d97706' : '#dc2626'
+                                    }}>
+                                        {formData.controlLevel === 'well-controlled' && t('control.wellControlled')}
+                                        {formData.controlLevel === 'partly-controlled' && t('control.partlyControlled')}
+                                        {formData.controlLevel === 'poorly-controlled' && t('control.poorlyControlled')}
+                                    </span>
+                                    <p className="text-xs mt-1 opacity-75">
+                                        Based on {[formData.nightWaking, formData.daytimeSymptoms, formData.activityLimitation, formData.relieverUse].filter(Boolean).length} selected criteria
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </Card>

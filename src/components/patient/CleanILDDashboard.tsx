@@ -12,6 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { fetchRealTimeAQI, getAQIColor, shouldAlertForAQI, forceRefreshAQI } from "@/lib/aqi-service"
 import { createDailyLog, canLogToday, getRemainingLogsToday } from "@/lib/patient-logging"
 import { calculateRedFlagScore } from "@/lib/red-flag-scoring"
+import { getPatientDataById } from "@/lib/patient-storage"
+import { PatientData } from "@/lib/patient-types"
 import {
     Wind,
     Activity,
@@ -32,6 +34,9 @@ interface CleanILDDashboardProps {
 }
 
 export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps) {
+    // Patient Data State
+    const [patientData, setPatientData] = useState<PatientData | null>(null)
+
     // AQI State
     const [aqiData, setAqiData] = useState<any>(null)
     const [aqiLoading, setAqiLoading] = useState(true)
@@ -104,9 +109,16 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
     })
 
     useEffect(() => {
+        loadPatientData()
         initializeDashboard()
         checkLoggingStatus()
     }, [patientId])
+
+    const loadPatientData = () => {
+        const data = getPatientDataById(patientId)
+        setPatientData(data)
+        console.log('Loaded patient data:', data)
+    }
 
     const initializeDashboard = async () => {
         try {

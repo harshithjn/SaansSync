@@ -56,6 +56,16 @@ export const validateStep2 = (data: PatientData): StepValidation => {
         errors.push({ field: 'sarcoidosisStage', message: 'Sarcoidosis stage is required when subtype is Sarcoidosis' })
     }
 
+    // Conditional validation for ILD Fibrotic field
+    if (data.diagnosis.primaryCategory === 'Interstitial Lung Disease (ILD)' && !data.diagnosis.fibroticiLD) {
+        errors.push({ field: 'fibroticiLD', message: 'Fibrotic ILD status is required for ILD diagnosis' })
+    }
+
+    // Conditional validation for custom subtype
+    if (data.diagnosis.subtype === 'Others' && (!data.diagnosis.customSubtype || !data.diagnosis.customSubtype.trim())) {
+        errors.push({ field: 'customSubtype', message: 'Custom subtype is required when "Others" is selected' })
+    }
+
     if (data.smokingStatus !== 'Never Smoked' && data.smokingStatus !== '') {
         const packYears = parseFloat(data.packYears)
         if (data.packYears && (isNaN(packYears) || packYears < 0)) {
@@ -145,6 +155,27 @@ export const validatePFTRecord = (record: PFTRecord, index: number): ValidationE
             }
         }
     })
+
+    // Validate new spirometry fields (FVC and FEV1 in litres)
+    if (record.fvcLitres && record.fvcLitres.trim() !== '') {
+        const numValue = parseFloat(record.fvcLitres)
+        if (isNaN(numValue) || numValue <= 0) {
+            errors.push({
+                field: `pft-${index}-fvclitres`,
+                message: `Record ${index + 1}: FVC (litres) must be a positive number`
+            })
+        }
+    }
+
+    if (record.fev1Litres && record.fev1Litres.trim() !== '') {
+        const numValue = parseFloat(record.fev1Litres)
+        if (isNaN(numValue) || numValue <= 0) {
+            errors.push({
+                field: `pft-${index}-fev1litres`,
+                message: `Record ${index + 1}: FEV1 (litres) must be a positive number`
+            })
+        }
+    }
 
     return errors
 }
