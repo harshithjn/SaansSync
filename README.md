@@ -1,28 +1,172 @@
-# SaansSync
+# SaansSync - Respiratory Monitoring Platform
 
-SaansSync is a remote respiratory health monitoring system designed for patients with chronic respiratory conditions. It focuses on producing reliable, stabilised physiological trends rather than raw, noisy readings.
+A comprehensive respiratory health monitoring platform with separate frontend and backend services.
 
-## Overview
+## 🏗️ Project Structure
 
-SaansSync collects SpO₂ readings, symptom scores, medication adherence data, and pulmonary rehabilitation activity from patients. These inputs are processed through a trend-based signal integrity pipeline to generate stable trends and early deterioration indicators for clinicians.
+```
+saanssync/
+├── frontend/                 ← Deploy THIS to Vercel
+│   ├── src/
+│   │   ├── app/              ← Next.js App Router
+│   │   │   ├── page.tsx
+│   │   │   ├── dashboard/
+│   │   │   ├── patient/
+│   │   │   └── api/          ← ONLY lightweight API routes
+│   │   │
+│   │   ├── components/
+│   │   ├── lib/
+│   │   │   └── supabase.ts
+│   │   └── styles/
+│   │
+│   ├── public/
+│   ├── .env.local            ← Vercel env vars
+│   ├── next.config.ts
+│   ├── tailwind.config.ts
+│   ├── tsconfig.json
+│   ├── package.json
+│   └── package-lock.json
+│
+├── backend/                  ← NOT deployed to Vercel
+│   ├── src/
+│   │   ├── server.ts
+│   │   ├── middleware/
+│   │   └── routes/
+│   │
+│   ├── tests/
+│   │   ├── test-daily-logs.js
+│   │   ├── test-complete-flow.js
+│   │   └── test-bidirectional-flow.js
+│   │
+│   ├── sql/
+│   │   ├── schema.sql
+│   │   └── DISABLE_RLS.sql
+│   │
+│   ├── tsconfig.json
+│   └── package.json
+│
+├── README.md
+└── .gitignore
+```
 
-## Key Capabilities
+## 🚀 Deployment
 
-- Stabilised SpO₂ trend generation
-- Symptom-weighted and adherence-aware analysis
-- Multi-parameter data fusion for accurate deterioration detection
-- Data Quality Index (DQI) and Fusion Integrity Index (FI)
-- Role-based dashboards for patients and doctors
-- Early warning alerts to support timely intervention
+### Frontend (Vercel)
+1. Connect your GitHub repo to Vercel
+2. Set these settings:
+   - **Root Directory**: `frontend`
+   - **Framework**: Next.js
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `.next`
 
-## Problem Addressed
+3. Environment Variables:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
-Most remote respiratory monitoring tools rely on isolated or noisy data points, leading to unreliable trends and delayed detection of exacerbations. Inconsistent patient adherence and missing data further reduce accuracy.
+### Backend (Optional - for heavy processing)
+- Deploy to Railway, Render, or similar
+- Or keep as local development/testing environment
 
-## SaansSync Solution
+## 🐳 Local Development (Docker)
 
-SaansSync integrates physiological data, symptoms, and adherence into a unified signal-stabilisation and trend-analysis engine. This enables clinicians to identify meaningful changes in patient condition earlier and with greater confidence.
+We recommend using Docker for a consistent development environment.
 
-## Status
+```bash
+# Start both frontend and backend
+docker-compose up --build
+```
 
-A functional prototype of SaansSync is available, including trend visualisation, alert workflows, and separate patient and doctor dashboards, tested using sample patient data.
+- **Frontend:** http://localhost:3000
+- **Backend:** http://localhost:3001
+
+## 🧪 Testing
+
+We use **Vitest** for robust backend testing.
+
+```bash
+cd backend
+npm test
+```
+
+Legacy manual test scripts are still available via `npm run test:legacy:all`.
+
+## 🔒 Security & Best Practices
+
+- **Security:** Backend now includes `helmet` for security headers.
+- **Validation:** `zod` is installed for schema validation.
+- **CI/CD:** GitHub Actions pipeline (`.github/workflows/ci.yml`) is set up for automated testing and linting.
+- **Documentation:** See `CONTRIBUTING.md` for detailed dev guidelines.
+
+## 📁 What Changed
+
+✅ **Moved to backend/**:
+- All test files (`test-*.js`)
+- SQL files (`schema.sql`, `DISABLE_RLS.sql`)
+
+✅ **Frontend now contains only**:
+- UI components
+- Next.js pages
+- Lightweight API routes
+- Supabase client calls
+
+✅ **Clean separation**:
+- Frontend = Vercel deployment
+- Backend = Logic + tests + SQL
+- Supabase = Database + realtime
+
+This structure ensures Vercel deployment will succeed without any build failures from extra JS files or backend logic.
+
+## Features
+
+- **Patient Dashboard**: Real-time monitoring for multiple respiratory conditions
+- **Doctor Portal**: Patient management and analytics
+- **Alert System**: Intelligent health alerts based on patient data
+- **Multi-language Support**: English and Arabic interfaces
+- **Responsive Design**: Works on desktop and mobile devices
+
+## Tech Stack
+
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, Realtime)
+- **Deployment**: Vercel
+- **UI Components**: Custom components with shadcn/ui
+
+## Getting Started
+
+### Frontend Development
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Backend Development
+```bash
+cd backend
+npm install
+npm run dev
+```
+
+## Environment Variables
+
+### Frontend (.env.local)
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### Backend (.env)
+```
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+```
+
+## Database Setup
+
+1. Create a new Supabase project
+2. Run the SQL schema from `backend/sql/schema.sql`
+3. If needed, run `backend/sql/DISABLE_RLS.sql` for development
+4. Update environment variables

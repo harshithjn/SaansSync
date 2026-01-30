@@ -2,21 +2,32 @@
   "name": "saanssync-backend",
   "version": "1.0.0",
   "description": "Backend server for SaansSync respiratory monitoring platform",
-  "main": "src/server.ts",
+  "main": "dist/server.js",
   "scripts": {
     "dev": "ts-node src/server.ts",
+    "dev:watch": "ts-node --watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "clean": "rm -rf dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:legacy:all": "npm run test:legacy:supabase && npm run test:legacy:logs && npm run test:legacy:flow",
+    "test:legacy:supabase": "node tests/test-supabase.js",
+    "test:legacy:logs": "node tests/test-daily-logs.js",
+    "test:legacy:flow": "node tests/test-complete-flow.js"
   },
   "dependencies": {
     "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "@supabase/supabase-js": "^2.39.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.17",
     "@types/cors": "^2.8.13",
     "@types/node": "^20.0.0",
     "ts-node": "^10.9.1",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vitest": "^1.2.0",
+    "dotenv": "^16.4.1"
   }
 }
