@@ -1,61 +1,61 @@
-// Authentication Types
-export interface PatientCredentials {
-    patientId: string
-    email: string
-    passwordHash: string
-    role: "PATIENT"
-    forcePasswordChange: boolean
-    createdAt: string
-    updatedAt: string
-}
-
+// Production Authentication Types
 export interface AuthSession {
-    patientId: string
+    userId: string
+    email?: string
+    phone?: string
+    role: 'doctor' | 'patient'
+    approved?: boolean
+    profile?: DoctorProfile | PatientProfile
+}
+
+export interface DoctorProfile {
+    id: string
     email: string
-    role: "PATIENT"
-    primaryDiagnosisCategory: string
-    token: string
+    full_name: string
+    phone?: string
+    approval_status: 'pending' | 'approved' | 'rejected'
+    created_at: string
+    updated_at: string
 }
 
-export interface LoginRequest {
-    email: string
-    password: string
+export interface PatientProfile {
+    id: string
+    auth_user_id: string
+    email?: string
+    full_name?: string
+    phone?: string
+    patient_data: PatientData
+    created_at: string
+    updated_at: string
 }
 
-export interface LoginResponse {
-    success: boolean
-    session?: AuthSession
-    error?: string
-}
-
-// Disease-specific routing map
-export const DISEASE_DASHBOARD_ROUTES = {
-    "Interstitial Lung Disease (ILD)": "/patient/dashboard/ild",
-    "Bronchial Asthma": "/patient/dashboard/asthma",
-    "COPD (Chronic Obstructive Pulmonary Disease)": "/patient/dashboard/oad",
-    "Obstructive Airway Disease (OAD)": "/patient/dashboard/oad",
-    "Bronchiectasis": "/patient/dashboard/bronchiectasis",
-    "Post ICU Recovery": "/patient/dashboard/post-icu"
-} as const
-
-export type DiagnosisCategory = keyof typeof DISEASE_DASHBOARD_ROUTES
-
-// Patient Dashboard Data
-export interface PatientDashboardData {
-    patientId: string
-    fullName: string
-    diagnosis: {
+export interface PatientData {
+    diagnosis?: {
         primaryCategory: string
-        subtype: string
+        subtype?: string
         ctdType?: string
         sarcoidosisStage?: string
-        dateOfDiagnosis: string
+        dateOfDiagnosis?: string
     }
-    latestMedications: Array<{
+    demographics?: {
+        age?: number
+        gender?: string
+        occupation?: string
+    }
+    medicalHistory?: {
+        smokingHistory?: {
+            status: string
+            packYears?: string
+        }
+        allergies?: string[]
+        comorbidities?: string[]
+    }
+    currentMedications?: Array<{
         drugName: string
         dose: string
         frequency: string
         isActive: boolean
+        startDate?: string
     }>
     latestPFT?: {
         testDate: string
@@ -72,8 +72,49 @@ export interface PatientDashboardData {
         invasiveVentilation?: { enabled: boolean }
         tracheostomy?: { enabled: boolean }
     }
-    smokingHistory?: {
-        status: string
-        packYears?: string
-    }
+}
+
+// Disease-specific routing map
+export const DISEASE_DASHBOARD_ROUTES = {
+    "Interstitial Lung Disease (ILD)": "/patient/dashboard/ild",
+    "Bronchial Asthma": "/patient/dashboard/asthma",
+    "COPD (Chronic Obstructive Pulmonary Disease)": "/patient/dashboard/oad",
+    "Obstructive Airway Disease (OAD)": "/patient/dashboard/oad",
+    "Bronchiectasis": "/patient/dashboard/bronchiectasis",
+    "Post ICU Recovery": "/patient/dashboard/post-icu"
+} as const
+
+export type DiagnosisCategory = keyof typeof DISEASE_DASHBOARD_ROUTES
+
+// Helper function to get dashboard route from diagnosis
+export function getDashboardRoute(diagnosis?: string): string {
+    if (!diagnosis) return "/patient/dashboard/ild" // Default
+    
+    const route = DISEASE_DASHBOARD_ROUTES[diagnosis as DiagnosisCategory]
+    return route || "/patient/dashboard/ild" // Default fallback
+}
+
+// OTP verification response
+export interface OTPVerificationResponse {
+    success: boolean
+    error?: string
+    session?: AuthSession
+    profile?: DoctorProfile | PatientProfile
+}
+
+// Login response for patient login
+export interface LoginResponse {
+    success: boolean
+    error?: string
+    session?: AuthSession
+}
+
+// Auth state for components
+export interface AuthContextType {
+    user: any | null
+    loading: boolean
+    role: 'doctor' | 'patient' | null
+    approved?: boolean
+    profile?: DoctorProfile | PatientProfile | null
+    signOut: () => Promise<void>
 }

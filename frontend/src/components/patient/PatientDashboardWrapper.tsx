@@ -6,8 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AuthSession } from "@/lib/auth-types"
-import { getStoredSession } from "@/lib/auth-utils"
+import { usePatientAuth } from "@/lib/auth-guard"
 import { getPatientDailyLogs, getPatientMedications, getPatientProfile } from "@/lib/database-service"
 import CleanAsthmaDashboard from "./CleanAsthmaDashboard"
 import CleanILDDashboard from "./CleanILDDashboard"
@@ -35,7 +34,7 @@ interface PatientDashboardWrapperProps {
 
 export default function PatientDashboardWrapper({ diseaseType }: PatientDashboardWrapperProps) {
     const router = useRouter()
-    const [session, setSession] = useState<AuthSession | null>(null)
+    const authState = usePatientAuth()
     const [isLoading, setIsLoading] = useState(true)
     const [dailyLogs, setDailyLogs] = useState<any[]>([])
     const [medications, setMedications] = useState<any[]>([])
@@ -44,20 +43,15 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
 
     useEffect(() => {
         const initializePage = async () => {
-            const storedSession = getStoredSession()
-            if (!storedSession || storedSession.role !== "PATIENT") {
-                router.push("/patient/login")
-                return
+            if (!authState.user || authState.role !== 'patient' || !authState.profile) {
+                return // Will redirect via usePatientAuth
             }
-
-            setSession(storedSession)
-
             try {
                 // Load patient data
                 const [logs, meds, profile] = await Promise.all([
-                    getPatientDailyLogs(storedSession.patientId),
-                    getPatientMedications(storedSession.patientId),
-                    getPatientProfile(storedSession.patientId)
+                    getPatientDailyLogs(authState.profile.id),
+                    getPatientMedications(authState.profile.id),
+                    getPatientProfile(authState.profile.id)
                 ])
 
                 setDailyLogs(logs)
@@ -76,11 +70,14 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
             }
         }
 
-        initializePage()
-    }, [router])
+        if (!authState.loading) {
+            initializePage()
+        }
+    }, [authState])
 
-    const handleLogout = () => {
-        localStorage.removeItem('patientSession')
+    const handleLogout = async () => {
+        const { signOut } = await import('@/lib/auth-service')
+        await signOut()
         router.push('/patient/login')
     }
 
@@ -114,9 +111,9 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
     }
 
     const renderDiseaseSpecificDashboard = () => {
-        if (!session) return null
+        if (!authState.profile) return null
 
-        const props = { patientId: session.patientId }
+        const props = { patientId: authState.profile.id }
 
         switch (diseaseType.toLowerCase()) {
             case 'asthma':
@@ -138,7 +135,7 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
         }
     }
 
-    if (isLoading) {
+    if (authState.loading || isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
@@ -149,8 +146,8 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
         )
     }
 
-    if (!session) {
-        return null
+    if (!authState.user || authState.role !== 'patient' || !authState.profile) {
+        return null // Will redirect via usePatientAuth
     }
 
     return (
@@ -164,10 +161,10 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
                         </div>
                         <div>
                             <h1 className="font-semibold text-gray-900">
-                                {patientData?.fullName || 'Patient'}
+                                {patientData?.fullName || authState.profile?.full_name || 'Patient'}
                             </h1>
                             <p className="text-sm text-gray-600">
-                                Diagnosis: {patientData?.diagnosis?.primaryCategory || session.primaryDiagnosisCategory}
+                                Diagnosis: {patientData?.diagnosis?.primaryCategory || authState.profile?.patient_data?.diagnosis?.primaryCategory || 'Health Monitoring'}
                             </p>
                         </div>
                     </div>

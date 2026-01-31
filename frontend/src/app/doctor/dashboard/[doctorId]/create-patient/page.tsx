@@ -381,71 +381,97 @@ export default function CreatePatientPage() {
     const handleCreatePatient = async () => {
         setIsSubmitting(true)
         try {
-            const { createPatientCredentials } = await import('@/lib/auth-utils')
-            const { storePatient } = await import('@/lib/patient-storage')
+            // Remove localStorage storage - use database only
             const { createPatientFolder, createPatientFolderAsync } = await import('@/lib/doctor-patient-mapping')
             const { createPatientAccount } = await import('@/lib/database-service')
-            const { getDoctorBySession } = await import('@/lib/doctor-session')
-            const { supabase, isSupabaseConfigured } = await import('@/lib/supabase')
-            const { isDoctorIdUuid } = await import('@/lib/supabase-auth')
+            const { supabase } = await import('@/lib/supabase')
 
             const pathParts = window.location.pathname.split('/')
             const urlDoctorId = pathParts[3]
-            const session = getDoctorBySession()
-            const doctorId = session?.doctorId ?? urlDoctorId
-            const useSupabase = isSupabaseConfigured() && isDoctorIdUuid(doctorId)
+            const doctorId = urlDoctorId // Use URL doctor ID directly in production
 
-            const credentials = createPatientCredentials(patientData.emailId)
-
-            if (useSupabase && supabase) {
-                const { error } = await supabase.from('patients').insert({
-                    id: credentials.patientId,
-                    doctor_id: doctorId,
-                    email: credentials.email,
-                    full_name: patientData.fullName,
-                    patient_data: patientData,
-                    default_password: 'patient123'
-                })
-                if (error) throw new Error(error.message)
-                await createPatientFolderAsync(patientData, doctorId, credentials.patientId, 1, 0)
-            } else {
-                const dbResult = await createPatientAccount(
-                    credentials.email,
-                    'patient123',
-                    patientData.fullName,
-                    patientData.diagnosis.primaryCategory as any,
-                    undefined,
-                    patientData
-                )
-                if (!dbResult.success) throw new Error(dbResult.error || 'Failed to create patient in database')
-                storePatient(credentials, patientData)
-                createPatientFolder(patientData, urlDoctorId, credentials.patientId, 1, 0)
+            // Generate simple credentials for patient (will be replaced by real auth)
+            const credentials = {
+                username: patientData.emailId || `patient_${Date.now()}`,
+                email: patientData.emailId || `patient_${Date.now()}@temp.com`,
+                password: Math.random().toString(36).substring(2, 15)
             }
+
+            // Always use database-only approach in production
+            const { supabaseAdmin } = await import('@/lib/supabase')
+            
+            if (!supabaseAdmin) {
+                throw new Error('Service role not configured. Please set NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY in environment variables.')
+            }
+            
+            const cleanPhoneForStorage = patientData.mobileNumber.replace(/\D/g, '')
+            
+            // Validate phone number before storage
+            if (cleanPhoneForStorage.length !== 10) {
+                throw new Error(`Invalid phone number length: ${cleanPhoneForStorage.length} digits. Expected 10 digits. Phone: "${cleanPhoneForStorage}"`)
+            }
+            
+            if (!/^[6-9]/.test(cleanPhoneForStorage)) {
+                throw new Error(`Invalid Indian mobile number format. Must start with 6-9. Phone: "${cleanPhoneForStorage}"`)
+            }
+            
+            const { data: insertedPatient, error } = await supabaseAdmin.from('patients').insert({
+                // Let database generate UUID automatically - don't specify id
+                doctor_id: doctorId,
+                phone: cleanPhoneForStorage, // Store clean phone number
+                email: credentials.email,
+                full_name: patientData.fullName,
+                patient_data: patientData,
+                default_password: 'patient123'
+            }).select().single()
+            
+            console.log('📱 Patient creation - Original mobile:', patientData.mobileNumber)
+            console.log('📱 Patient creation - Clean phone stored:', cleanPhoneForStorage)
+            console.log('📱 Patient creation - Phone length:', cleanPhoneForStorage.length)
+            console.log('📱 Patient creation - Phone starts with:', cleanPhoneForStorage[0])
+            console.log('👤 Patient creation result:', { insertedPatient, error })
+            
+            if (error) throw new Error(error.message)
+            
+            const patientId = insertedPatient.id
+            
+            // Create doctor-patient assignment (required for RLS policies)
+            const { error: assignmentError } = await supabaseAdmin.from('doctor_patient_assignments').insert({
+                doctor_id: doctorId,
+                patient_id: patientId,
+                status: 'active'
+            })
+            
+            if (assignmentError) {
+                console.warn('Failed to create doctor-patient assignment:', assignmentError.message)
+                // Don't throw error - patient creation succeeded, assignment can be done later
+            }
+            
+            await createPatientFolderAsync(patientData, doctorId, patientId, 1, 0)
 
             // Combine patient data with credentials
             const patientWithCredentials = {
                 ...patientData,
-                patientId: credentials.patientId,
+                patientId: patientId,
                 credentials: credentials
             }
 
             console.log("Creating patient with data:", patientWithCredentials)
             console.log("Patient credentials created:", {
-                patientId: credentials.patientId,
+                patientId: patientId,
                 email: credentials.email,
-                defaultPassword: "patient123",
-                role: credentials.role
+                defaultPassword: "patient123"
             })
 
             // Simulate API call
             await new Promise(resolve => setTimeout(resolve, 1000))
 
             const { generatePrescription } = await import('@/lib/prescription-service')
-            const doctorName = session?.name || 'Dr. Unknown'
-            generatePrescription(patientData, credentials.patientId, urlDoctorId, doctorName, [], undefined)
+            const doctorName = 'Dr. Unknown' // In production, this would come from the authenticated doctor profile
+            await generatePrescription(patientData, patientId, urlDoctorId, doctorName, [], undefined)
             const genMsg = 'Prescription card generated from current medications. View it in the patient folder under Medications → Previous prescriptions.'
 
-            toast.success('Patient created', `Patient ID: ${credentials.patientId}. Login: ${credentials.email} / patient123. ${genMsg}`)
+            toast.success('Patient created', `Patient ID: ${patientId}. Login: ${credentials.email} / patient123. ${genMsg}`)
 
             setPatientData(initialPatientData)
             setCurrentStep(1)

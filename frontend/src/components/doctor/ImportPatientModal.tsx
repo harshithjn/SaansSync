@@ -60,7 +60,7 @@ export default function ImportPatientModal({
         setError('')
         
         try {
-            const result = importPatientWithOTP(
+            const result = await importPatientWithOTP(
                 doctorId,
                 patientId.trim(),
                 otpCode.trim()

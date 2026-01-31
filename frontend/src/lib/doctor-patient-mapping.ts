@@ -86,7 +86,7 @@ export async function createPatientFolderAsync(
     const diseaseType = mapDiagnosisToDisease(patientData.diagnosis.primaryCategory)
     const folderColor = getFolderColorFromScore(redFlagScore)
 
-    if (isSupabaseConfigured() && supabase && isDoctorIdUuid(doctorId)) {
+    if (isSupabaseConfigured && supabase && isDoctorIdUuid(doctorId)) {
         try {
             await supabase.from('patient_folders').upsert({
                 patient_id: patientId,
@@ -159,13 +159,13 @@ export function createPatientFolder(
 // Get patient folders for a doctor (Supabase when doctorId is UUID)
 export async function getDoctorPatientFoldersAsync(doctorId: string): Promise<PatientFolder[]> {
     if (typeof window === 'undefined') return []
-    if (isSupabaseConfigured() && supabase && isDoctorIdUuid(doctorId)) {
+    if (isSupabaseConfigured && supabase && isDoctorIdUuid(doctorId)) {
         try {
             const { data, error } = await supabase.from('patient_folders').select('*').eq('doctor_id', doctorId)
             if (error) return []
             return (data ?? []).map((row: Record<string, unknown>) => ({
-                patientId: row.patient_id,
-                fullName: row.full_name,
+                patientId: row.patient_id as string,
+                fullName: row.full_name as string,
                 age: Number(row.age ?? 0),
                 diseaseType: (row.disease_type as DiseaseType) ?? 'ILD',
                 lastLogDate: (row.last_log_date as string) ?? new Date().toISOString(),

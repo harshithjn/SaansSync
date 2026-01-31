@@ -73,7 +73,7 @@ export default function PatientTransferModal({
         setError('')
         
         try {
-            const result = initiatePatientTransfer(patientId)
+            const result = await initiatePatientTransfer(patientId)
             
             if (result.success && result.otp) {
                 setOtp(result.otp)

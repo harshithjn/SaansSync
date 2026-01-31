@@ -1,71 +1,25 @@
-// Supabase Configuration - Production Ready
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+// Modern Supabase Client Configuration
+import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? ''
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? ''
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://hvzzscoreonfosgxhjfe.supabase.co'
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh2enpzY29yZW9uZm9zZ3hoamZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY1OTE3NjYsImV4cCI6MjA4MjE2Nzc2Nn0.pxmNddDmMNnKHxgllW4gfUJsE3Hp3IHUnuZACGYcHHI'
 
-console.log('Supabase config check:', {
-  hasUrl: !!supabaseUrl,
-  hasKey: !!supabaseAnonKey,
-  url: supabaseUrl ? supabaseUrl.substring(0, 30) + '...' : 'missing',
-  keyLength: supabaseAnonKey ? supabaseAnonKey.length : 0
-})
+// Service role key for admin operations (only use on server-side or for admin functions)
+const supabaseServiceKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY
 
-export const supabase: SupabaseClient | null = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+// Service role client for admin operations (bypasses RLS)
+export const supabaseAdmin = supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true
+        autoRefreshToken: false,
+        persistSession: false
       }
     })
   : null
 
-// Helper function to check if Supabase is configured
-export const isSupabaseConfigured = () => {
-  const configured = supabaseUrl && supabaseAnonKey && 
-         supabaseUrl !== 'https://your-project.supabase.co' && 
-         supabaseAnonKey !== 'your-anon-key'
-  
-  console.log('Supabase configured:', configured)
-  return configured
-}
+// Check if Supabase is properly configured
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey && supabaseUrl !== 'your-supabase-url')
 
-// Use database if configured, otherwise localStorage
-export const useDatabase = () => {
-  return isSupabaseConfigured()
-}
-
-// Database helper functions
-export const getCurrentUser = async () => {
-  if (!supabase) return null
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
-}
-
-export const signUp = async (email: string, password: string, userData: any) => {
-  if (!supabase) return { data: null, error: { message: 'Supabase not configured' } }
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: userData
-    }
-  })
-  return { data, error }
-}
-
-export const signIn = async (email: string, password: string) => {
-  if (!supabase) return { data: null, error: { message: 'Supabase not configured' } }
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password
-  })
-  return { data, error }
-}
-
-export const signOut = async () => {
-  if (!supabase) return { error: { message: 'Supabase not configured' } }
-  const { error } = await supabase.auth.signOut()
-  return { error }
-}
+export default supabase

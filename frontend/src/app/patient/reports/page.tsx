@@ -6,8 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AuthSession } from "@/lib/auth-types"
-import { getStoredSession } from "@/lib/auth-utils"
+import { usePatientAuth } from "@/lib/auth-guard"
 import { getPatientDailyLogs, getPatientMedications, getPatientProfile } from "@/lib/database-service"
 import { 
     TrendingUp, 
@@ -38,7 +37,7 @@ interface DailyLog {
 
 export default function PatientReportsPage() {
     const router = useRouter()
-    const [session, setSession] = useState<AuthSession | null>(null)
+    const authState = usePatientAuth()
     const [isLoading, setIsLoading] = useState(true)
     const [dailyLogs, setDailyLogs] = useState<DailyLog[]>([])
     const [medications, setMedications] = useState<any[]>([])
@@ -46,20 +45,16 @@ export default function PatientReportsPage() {
 
     useEffect(() => {
         const initializePage = async () => {
-            const storedSession = getStoredSession()
-            if (!storedSession || storedSession.role !== "PATIENT") {
-                router.push("/patient/login")
-                return
+            if (!authState.user || authState.role !== 'patient' || !authState.profile) {
+                return // Will redirect via usePatientAuth
             }
-
-            setSession(storedSession)
 
             try {
                 // Load patient data
                 const [logs, meds, profile] = await Promise.all([
-                    getPatientDailyLogs(storedSession.patientId),
-                    getPatientMedications(storedSession.patientId),
-                    getPatientProfile(storedSession.patientId)
+                    getPatientDailyLogs(authState.profile.id),
+                    getPatientMedications(authState.profile.id),
+                    getPatientProfile(authState.profile.id)
                 ])
 
                 setDailyLogs(logs)
@@ -78,8 +73,10 @@ export default function PatientReportsPage() {
             }
         }
 
-        initializePage()
-    }, [router])
+        if (!authState.loading) {
+            initializePage()
+        }
+    }, [authState])
 
     const getRedFlagColor = (score: number) => {
         if (score >= 9) return 'bg-red-500 text-white'
@@ -110,7 +107,7 @@ export default function PatientReportsPage() {
         })
     }
 
-    if (isLoading) {
+    if (authState.loading || isLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
@@ -121,8 +118,8 @@ export default function PatientReportsPage() {
         )
     }
 
-    if (!session) {
-        return null
+    if (!authState.user || authState.role !== 'patient') {
+        return null // Will redirect via usePatientAuth
     }
 
     return (
@@ -134,7 +131,7 @@ export default function PatientReportsPage() {
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">Health Reports</h1>
                             <p className="text-gray-600">
-                                {patientData?.fullName || 'Patient'} • {patientData?.diagnosis?.primaryCategory || session.primaryDiagnosisCategory}
+                                {patientData?.fullName || authState.profile?.full_name || 'Patient'} • {patientData?.diagnosis?.primaryCategory || authState.profile?.patient_data?.diagnosis?.primaryCategory || 'Health Monitoring'}
                             </p>
                         </div>
                         <Button 

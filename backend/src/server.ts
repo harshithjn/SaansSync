@@ -22,9 +22,13 @@ app.get('/health', (req, res) => {
 app.get('/keepalive', async (req, res) => {
     if (!supabase) return res.status(503).json({ status: 'error', message: 'Supabase not configured' })
     try {
-        const { data, error } = await supabase.auth.getUser()
+        // Test database connectivity with a simple query to a public table
+        const { data, error } = await supabase
+            .from('doctors')
+            .select('count')
+            .limit(1)
 
-        if (error) {
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned, which is fine
             console.error('Keepalive error:', error)
             return res.status(500).json({ 
                 status: 'error', 
@@ -83,10 +87,16 @@ app.post('/api/auth/patient', async (req, res) => {
 app.get('/api/db-status', async (req, res) => {
     if (!supabase) return res.status(503).json({ status: 'error', connected: false, message: 'Supabase not configured' })
     try {
-        const { data, error } = await supabase.auth.getUser()
-        if (error) {
+        // Test database connectivity with a simple query to a public table
+        const { data, error } = await supabase
+            .from('doctors')
+            .select('count')
+            .limit(1)
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned, which is fine
             return res.status(500).json({ status: 'error', connected: false, error: error.message })
         }
+        
         res.json({ status: 'connected', connected: true, timestamp: new Date().toISOString() })
     } catch (error) {
         res.status(500).json({ status: 'error', connected: false, message: 'Database connection failed' })
@@ -107,9 +117,13 @@ app.use('/api/personalized-alerts', personalizedAlertsRouter)
 setInterval(async () => {
     if (!supabase) return
     try {
-        const { data, error } = await supabase.auth.getUser()
+        // Test database connectivity with a simple query to a public table
+        const { data, error } = await supabase
+            .from('doctors')
+            .select('count')
+            .limit(1)
         
-        if (error) {
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned, which is fine
             console.error('Auto-keepalive failed:', error)
         } else {
             console.log('✅ Database keepalive successful:', new Date().toISOString())

@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PatientFolder, DoctorInstruction, Alert } from "@/lib/monitoring-types"
 import { Prescription } from "@/lib/patient-types"
 import { getDoctorPatientFolders } from "@/lib/doctor-patient-mapping"
-import { getPatientDataById } from "@/lib/patient-storage"
+import { getPatientProfile } from "@/lib/database-service"
 import { getPatientPrescriptions, formatPrescriptionCard } from "@/lib/prescription-service"
 import { ArrowLeft, User, Calendar, MapPin, Phone, Mail, AlertTriangle, Pill, FileText, TrendingUp, Download, Edit, Bell, MessageSquare, Trash2, Share, Import, MoreHorizontal, FileOutput } from "lucide-react"
 import Link from "next/link"
@@ -40,10 +40,8 @@ export default function PatientDetailView({
       setDoctorId(resolvedParams.doctorId)
       setPatientId(resolvedParams.patientId)
 
-      // Load doctor session
-      const { getDoctorBySession } = await import('@/lib/doctor-session')
-      const session = getDoctorBySession()
-      setDoctorSession(session)
+      // Remove doctor session loading - handled by auth guard
+      console.log('Production mode - using Supabase auth')
 
       console.log('Loading patient details for:', resolvedParams.patientId)
 
@@ -52,35 +50,28 @@ export default function PatientDetailView({
       const folder = folders.find(f => f.patientId === resolvedParams.patientId)
       setPatientFolder(folder || null)
 
-      // Load patient data
-      let data = getPatientDataById(resolvedParams.patientId)
+      // Load patient data from database
+      let data = await getPatientProfile(resolvedParams.patientId)
 
-      // If not found, check stored patients directly
+      // If not found in database, return error
       if (!data) {
-        const { getStoredPatients } = await import('@/lib/patient-storage')
-        const allPatients = getStoredPatients()
-        const patientRecord = allPatients.find(p => p.credentials.patientId === resolvedParams.patientId)
-        if (patientRecord) {
-          data = patientRecord.patientData
-        }
+        console.log('❌ Patient not found in database:', resolvedParams.patientId)
+        return (
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Patient Not Found</h1>
+              <p className="text-gray-600 mb-4">The requested patient could not be found in the database.</p>
+              <Link href={`/doctor/dashboard/${resolvedParams.doctorId}`}>
+                <Button>Back to Dashboard</Button>
+              </Link>
+            </div>
+          </div>
+        )
       }
-
-      // Also check if data is stored in the old format (patient_${id})
-      if (!data) {
-        try {
-          const oldFormatData = localStorage.getItem(`patient_${resolvedParams.patientId}`)
-          if (oldFormatData) {
-            data = JSON.parse(oldFormatData)
-          }
-        } catch (error) {
-          console.error('Error reading old format data:', error)
-        }
-      }
-
       setPatientData(data)
 
       // Load prescriptions
-      loadPrescriptions(resolvedParams.patientId)
+      await loadPrescriptions(resolvedParams.patientId)
 
       // Load instructions
       loadInstructions(resolvedParams.patientId)
@@ -97,9 +88,9 @@ export default function PatientDetailView({
     initializeParams()
   }, [params])
 
-  const loadPrescriptions = (pid: string) => {
+  const loadPrescriptions = async (pid: string) => {
     try {
-      const list = getPatientPrescriptions(pid)
+      const list = await getPatientPrescriptions(pid)
       setPrescriptions(list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()))
     } catch (error) {
       console.error("Error loading prescriptions:", error)

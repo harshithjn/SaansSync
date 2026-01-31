@@ -1,7 +1,8 @@
 // Patient Transfer System - OTP-Based Doctor Change
 import { PatientData } from './patient-types'
-import { getPatientDataById, updatePatientData } from './patient-storage'
+// import { getPatientDataById, updatePatientData } from './patient-storage' // Removed - using database
 import { getDoctorPatientFolders, createPatientFolder, removeDoctorPatientMapping } from './doctor-patient-mapping'
+import { getPatientProfile } from './database-service'
 
 interface TransferOTP {
     patientId: string
@@ -128,15 +129,15 @@ function findCurrentDoctor(patientId: string): string | null {
 }
 
 // STEP 1: Patient initiates transfer (generates OTP)
-export function initiatePatientTransfer(patientId: string): {
+export async function initiatePatientTransfer(patientId: string): Promise<{
     success: boolean
     otp?: string
     expiresAt?: string
     error?: string
-} {
+}> {
     try {
         // Verify patient exists
-        const patientData = getPatientDataById(patientId)
+        const patientData = await getPatientProfile(patientId)
         if (!patientData) {
             return {
                 success: false,
@@ -185,18 +186,18 @@ export function initiatePatientTransfer(patientId: string): {
 }
 
 // STEP 2: New doctor imports patient using OTP
-export function importPatientWithOTP(
+export async function importPatientWithOTP(
     newDoctorId: string,
     patientId: string,
     otpCode: string
-): {
+): Promise<{
     success: boolean
     patientData?: PatientData
     error?: string
-} {
+}> {
     try {
         // Verify patient exists
-        const patientData = getPatientDataById(patientId)
+        const patientData = await getPatientProfile(patientId)
         if (!patientData) {
             return {
                 success: false,

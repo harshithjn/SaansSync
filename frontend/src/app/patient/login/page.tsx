@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Phone, Shield, Users, Activity, Heart } from "lucide-react"
-import { storeSession, getDashboardRoute } from "@/lib/auth-utils"
-import { loginPatient } from "@/lib/database-service"
-import { supabase } from "@/lib/supabase"
-import { getPatientDataArray, initializeDemoPatients, getStoredPatients, forceInitializeDemoPatients } from "@/lib/patient-storage"
+import { signInPatientWithOTP, verifyPatientOTP, debugPatientPhoneNumbers, findPatientByPhone } from "@/lib/auth-service"
+import { getDashboardRoute } from "@/lib/auth-types"
 import { Header } from '@/components/common/Header'
 
 export default function PatientLoginPage() {
@@ -18,21 +16,6 @@ export default function PatientLoginPage() {
     const [otp, setOtp] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
-    const [otpSent, setOtpSent] = useState(false)
-
-    // Initialize demo patients on component mount
-    useEffect(() => {
-        initializeDemoPatients()
-        
-        // Debug: Log existing patients
-        setTimeout(() => {
-            const patients = getStoredPatients()
-            console.log('Current patients:', patients.length)
-            patients.forEach(p => {
-                console.log(`Patient: ${p.patientData.fullName} - Mobile: ${p.patientData.mobileNumber}`)
-            })
-        }, 1000)
-    }, [])
 
     const formatMobileNumber = (input: string): string => {
         const digits = input.replace(/\D/g, '')
@@ -48,8 +31,14 @@ export default function PatientLoginPage() {
         setError("")
 
         try {
+            // Debug: Check what's in the database
+            await debugPatientPhoneNumbers()
+            
             // Clean mobile number (remove formatting)
             const cleanMobile = mobileNumber.replace(/\D/g, '')
+            console.log('🔍 Login attempt - Original input:', mobileNumber)
+            console.log('🔍 Login attempt - Clean mobile:', cleanMobile)
+            console.log('🔍 Login attempt - Mobile length:', cleanMobile.length)
 
             if (cleanMobile.length < 10) {
                 setError("Please enter a valid 10-digit mobile number")
@@ -57,66 +46,20 @@ export default function PatientLoginPage() {
                 return
             }
 
-            // First check database for patients created by doctors
-            try {
-                const { data: dbPatients, error: dbError } = await supabase
-                    .from('patient_profiles')
-                    .select('*')
-                
-                if (!dbError && dbPatients) {
-                    console.log('Database patients found:', dbPatients.length)
-                    
-                    // Check if mobile number exists in database patients
-                    const dbPatient = dbPatients.find(p => {
-                        const patientData = p.patient_data || {}
-                        const dbMobile = patientData.mobile || p.phone || ''
-                        const cleanDbMobile = dbMobile.replace(/\D/g, '')
-                        return cleanDbMobile === cleanMobile
-                    })
-                    
-                    if (dbPatient) {
-                        console.log('Patient found in database:', dbPatient.full_name)
-                        // Simulate OTP sending
-                        setTimeout(() => {
-                            setOtpSent(true)
-                            setStep('otp')
-                            setIsLoading(false)
-                        }, 1000)
-                        return
-                    }
-                }
-            } catch (dbError) {
-                console.log('Database check failed, falling back to localStorage')
-            }
+            // Manual search to debug
+            const searchResult = await findPatientByPhone(cleanMobile)
+            console.log('🔍 Manual search result:', searchResult)
 
-            // Fallback: Check localStorage for demo patients
-            const allPatients = getStoredPatients()
-            console.log('Searching for mobile:', cleanMobile)
-            console.log('Available patients:', allPatients.map(p => ({
-                name: p.patientData.fullName,
-                mobile: p.patientData.mobileNumber
-            })))
-
-            const patient = allPatients.find(p => {
-                const patientMobile = p.patientData.mobileNumber.replace(/\D/g, '')
-                console.log(`Comparing ${patientMobile} with ${cleanMobile}`)
-                return patientMobile === cleanMobile
-            })
-
-            if (!patient) {
-                setError(`Mobile number ${cleanMobile} not found. Available numbers: ${allPatients.map(p => p.patientData.mobileNumber).join(', ')}`)
-                setIsLoading(false)
-                return
-            }
-
-            console.log('Patient found:', patient.patientData.fullName)
-
-            // Simulate OTP sending (in real app, this would call an API)
-            setTimeout(() => {
-                setOtpSent(true)
+            // Send OTP using real auth service
+            const result = await signInPatientWithOTP(cleanMobile)
+            
+            if (result.success) {
                 setStep('otp')
                 setIsLoading(false)
-            }, 1000)
+            } else {
+                setError(result.error || 'Failed to send OTP')
+                setIsLoading(false)
+            }
 
         } catch (error) {
             console.error('Login error:', error)
@@ -131,47 +74,24 @@ export default function PatientLoginPage() {
         setError("")
 
         try {
-            // Fixed OTP validation (123456)
-            if (otp !== "123456") {
-                setError("Invalid OTP. Please enter 123456")
-                setIsLoading(false)
-                return
-            }
-
-            // Database login
             const cleanMobile = mobileNumber.replace(/\D/g, '')
             
-            const allPatients = getStoredPatients()
-            const foundPatient = allPatients.find(p => p.patientData.mobileNumber.replace(/\D/g, '') === cleanMobile)
-            const patientEmail = foundPatient?.patientData?.emailId ?? `${cleanMobile}@demo.com`
-            // Try backend patient auth first (Phase 1: Supabase-created patients)
-            const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'
-            try {
-                const res = await fetch(`${backendUrl}/api/auth/patient`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: patientEmail, password: 'patient123' })
-                })
-                const data = await res.json()
-                if (data.success && data.session) {
-                    storeSession(data.session)
-                    router.push(getDashboardRoute(data.session.primaryDiagnosisCategory))
-                    return
-                }
-            } catch (_) { /* fallback */ }
-
-            const loginResult = await loginPatient(patientEmail, 'patient123')
-            if (loginResult.success && loginResult.session) {
-                storeSession(loginResult.session)
-                router.push(getDashboardRoute(loginResult.session.primaryDiagnosisCategory))
-                return
+            // Verify OTP using real auth service
+            const result = await verifyPatientOTP(cleanMobile, otp)
+            
+            if (result.success && result.patientProfile) {
+                // Get dashboard route from patient data
+                const diagnosis = result.patientProfile.patient_data?.diagnosis?.primaryCategory
+                const dashboardRoute = getDashboardRoute(diagnosis)
+                router.push(dashboardRoute)
+            } else {
+                setError(result.error || 'OTP verification failed')
             }
-            setError(loginResult.error || 'Login failed')
-            setIsLoading(false)
-            return
 
         } catch (error) {
+            console.error('OTP verification error:', error)
             setError("An error occurred during login. Please try again.")
+        } finally {
             setIsLoading(false)
         }
     }
@@ -179,8 +99,31 @@ export default function PatientLoginPage() {
     const handleBackToMobile = () => {
         setStep('mobile')
         setOtp("")
-        setOtpSent(false)
         setError("")
+    }
+
+    const handleResendOTP = async () => {
+        setIsLoading(true)
+        setError("")
+
+        try {
+            const cleanMobile = mobileNumber.replace(/\D/g, '')
+            const result = await signInPatientWithOTP(cleanMobile)
+            
+            if (result.success) {
+                setError("")
+                // Show success message briefly
+                setError("OTP resent successfully!")
+                setTimeout(() => setError(""), 3000)
+            } else {
+                setError(result.error || 'Failed to resend OTP')
+            }
+        } catch (error) {
+            console.error('Resend OTP error:', error)
+            setError("Failed to resend OTP. Please try again.")
+        } finally {
+            setIsLoading(false)
+        }
     }
 
     return (
@@ -228,13 +171,17 @@ export default function PatientLoginPage() {
                                         />
                                     </div>
                                     <p className="text-sm text-gray-500">
-                                        Enter the mobile number registered with your doctor
+                                        Enter your registered mobile number
                                     </p>
                                 </div>
 
                                 {error && (
-                                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                                        <p className="text-sm text-red-700">{error}</p>
+                                    <div className={`p-3 border rounded-lg ${
+                                        error.includes('successfully') 
+                                            ? 'bg-green-50 border-green-200 text-green-700'
+                                            : 'bg-red-50 border-red-200 text-red-700'
+                                    }`}>
+                                        <p className="text-sm">{error}</p>
                                     </div>
                                 )}
 
@@ -267,16 +214,20 @@ export default function PatientLoginPage() {
                                         />
                                     </div>
                                     <p className="text-sm text-gray-500">
-                                        OTP sent to {mobileNumber}
+                                        OTP sent to {mobileNumber} via SMS
                                     </p>
-                                    <p className="text-xs text-blue-600">
-                                        Demo OTP: 123456
+                                    <p className="text-xs text-gray-400">
+                                        SMS may take 1-2 minutes to arrive
                                     </p>
                                 </div>
 
                                 {error && (
-                                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                                        <p className="text-sm text-red-700">{error}</p>
+                                    <div className={`p-3 border rounded-lg ${
+                                        error.includes('successfully') 
+                                            ? 'bg-green-50 border-green-200 text-green-700'
+                                            : 'bg-red-50 border-red-200 text-red-700'
+                                    }`}>
+                                        <p className="text-sm">{error}</p>
                                     </div>
                                 )}
 
@@ -289,15 +240,27 @@ export default function PatientLoginPage() {
                                         {isLoading ? 'Verifying...' : 'Verify & Login'}
                                     </Button>
 
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={handleBackToMobile}
-                                        className="w-full h-12 text-base"
-                                        disabled={isLoading}
-                                    >
-                                        Change Mobile Number
-                                    </Button>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={handleBackToMobile}
+                                            className="flex-1 h-12 text-base"
+                                            disabled={isLoading}
+                                        >
+                                            Change Number
+                                        </Button>
+
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={handleResendOTP}
+                                            className="flex-1 h-12 text-base"
+                                            disabled={isLoading}
+                                        >
+                                            Resend OTP
+                                        </Button>
+                                    </div>
                                 </div>
                             </form>
                         )}
@@ -331,28 +294,6 @@ export default function PatientLoginPage() {
                             <p className="text-sm text-gray-500">
                                 Need help? Contact your healthcare provider
                             </p>
-                        </div>
-
-                        {/* Debug Section for Testing */}
-                        <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                            <h4 className="text-sm font-semibold text-blue-900 mb-2">Testing Information</h4>
-                            <div className="text-xs text-blue-700 space-y-1">
-                                <p><strong>Demo Mobile Numbers:</strong></p>
-                                <p>• 9876543210 (John Doe - ILD)</p>
-                                <p>• 9876543211 (Jane Smith - Asthma)</p>
-                                <p>• 9876543212 (Mike Johnson - COPD)</p>
-                                <p>• 9876543213 (Bob Wilson - Bronchiectasis)</p>
-                                <p>• 9876543214 (Alice Brown - Post ICU)</p>
-                                <p><strong>OTP:</strong> 123456</p>
-                                <Button
-                                    onClick={() => forceInitializeDemoPatients()}
-                                    variant="outline"
-                                    size="sm"
-                                    className="mt-2 text-xs"
-                                >
-                                    Reset Demo Patients
-                                </Button>
-                            </div>
                         </div>
                     </div>
                 </div>

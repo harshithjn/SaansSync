@@ -12,8 +12,9 @@ import {
     HelpCircle,
     Heart
 } from "lucide-react"
-import { AuthSession } from "@/lib/auth-types"
-import { getStoredSession, clearSession } from "@/lib/auth-utils"
+import { usePatientAuth } from "@/lib/auth-guard"
+import { signOut } from "@/lib/auth-service"
+import { getDashboardRoute } from "@/lib/auth-types"
 import { LanguageProvider, LanguageToggle } from "@/lib/language-context"
 
 export default function PatientLayout({
@@ -23,20 +24,9 @@ export default function PatientLayout({
 }) {
     const router = useRouter()
     const pathname = usePathname()
-    const [session, setSession] = useState<AuthSession | null>(null)
-    const [isLoading, setIsLoading] = useState(true)
+    const authState = usePatientAuth()
 
-    useEffect(() => {
-        const storedSession = getStoredSession()
-        if (!storedSession || storedSession.role !== "PATIENT") {
-            router.push("/patient/login")
-            return
-        }
-        setSession(storedSession)
-        setIsLoading(false)
-    }, [router])
-
-    // Skip layout for login page - moved after hooks
+    // Skip layout for login page
     if (pathname === '/patient/login') {
         return (
             <LanguageProvider>
@@ -48,7 +38,7 @@ export default function PatientLayout({
     const navigationItems = [
         {
             name: "Dashboard",
-            href: `/patient/dashboard/${getDashboardSlug(session?.primaryDiagnosisCategory || 'ild')}`,
+            href: getDashboardRoute(authState.profile?.patient_data?.diagnosis?.primaryCategory),
             icon: Home,
             isActive: pathname.includes('/patient/dashboard/') && !pathname.includes('/reports') && !pathname.includes('/medications') && !pathname.includes('/help')
         },
@@ -72,12 +62,12 @@ export default function PatientLayout({
         }
     ]
 
-    const handleLogout = () => {
-        clearSession()
+    const handleLogout = async () => {
+        await signOut()
         router.push("/patient/login")
     }
 
-    if (isLoading) {
+    if (authState.loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
@@ -88,8 +78,8 @@ export default function PatientLayout({
         )
     }
 
-    if (!session) {
-        return null // Will redirect to login
+    if (!authState.user || authState.role !== 'patient') {
+        return null // Will redirect to login via usePatientAuth
     }
 
     return (
@@ -108,7 +98,7 @@ export default function PatientLayout({
                             </div>
                             <LanguageToggle />
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">ID: {session.patientId}</p>
+                        <p className="text-xs text-gray-500 mt-1">ID: {authState.profile?.id || 'Loading...'}</p>
                     </div>
 
                     {/* Navigation */}
@@ -143,10 +133,10 @@ export default function PatientLayout({
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs font-medium text-gray-900 truncate">
-                                        {session.email.split('@')[0]}
+                                        {authState.profile?.full_name || 'Patient'}
                                     </p>
                                     <p className="text-xs text-gray-500 truncate">
-                                        {session.email}
+                                        {authState.profile?.email || authState.profile?.phone || 'No contact info'}
                                     </p>
                                 </div>
                             </div>
@@ -171,24 +161,4 @@ export default function PatientLayout({
             </div>
         </LanguageProvider>
     )
-}
-
-// Helper function to get dashboard slug from diagnosis category
-function getDashboardSlug(category: string): string {
-    switch (category) {
-        case "Interstitial Lung Disease (ILD)":
-            return "ild"
-        case "Bronchial Asthma":
-            return "asthma"
-        case "COPD (Chronic Obstructive Pulmonary Disease)":
-            return "oad"
-        case "Obstructive Airway Disease (OAD)":
-            return "oad"
-        case "Bronchiectasis":
-            return "bronchiectasis"
-        case "Post ICU Recovery":
-            return "post-icu"
-        default:
-            return "ild" // Default to ILD dashboard
-    }
 }

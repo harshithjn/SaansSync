@@ -1,5 +1,5 @@
 // Database Service - Updated for Production Schema v3.0.0
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from './supabase'
 import { AuthSession, LoginResponse } from './auth-types'
 import { DiseaseType } from './monitoring-types'
 
@@ -27,7 +27,6 @@ export async function createDoctorProfile(
     hospitalAffiliation: string,
     phone?: string
 ) {
-    const supabase = createClientComponentClient()
     try {
         // Get current authenticated user
         const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -72,7 +71,6 @@ export async function createPatientAccount(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     patientData?: any
 ) {
-    const supabase = createClientComponentClient()
     try {
         console.log('Creating patient account:', { email, fullName, diseaseType, doctorId })
         
@@ -185,11 +183,9 @@ export async function loginPatient(email: string, password: string): Promise<Log
 
         // Create session
         const session: AuthSession = {
-            patientId: profile.id,
+            userId: profile.id,
             email: email,
-            role: "PATIENT",
-            primaryDiagnosisCategory: profile.disease_type,
-            token: 'mock-token-' + Date.now()
+            role: "patient"
         }
 
         console.log('✅ Patient login successful:', { patientId: profile.id, email })
@@ -212,7 +208,6 @@ export async function loginPatient(email: string, password: string): Promise<Log
 // =====================================================
 
 export async function canLogToday(patientId: string): Promise<boolean> {
-    const supabase = createClientComponentClient()
     try {
         const today = new Date().toISOString().split('T')[0]
         const { count } = await supabase
@@ -234,7 +229,6 @@ export async function createDailyLog(
     commonData: any,
     diseaseSpecificData: any
 ): Promise<{ success: boolean; logEntry?: any; alert?: any; error?: string }> {
-    const supabase = createClientComponentClient()
     try {
         // Check daily limit
         const canLog = await canLogToday(patientId)
@@ -252,7 +246,7 @@ export async function createDailyLog(
         const { calculateRedFlagScore } = await import('./red-flag-scoring')
         const redFlagResult = calculateRedFlagScore({
             patientId,
-            diagnosis: dbDiseaseType,
+            diagnosis: dbDiseaseType as DiseaseType,
             spo2: commonData.spo2?.atRest || 95,
             hasHemoptysis: diseaseSpecificData.hasHemoptysis || false,
             mMRCIncrease: false,
@@ -337,8 +331,7 @@ export async function createDailyLog(
         return { 
             success: true, 
             logEntry: logData,
-            alert: alertData,
-            redFlagScore: redFlagResult.score
+            alert: alertData
         }
 
     } catch (error) {
@@ -375,7 +368,6 @@ export async function getPatientAlerts(patientId: string) {
 }
 
 export async function getDoctorPatients(_doctorIdParam: string) {
-    const supabase = createClientComponentClient()
     try {
         // 1. Verify Session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
@@ -427,7 +419,6 @@ export async function getDoctorPatients(_doctorIdParam: string) {
 }
 
 export async function getDoctorDailyLogs(_doctorIdParam: string) {
-    const supabase = createClientComponentClient()
     try {
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) return []
@@ -481,7 +472,6 @@ export async function getDoctorDailyLogs(_doctorIdParam: string) {
 }
 
 export async function getDoctorAlerts(_doctorIdParam: string) {
-    const supabase = createClientComponentClient()
     try {
         // 1. Verify Session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
@@ -590,10 +580,8 @@ export async function getPatientMedications(patientId: string) {
 export async function getPatientProfile(patientId: string) {
     try {
         if (!supabase) {
-            console.log('Supabase not configured, checking localStorage')
-            // Fallback to localStorage
-            const { getPatientDataById } = await import('./patient-storage')
-            return getPatientDataById(patientId)
+            console.log('Supabase not configured')
+            return null
         }
 
         // Query 'patients' table
@@ -605,9 +593,8 @@ export async function getPatientProfile(patientId: string) {
 
         if (error) {
             console.error('Get patient profile error:', error)
-            // Fallback to localStorage
-            const { getPatientDataById } = await import('./patient-storage')
-            return getPatientDataById(patientId)
+            // Return null if patient not found - no localStorage fallback in production
+            return null
         }
 
         // Convert database format to PatientData format
@@ -648,9 +635,8 @@ export async function getPatientProfile(patientId: string) {
         return data
     } catch (error) {
         console.error('Get patient profile error:', error)
-        // Fallback to localStorage
-        const { getPatientDataById } = await import('./patient-storage')
-        return getPatientDataById(patientId)
+        // Return null if patient not found - no localStorage fallback in production
+        return null
     }
 }
 

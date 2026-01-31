@@ -10,11 +10,23 @@ if (!supabaseUrl) {
 }
 
 export const supabase: SupabaseClient | null = (supabaseUrl && supabaseAnonKey)
-  ? createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } })
+  ? createClient(supabaseUrl, supabaseAnonKey, { 
+      auth: { 
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      } 
+    })
   : null
 
 export const supabaseAdmin: SupabaseClient | null = (supabaseUrl && supabaseServiceKey)
-  ? createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } })
+  ? createClient(supabaseUrl, supabaseServiceKey, { 
+      auth: { 
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      } 
+    })
   : null
 
 export function requireAdminClient(): SupabaseClient {

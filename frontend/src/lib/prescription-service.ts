@@ -1,92 +1,180 @@
-// Prescription Generation and Management Service
+// Professional Database-Driven Prescription Service - NO localStorage
+import { supabase } from './supabase'
+import { requireApprovedDoctor } from './session-manager'
 import { Prescription, PrescriptionMedication, PersonalizedAlert, PatientData } from './patient-types'
 
-const PRESCRIPTIONS_STORAGE_KEY = 'doctor_prescriptions'
+// =====================================================
+// DATABASE-ONLY PRESCRIPTION MANAGEMENT
+// =====================================================
 
-// Generate prescription from patient data (patientId = actual patient id e.g. from credentials)
-export function generatePrescription(
+/**
+ * Generate and store prescription in database
+ */
+export async function generatePrescription(
     patientData: PatientData,
     patientId: string,
     doctorId: string,
     doctorName: string,
     personalizedAlerts: PersonalizedAlert[] = [],
     instructions?: string
-): Prescription {
-    const prescription: Prescription = {
-        id: `prescription-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        patientId,
-        doctorId,
-        patientName: patientData.fullName,
-        doctorName,
-        date: new Date().toISOString().split('T')[0],
-        medications: patientData.medications
-            .filter(med => med.isActive)
-            .map(med => ({
-                drugName: med.customDrugName || med.drugName,
-                dose: med.dose,
-                frequency: med.frequency,
-                instructions: `Route: ${med.route}`
-            })),
-        personalizedAlerts,
-        diagnosis: `${patientData.diagnosis.primaryCategory}${patientData.diagnosis.subtype ? ' - ' + (patientData.diagnosis.subtype === 'Others' && patientData.diagnosis.customSubtype ? patientData.diagnosis.customSubtype : patientData.diagnosis.subtype) : ''}`,
-        instructions
-    }
+): Promise<Prescription | null> {
+    try {
+        // Verify doctor is approved (server-side validation)
+        await requireApprovedDoctor()
 
-    storePrescription(prescription)
-    return prescription
+        const prescription = {
+            patient_id: patientId,
+            doctor_id: doctorId,
+            prescription_date: new Date().toISOString().split('T')[0],
+            medications: patientData.medications
+                .filter(med => med.isActive)
+                .map(med => ({
+                    drugName: med.customDrugName || med.drugName,
+                    dose: med.dose,
+                    frequency: med.frequency,
+                    instructions: `Route: ${med.route}`
+                })),
+            diagnosis: `${patientData.diagnosis.primaryCategory}${patientData.diagnosis.subtype ? ' - ' + (patientData.diagnosis.subtype === 'Others' && patientData.diagnosis.customSubtype ? patientData.diagnosis.customSubtype : patientData.diagnosis.subtype) : ''}`,
+            instructions,
+            notes: JSON.stringify({
+                patientName: patientData.fullName,
+                doctorName,
+                personalizedAlerts
+            })
+        }
+
+        const { data, error } = await supabase
+            .from('prescriptions')
+            .insert(prescription)
+            .select()
+            .single()
+
+        if (error) {
+            console.error('❌ Generate prescription error:', error)
+            return null
+        }
+
+        console.log('✅ Prescription generated successfully')
+        
+        // Return in legacy format for compatibility
+        return {
+            id: data.id,
+            patientId,
+            doctorId,
+            patientName: patientData.fullName,
+            doctorName,
+            date: data.prescription_date,
+            medications: data.medications,
+            personalizedAlerts,
+            diagnosis: data.diagnosis,
+            instructions: data.instructions
+        }
+    } catch (error) {
+        console.error('❌ Generate prescription error:', error)
+        return null
+    }
 }
 
-// Store prescription in localStorage
-function storePrescription(prescription: Prescription): void {
-    if (typeof window === 'undefined') return
-
+/**
+ * Get prescriptions by doctor (server-side validated)
+ */
+export async function getDoctorPrescriptions(doctorId: string): Promise<Prescription[]> {
     try {
-        const stored = localStorage.getItem(PRESCRIPTIONS_STORAGE_KEY)
-        const prescriptions: Prescription[] = stored ? JSON.parse(stored) : []
-        prescriptions.push(prescription)
-        localStorage.setItem(PRESCRIPTIONS_STORAGE_KEY, JSON.stringify(prescriptions))
-    } catch (error) {
-        console.error('Error storing prescription:', error)
-    }
-}
+        const { data, error } = await supabase
+            .from('prescriptions')
+            .select('*')
+            .eq('doctor_id', doctorId)
+            .order('created_at', { ascending: false })
 
-// Get all prescriptions for a doctor
-export function getDoctorPrescriptions(doctorId: string): Prescription[] {
-    if (typeof window === 'undefined') return []
+        if (error) {
+            console.error('❌ Get doctor prescriptions error:', error)
+            return []
+        }
 
-    try {
-        const stored = localStorage.getItem(PRESCRIPTIONS_STORAGE_KEY)
-        const prescriptions: Prescription[] = stored ? JSON.parse(stored) : []
-        return prescriptions.filter(prescription => prescription.doctorId === doctorId)
+        // Convert to legacy format
+        return (data || []).map(convertToLegacyFormat)
     } catch (error) {
-        console.error('Error getting doctor prescriptions:', error)
+        console.error('❌ Get doctor prescriptions error:', error)
         return []
     }
 }
 
-// Get all prescriptions for a patient
-export function getPatientPrescriptions(patientId: string): Prescription[] {
-    if (typeof window === 'undefined') return []
-
+/**
+ * Get prescriptions by patient (server-side validated)
+ */
+export async function getPatientPrescriptions(patientId: string): Promise<Prescription[]> {
     try {
-        const stored = localStorage.getItem(PRESCRIPTIONS_STORAGE_KEY)
-        const prescriptions: Prescription[] = stored ? JSON.parse(stored) : []
-        return prescriptions.filter(prescription => prescription.patientId === patientId)
+        const { data, error } = await supabase
+            .from('prescriptions')
+            .select('*')
+            .eq('patient_id', patientId)
+            .order('created_at', { ascending: false })
+
+        if (error) {
+            console.error('❌ Get patient prescriptions error:', error)
+            return []
+        }
+
+        // Convert to legacy format
+        return (data || []).map(convertToLegacyFormat)
     } catch (error) {
-        console.error('Error getting patient prescriptions:', error)
+        console.error('❌ Get patient prescriptions error:', error)
         return []
     }
 }
 
-// Get prescriptions by date range for a doctor
-export function getDoctorPrescriptionsByDate(doctorId: string, startDate: string, endDate: string): Prescription[] {
-    const prescriptions = getDoctorPrescriptions(doctorId)
-    return prescriptions.filter(prescription =>
-        prescription.date >= startDate && prescription.date <= endDate
-    )
+/**
+ * Get prescriptions by date range for a doctor
+ */
+export async function getDoctorPrescriptionsByDate(doctorId: string, startDate: string, endDate: string): Promise<Prescription[]> {
+    try {
+        const { data, error } = await supabase
+            .from('prescriptions')
+            .select('*')
+            .eq('doctor_id', doctorId)
+            .gte('prescription_date', startDate)
+            .lte('prescription_date', endDate)
+            .order('created_at', { ascending: false })
+
+        if (error) {
+            console.error('❌ Get doctor prescriptions by date error:', error)
+            return []
+        }
+
+        return (data || []).map(convertToLegacyFormat)
+    } catch (error) {
+        console.error('❌ Get doctor prescriptions by date error:', error)
+        return []
+    }
 }
 
-// Format prescription for display/printing
+// =====================================================
+// HELPER FUNCTIONS
+// =====================================================
+
+/**
+ * Convert database format to legacy format for compatibility
+ */
+function convertToLegacyFormat(dbPrescription: any): Prescription {
+    const notes = dbPrescription.notes ? JSON.parse(dbPrescription.notes) : {}
+    
+    return {
+        id: dbPrescription.id,
+        patientId: dbPrescription.patient_id,
+        doctorId: dbPrescription.doctor_id,
+        patientName: notes.patientName || 'Unknown Patient',
+        doctorName: notes.doctorName || 'Unknown Doctor',
+        date: dbPrescription.prescription_date,
+        medications: dbPrescription.medications || [],
+        personalizedAlerts: notes.personalizedAlerts || [],
+        diagnosis: dbPrescription.diagnosis || '',
+        instructions: dbPrescription.instructions || ''
+    }
+}
+
+/**
+ * Format prescription for display/printing
+ */
 export function formatPrescriptionCard(prescription: Prescription): string {
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr)
@@ -149,7 +237,9 @@ Generated on: ${formatDate(new Date().toISOString())}
     return prescriptionText
 }
 
-// Create folder structure for prescriptions
+/**
+ * Create folder structure for prescriptions
+ */
 export function createPrescriptionFolders(prescription: Prescription): {
     doctorFolder: string
     patientFolder: string
@@ -163,7 +253,9 @@ export function createPrescriptionFolders(prescription: Prescription): {
     }
 }
 
-// Export prescription data for Excel
+/**
+ * Export prescription data for Excel
+ */
 export function exportPrescriptionsToExcel(prescriptions: Prescription[]): any[] {
     return prescriptions.map(prescription => ({
         Date: prescription.date,

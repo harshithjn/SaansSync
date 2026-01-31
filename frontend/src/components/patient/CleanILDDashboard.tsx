@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { fetchRealTimeAQI, getAQIColor, shouldAlertForAQI, forceRefreshAQI } from "@/lib/aqi-service"
 import { createDailyLog, canLogToday } from "@/lib/database-service"
 import { calculateRedFlagScore } from "@/lib/red-flag-scoring"
-import { getPatientDataById } from "@/lib/patient-storage"
+import { getPatientProfile } from "@/lib/database-service"
 import { PatientData } from "@/lib/patient-types"
 import { toast } from "@/lib/toast"
 import {
@@ -111,15 +111,24 @@ export default function CleanILDDashboard({ patientId }: CleanILDDashboardProps)
     })
 
     useEffect(() => {
-        loadPatientData()
-        initializeDashboard()
-        checkLoggingStatus()
+        const initializeComponent = async () => {
+            await loadPatientData()
+            initializeDashboard()
+            checkLoggingStatus()
+        }
+        initializeComponent()
     }, [patientId])
 
-    const loadPatientData = () => {
-        const data = getPatientDataById(patientId)
-        setPatientData(data)
-        console.log('Loaded patient data:', data)
+    const loadPatientData = async () => {
+        try {
+            const data = await getPatientProfile(patientId)
+            if (data) {
+                setPatientData(data)
+                console.log('Loaded patient data:', data)
+            }
+        } catch (error) {
+            console.error('Error loading patient data:', error)
+        }
     }
 
     const initializeDashboard = async () => {

@@ -18,8 +18,8 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
 
   try {
     // Verify token and fetch user
-    // Note: supabase-js getUser can accept an access token param in v2
-    const { data, error } = await supabaseAdmin.auth.getUser({ access_token: token })
+    // Note: supabase-js getUser expects just the token string in v2
+    const { data, error } = await supabaseAdmin.auth.getUser(token)
     if (error || !data?.user) {
       return res.status(401).json({ success: false, error: 'Invalid or expired token' })
     }

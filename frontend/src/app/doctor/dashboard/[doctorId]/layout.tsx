@@ -15,7 +15,7 @@ import {
   Stethoscope,
   ChevronRight
 } from "lucide-react"
-import { getDoctorBySession, clearDoctorSession, verifyDoctorSession, type DoctorSession } from "@/lib/doctor-session"
+import { useDoctorAuth } from '@/lib/auth-guard'
 
 export default function Layout({
   children,
@@ -26,8 +26,7 @@ export default function Layout({
 }) {
   const router = useRouter()
   const pathname = usePathname()
-  const [doctorSession, setDoctorSession] = useState<DoctorSession | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const authState = useDoctorAuth() // Use the new auth system
   const [doctorId, setDoctorId] = useState<string>("")
 
   const navigationItems = [
@@ -68,30 +67,21 @@ export default function Layout({
     const initializeParams = async () => {
       const resolvedParams = await params
       setDoctorId(resolvedParams.doctorId)
-
-      // Verify doctor session and access
-      const session = getDoctorBySession()
-
-      if (!session || !verifyDoctorSession(resolvedParams.doctorId)) {
-        // Invalid session or unauthorized access
-        clearDoctorSession()
-        router.push('/login')
-        return
-      }
-
-      setDoctorSession(session)
-      setIsLoading(false)
+      
+      // Auth verification is handled by useDoctorAuth hook
+      // No need for manual session verification
     }
 
     initializeParams()
-  }, [params, router])
+  }, [params])
 
-  const handleLogout = () => {
-    clearDoctorSession()
+  const handleLogout = async () => {
+    const { signOutUser } = await import('@/lib/session-manager')
+    await signOutUser()
     router.push('/login')
   }
 
-  if (isLoading) {
+  if (authState.loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -102,7 +92,7 @@ export default function Layout({
     )
   }
 
-  if (!doctorSession) {
+  if (!authState.user || !authState.approved) {
     return null // Will redirect to login
   }
 
@@ -152,10 +142,10 @@ export default function Layout({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-medium text-gray-900 truncate">
-                  {doctorSession.name}
+                  {authState.profile?.full_name || 'Doctor'}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
-                  {doctorSession.email}
+                  {authState.user?.email || 'doctor@example.com'}
                 </p>
               </div>
             </div>

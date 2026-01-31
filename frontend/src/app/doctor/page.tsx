@@ -1,96 +1,37 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { createDoctorSession, storeDoctorSession } from "@/lib/doctor-session";
+import React, { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { guardPublicRoute } from "@/lib/auth-guard"
 
 export default function DoctorPage() {
-  const router = useRouter();
+  const router = useRouter()
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [showCreateAccount, setShowCreateAccount] = useState(false);
+  // Redirect if already authenticated
+  useEffect(() => {
+    guardPublicRoute()
+  }, [])
 
   const handleLogin = () => {
-    if (email === "test@doctor.com" && password === "doctor123") {
-      setError("");
-      // Create and store session so dashboard layout can verify (doctorId must match URL)
-      let session = createDoctorSession(email);
-      if (!session) {
-        session = {
-          doctorId: "1",
-          name: "Test Doctor",
-          email: "test@doctor.com",
-          phoneNumber: "",
-          loginTime: new Date().toISOString(),
-          token: btoa(JSON.stringify({ email, timestamp: Date.now() }))
-        };
-      }
-      if (session.doctorId !== "1") {
-        session = { ...session, doctorId: "1" };
-      }
-      storeDoctorSession(session);
-      router.push("/doctor/dashboard/1");
-    } else {
-      setError("Invalid email or password");
-    }
-  };
+    router.push('/login')
+  }
 
   return (
-    <main className="p-6 max-w-md mx-auto">
-      <h2 className="text-xl font-semibold mb-4">Doctor Portal</h2>
-
-      {!showCreateAccount ? (
-        <>
-          <Input
-            placeholder="Email ID"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-
-          <Input
-            type="password"
-            placeholder="Password"
-            className="mt-3"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-
-          {error && <p className="text-red-500 mt-2">{error}</p>}
-
-          <Button className="mt-4 w-full" onClick={handleLogin}>
-            Login
-          </Button>
-
-          <Button
-            variant="outline"
-            className="mt-2 w-full"
-            onClick={() => setShowCreateAccount(true)}
-          >
-            Create Account
-          </Button>
-        </>
-      ) : (
-        <>
-          <Input placeholder="Full Name" />
-          <Input placeholder="Age" type="number" className="mt-3" />
-          <Input placeholder="Email ID" className="mt-3" />
-          <Input type="file" className="mt-3" />
-
-          <Button className="mt-4 w-full">Create Account</Button>
-
-          <Button
-            variant="outline"
-            className="mt-2 w-full"
-            onClick={() => setShowCreateAccount(false)}
-          >
-            Back to Login
-          </Button>
-        </>
-      )}
-    </main>
-  );
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
+      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+        <h1 className="text-2xl font-bold text-center mb-6">Doctor Portal</h1>
+        <p className="text-gray-600 text-center mb-8">
+          Access your healthcare dashboard
+        </p>
+        
+        <Button 
+          onClick={handleLogin}
+          className="w-full bg-blue-600 hover:bg-blue-700"
+        >
+          Go to Login
+        </Button>
+      </div>
+    </div>
+  )
 }

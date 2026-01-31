@@ -70,12 +70,12 @@ export default function PrescriptionModal({
         return PERSONALIZED_ALERT_TYPES.find(t => t.type === type) || PERSONALIZED_ALERT_TYPES[3] // default to custom
     }
 
-    const handleGeneratePrescription = () => {
+    const handleGeneratePrescription = async () => {
         setIsGenerating(true)
 
         try {
             // Generate prescription (patientId required for storage)
-            const prescription = generatePrescription(
+            const prescription = await generatePrescription(
                 patientData,
                 patientId,
                 doctorId,
@@ -83,6 +83,10 @@ export default function PrescriptionModal({
                 personalizedAlerts.filter(alert => alert.name && alert.frequency),
                 instructions
             )
+
+            if (!prescription) {
+                throw new Error('Failed to generate prescription')
+            }
 
             // Format for display
             const formattedPrescription = formatPrescriptionCard(prescription)

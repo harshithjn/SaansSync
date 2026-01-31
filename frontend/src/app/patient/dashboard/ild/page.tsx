@@ -1,27 +1,12 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { AuthSession } from "@/lib/auth-types"
-import { getStoredSession } from "@/lib/auth-utils"
+import { usePatientAuth } from "@/lib/auth-guard"
 import PatientDashboardWrapper from "@/components/patient/PatientDashboardWrapper"
 
 export default function ILDDashboard() {
-    const router = useRouter()
-    const [session, setSession] = useState<AuthSession | null>(null)
-    const [isLoading, setIsLoading] = useState(true)
+    const authState = usePatientAuth()
 
-    useEffect(() => {
-        const storedSession = getStoredSession()
-        if (!storedSession || storedSession.role !== "PATIENT") {
-            router.push("/patient/login")
-            return
-        }
-        setSession(storedSession)
-        setIsLoading(false)
-    }, [router])
-
-    if (isLoading) {
+    if (authState.loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
@@ -32,8 +17,8 @@ export default function ILDDashboard() {
         )
     }
 
-    if (!session) {
-        return null
+    if (!authState.user || authState.role !== 'patient') {
+        return null // Will redirect via usePatientAuth
     }
 
     return <PatientDashboardWrapper diseaseType="ild" />

@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { getDoctorBySession, type DoctorSession } from "@/lib/doctor-session"
+import { useDoctorAuth } from '@/lib/auth-guard'
 import { getDoctorPatients, getDoctorAlerts } from "@/lib/database-service"
 import { getDoctorPatientFolders, getDoctorPatientFoldersAsync, getDoctorAlertCounts, searchPatients } from "@/lib/doctor-patient-mapping"
 import { getDoctorAlertsSaansSync } from "@/lib/alert-engines"
@@ -15,16 +15,15 @@ import { PatientFolder } from "@/lib/monitoring-types"
 import { Users, AlertTriangle, TrendingUp, Clock, Search, Plus, Bell, Edit, UserPlus } from "lucide-react"
 import ImportPatientModal from "@/components/doctor/ImportPatientModal"
 
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabase'
 
 export default function DoctorDashboard({
   params,
 }: {
   params: Promise<{ doctorId: string }>
 }) {
-  const [doctorSession, setDoctorSession] = useState<DoctorSession | null>(null)
+  const authState = useDoctorAuth() // Use the new auth system
   const [doctorId, setDoctorId] = useState<string>("")
-  const [isLoading, setIsLoading] = useState(true) // Add loading state
   
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedDisease, setSelectedDisease] = useState("all")
@@ -41,27 +40,14 @@ export default function DoctorDashboard({
 
   useEffect(() => {
     const initializeDashboard = async () => {
-      setIsLoading(true)
       const resolvedParams = await params
       setDoctorId(resolvedParams.doctorId)
 
-      const supabase = createClientComponentClient()
-      
-      // 1. Wait for Supabase Session
-      const { data: { session }, error: authError } = await supabase.auth.getSession()
-      
-      if (authError || !session) {
-          console.error('Dashboard Auth Error:', authError)
-          // Optional: Redirect to login here
-          setIsLoading(false)
-          return
-      }
+      // Auth verification is handled by useDoctorAuth hook
+      console.log('✅ Dashboard initialized for doctor:', resolvedParams.doctorId)
 
-      console.log('✅ Session verified for user:', session.user.id)
-
-      // 2. Initialize Helpers
-      const { initializeDemoPatients } = await import('@/lib/patient-storage')
-      initializeDemoPatients()
+      // 2. Initialize production system (no demo patients needed)
+      console.log('Production mode - using database patients only')
 
       // 3. Load Data (now safe to call)
       try {
@@ -77,7 +63,10 @@ export default function DoctorDashboard({
         const dbFolders: PatientFolder[] = dbPatients.map(patient => ({
           patientId: patient.id,
           patientName: patient.full_name,
-          diseaseType: patient.disease_type,
+          fullName: patient.full_name,
+          age: 0, // Default age, would come from patient data
+          doctorId: resolvedParams.doctorId,
+          diseaseType: patient.disease_type || 'Unknown',
           redFlagScore: 1, // Default, will be updated from latest log
           alertCount: 0, // Will be calculated from alerts
           lastLogDate: new Date().toISOString().split('T')[0],
@@ -135,8 +124,6 @@ export default function DoctorDashboard({
           pendingReview: 0,
           total: activeAlerts.length
         })
-      } finally {
-        setIsLoading(false)
       }
     }
 
@@ -203,12 +190,12 @@ export default function DoctorDashboard({
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      {doctorSession && (
+      {authState.user && (
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-2xl font-semibold text-gray-900 mb-1">
-                Welcome back, Dr. {doctorSession.name.split(' ')[0]}!
+                Welcome back, Dr. {authState.profile?.full_name?.split(' ')[0] || 'Doctor'}!
               </h1>
               <p className="text-gray-600">
                 Remote Respiratory Monitoring Dashboard - Manage your patients and monitor their health status

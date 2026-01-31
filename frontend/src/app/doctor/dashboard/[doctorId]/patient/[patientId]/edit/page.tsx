@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { PatientFolder } from "@/lib/monitoring-types"
 import { getDoctorPatientFolders } from "@/lib/doctor-patient-mapping"
-import { getPatientDataById, updatePatientData } from "@/lib/patient-storage"
+import { getPatientProfile } from "@/lib/database-service"
 import { PatientData } from "@/lib/patient-types"
+import { supabase } from "@/lib/supabase"
 import { ArrowLeft, Save, User, Phone, Mail, MapPin, Calendar, Stethoscope } from "lucide-react"
 import Link from "next/link"
 import { toast } from "@/lib/toast"
@@ -40,31 +41,24 @@ export default function EditPatientPage({
       const folder = folders.find(f => f.patientId === resolvedParams.patientId)
       setPatientFolder(folder || null)
 
-      // Load patient data
-      let data = getPatientDataById(resolvedParams.patientId)
+      // Load patient data from database
+      let data = await getPatientProfile(resolvedParams.patientId)
 
-      // If not found, check stored patients directly
+      // If not found in database, return error
       if (!data) {
-        const { getStoredPatients } = await import('@/lib/patient-storage')
-        const allPatients = getStoredPatients()
-        const patientRecord = allPatients.find(p => p.credentials.patientId === resolvedParams.patientId)
-        if (patientRecord) {
-          data = patientRecord.patientData
-        }
+        console.log('❌ Patient not found in database:', resolvedParams.patientId)
+        return (
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Patient Not Found</h1>
+              <p className="text-gray-600 mb-4">The requested patient could not be found in the database.</p>
+              <Link href={`/doctor/dashboard/${resolvedParams.doctorId}`}>
+                <Button>Back to Dashboard</Button>
+              </Link>
+            </div>
+          </div>
+        )
       }
-
-      // Also check old format
-      if (!data) {
-        try {
-          const oldFormatData = localStorage.getItem(`patient_${resolvedParams.patientId}`)
-          if (oldFormatData) {
-            data = JSON.parse(oldFormatData)
-          }
-        } catch (error) {
-          console.error('Error reading old format data:', error)
-        }
-      }
-
       setPatientData(data)
       setEditedData(data || {})
 
@@ -101,11 +95,22 @@ export default function EditPatientPage({
         ...editedData
       }
 
-      const success = updatePatientData(patientId, updatedData)
-      if (success) {
-        router.push(`/doctor/dashboard/${doctorId}/patient/${patientId}`)
-      } else {
+      // Update patient in database
+      const { error } = await supabase
+        .from('patients')
+        .update({
+          full_name: updatedData.fullName,
+          patient_data: updatedData,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', patientId)
+
+      if (error) {
+        console.error('Database update error:', error)
         toast.error('Failed to update patient data')
+      } else {
+        toast.success('Patient data updated successfully')
+        router.push(`/doctor/dashboard/${doctorId}/patient/${patientId}`)
       }
     } catch (error) {
       console.error('Error updating patient:', error)

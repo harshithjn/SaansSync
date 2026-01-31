@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "../../../components/ui/badge"
-import { getStoredSession } from "@/lib/auth-utils"
+import { usePatientAuth } from "@/lib/auth-guard"
 
 interface Medication {
     id: string
@@ -20,13 +20,15 @@ interface Medication {
 }
 
 export default function PatientMedicationsPage() {
+    const authState = usePatientAuth()
     const [medications, setMedications] = useState<Medication[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
         const loadMedications = async () => {
-            const session = getStoredSession()
-            if (!session) return
+            if (!authState.user || authState.role !== 'patient') {
+                return // Will redirect via usePatientAuth
+            }
 
             // Simulate API call to fetch medications
             const mockMedications: Medication[] = [
@@ -97,8 +99,10 @@ export default function PatientMedicationsPage() {
             setIsLoading(false)
         }
 
-        loadMedications()
-    }, [])
+        if (!authState.loading) {
+            loadMedications()
+        }
+    }, [authState])
 
     const activeMedications = medications.filter(med => med.isActive)
     const pastMedications = medications.filter(med => !med.isActive)
@@ -120,7 +124,7 @@ export default function PatientMedicationsPage() {
         }
     }
 
-    if (isLoading) {
+    if (authState.loading || isLoading) {
         return (
             <div className="space-y-6">
                 <div className="animate-pulse">
@@ -132,6 +136,10 @@ export default function PatientMedicationsPage() {
                 </div>
             </div>
         )
+    }
+
+    if (!authState.user || authState.role !== 'patient') {
+        return null // Will redirect via usePatientAuth
     }
 
     return (
