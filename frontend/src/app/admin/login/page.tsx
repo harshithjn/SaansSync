@@ -141,7 +141,7 @@ export default function AdminLoginPage() {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                placeholder="harshithj1121@gmail.com"
+                                placeholder="Enter your email here"
                                 className="pl-10"
                                 required
                             />
@@ -181,15 +181,6 @@ export default function AdminLoginPage() {
                     </Button>
                 </form>
 
-                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Admin Credentials</h4>
-                    <div className="text-xs text-gray-600 space-y-1">
-                        <p><strong>Email:</strong> harshithj1121@gmail.com</p>
-                        <p><strong>Password:</strong> admin123</p>
-                        <p className="text-blue-600 mt-2">ℹ️ First time: Check email for verification link</p>
-                        <p className="text-green-600">✓ After verification: Instant admin access</p>
-                    </div>
-                </div>
 
                 <div className="mt-4 text-center">
                     <Button
