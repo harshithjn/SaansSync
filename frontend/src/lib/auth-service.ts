@@ -7,6 +7,7 @@ export interface DoctorProfile {
   email: string
   full_name: string
   phone?: string
+  alt_phone?: string
   approval_status: 'pending' | 'approved' | 'rejected'
   created_at: string
   updated_at: string
@@ -16,6 +17,7 @@ export interface PatientProfile {
   id: string
   auth_user_id: string
   phone: string
+  alt_phone?: string
   full_name?: string
   patient_data: any
   created_at: string
@@ -23,9 +25,279 @@ export interface PatientProfile {
 }
 
 // =====================================================
-// DOCTOR AUTHENTICATION (Email OTP Only)
+// DOCTOR AUTHENTICATION
 // =====================================================
 
+// 1. Registration Step 1: Send OTP to Mobile
+export async function startDoctorRegistration(
+  phone: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const cleanPhone = phone.replace(/\D/g, '')
+    const formattedPhone = `+91${cleanPhone}`
+    
+    console.log('🩺 Starting doctor registration for:', formattedPhone)
+    
+    // Check if phone already registered
+    const serviceClient = createServiceClient()
+    const { data: existing } = await serviceClient
+      .from('doctors')
+      .select('id')
+      .eq('phone', cleanPhone)
+      .single()
+      
+    if (existing) {
+      return { success: false, error: 'Mobile number already registered. Please login instead.' }
+    }
+
+    const { error } = await supabase.auth.signInWithOtp({
+      phone: formattedPhone
+    })
+
+    if (error) {
+      console.error('❌ Registration OTP error:', error)
+      return { success: false, error: error.message }
+    }
+
+    return { success: true }
+  } catch (error) {
+    console.error('❌ Registration error:', error)
+    return { success: false, error: 'Failed to send OTP' }
+  }
+}
+
+// 2. Registration Step 2: Verify OTP and Create Profile
+export async function completeDoctorRegistration(
+  phone: string,
+  token: string,
+  email: string,
+  fullName: string,
+  altPhone?: string
+): Promise<{ success: boolean; error?: string; doctorProfile?: DoctorProfile }> {
+  try {
+    const cleanPhone = phone.replace(/\D/g, '')
+    const formattedPhone = `+91${cleanPhone}`
+    
+    // Verify OTP
+    const { data: authData, error: authError } = await supabase.auth.verifyOtp({
+      phone: formattedPhone,
+      token,
+      type: 'sms'
+    })
+
+    if (authError || !authData.user) {
+      return { success: false, error: authError?.message || 'Verification failed' }
+    }
+
+    // Create Doctor Profile
+    const serviceClient = createServiceClient()
+    const { data: profile, error: dbError } = await serviceClient
+      .from('doctors')
+      .insert({
+        auth_user_id: authData.user.id,
+        email: email.trim(),
+        full_name: fullName.trim(),
+        phone: cleanPhone,
+        alt_phone: altPhone?.replace(/\D/g, '') || null,
+        approval_status: 'pending'
+      })
+      .select()
+      .single()
+
+    if (dbError) {
+      // If profile creation fails, we should probably delete the auth user to clean up?
+      // For now just return error
+      console.error('❌ Profile creation error:', dbError)
+      return { success: false, error: 'Failed to create profile: ' + dbError.message }
+    }
+
+    return { success: true, doctorProfile: profile }
+  } catch (error) {
+    console.error('❌ Completion error:', error)
+    return { success: false, error: 'An unexpected error occurred' }
+  }
+}
+
+// 3. Login: Email + Password
+export async function signInDoctorWithPassword(
+  email: string,
+  password: string
+): Promise<{ success: boolean; error?: string; doctorProfile?: DoctorProfile }> {
+  try {
+    // 1. Try Email Login
+    let { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
+
+    // 2. Fallback: Try Phone Login if Email login failed
+    if (error && (error.message.includes('Invalid login credentials') || error.message.includes('Email not confirmed'))) {
+      console.log('⚠️ Email login failed, trying Phone fallback for:', email)
+      
+      try {
+        const serviceClient = createServiceClient()
+        const { data: profile } = await serviceClient
+          .from('doctors')
+          .select('phone')
+          .eq('email', email)
+          .single()
+
+        if (profile && profile.phone) {
+          const formattedPhone = `+91${profile.phone.replace(/\D/g, '')}`
+          console.log('📱 Trying fallback login with phone:', formattedPhone)
+          
+          const { data: phoneData, error: phoneError } = await supabase.auth.signInWithPassword({
+            phone: formattedPhone,
+            password
+          })
+
+          if (!phoneError && phoneData.user) {
+            console.log('✅ Fallback phone login successful')
+            data = phoneData
+            error = null
+          }
+        }
+      } catch (fallbackError) {
+        console.warn('⚠️ Fallback login error:', fallbackError)
+      }
+    }
+
+    if (error) return { success: false, error: error.message }
+    if (!data?.user) return { success: false, error: 'Login failed' }
+
+    // Get Profile and Check Status
+    const { data: profile, error: profileError } = await supabase
+      .from('doctors')
+      .select('*')
+      .eq('auth_user_id', data.user.id)
+      .single()
+
+    if (profileError || !profile) {
+      await supabase.auth.signOut()
+      return { success: false, error: 'Doctor profile not found' }
+    }
+
+    if (profile.approval_status !== 'approved') {
+      await supabase.auth.signOut()
+      return { 
+        success: false, 
+        error: `Account is ${profile.approval_status}. Please wait for admin approval.` 
+      }
+    }
+
+    return { success: true, doctorProfile: profile }
+  } catch (error) {
+    console.error('Login exception:', error)
+    return { success: false, error: 'Login failed' }
+  }
+}
+
+// 4. Password Setup (for approved doctors)
+export async function setupDoctorPassword(
+  phone: string,
+  token: string,
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Verify OTP first (authenticates the user)
+    const cleanPhone = phone.replace(/\D/g, '')
+    const formattedPhone = `+91${cleanPhone}`
+    
+    const { data: authData, error: authError } = await supabase.auth.verifyOtp({
+      phone: formattedPhone,
+      token,
+      type: 'sms'
+    })
+
+    if (authError || !authData.user) {
+      return { success: false, error: 'Invalid OTP' }
+    }
+
+    // Check Approval Status
+    const serviceClient = createServiceClient()
+    console.log('🔍 Setup Password: Checking profile for user:', authData.user.id)
+    
+    let { data: profile } = await serviceClient
+      .from('doctors')
+      .select('id, approval_status, auth_user_id, phone, email')
+      .eq('auth_user_id', authData.user.id)
+      .single()
+
+    console.log('🔍 Setup Password: Profile found via auth_id:', profile)
+
+    // Fallback: Check by phone if not found by auth_id
+    if (!profile) {
+      console.log('🔍 Setup Password: Profile not found by auth_id, checking phone:', cleanPhone)
+      const { data: phoneProfile } = await serviceClient
+        .from('doctors')
+        .select('id, approval_status, auth_user_id, phone, email')
+        .eq('phone', cleanPhone)
+        .single()
+        
+      if (phoneProfile) {
+        console.log('🔍 Setup Password: Profile found by phone:', phoneProfile)
+        profile = phoneProfile
+        
+        // If the profile exists but auth_user_id is not linked, link it now
+        if (profile.auth_user_id !== authData.user.id) {
+           console.log('🔗 Setup Password: Linking auth_user_id to doctor profile...')
+           await serviceClient
+             .from('doctors')
+             .update({ auth_user_id: authData.user.id })
+             .eq('id', profile.id)
+        }
+      }
+    }
+
+    if (!profile) {
+       console.error('❌ Setup Password: Doctor profile not found for phone:', cleanPhone)
+       return { success: false, error: 'Doctor profile not found. Please register first.' }
+    }
+
+    if (profile.approval_status !== 'approved') {
+      console.warn('⚠️ Setup Password: Account status is', profile.approval_status)
+      return { success: false, error: `Account is ${profile.approval_status}. Please wait for admin approval.` }
+    }
+
+    // Update Password and Link Email
+    const updates: any = { password: newPassword }
+    if (profile.email) {
+      console.log('🔗 Setup Password: Linking email to auth user:', profile.email)
+      updates.email = profile.email
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser(updates)
+
+    if (updateError) {
+       console.warn('⚠️ Update user error:', updateError)
+       // If email update fails, try just password
+       if (updates.email) {
+         console.log('⚠️ Retrying with password only...')
+         const { error: retryError } = await supabase.auth.updateUser({ password: newPassword })
+         if (retryError) return { success: false, error: retryError.message }
+       } else {
+         return { success: false, error: updateError.message }
+       }
+    }
+
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: 'Password setup failed' }
+  }
+}
+
+// 5. Forgot Password (OTP -> Reset)
+export async function initiatePasswordReset(phone: string) {
+  const cleanPhone = phone.replace(/\D/g, '')
+  const formattedPhone = `+91${cleanPhone}`
+  return supabase.auth.signInWithOtp({ phone: formattedPhone })
+}
+
+export async function completePasswordReset(phone: string, token: string, newPassword: string) {
+  return setupDoctorPassword(phone, token, newPassword) // Re-use setup logic
+}
+
+// Old functions kept for compatibility but should be deprecated/removed
 export async function signUpDoctor(
   email: string,
   fullName: string,
@@ -267,101 +539,61 @@ export async function signInPatientWithOTP(phoneNumber: string): Promise<{ succe
     const formattedPhone = `+91${cleanPhone}`
     console.log('📱 Formatted phone for Twilio:', formattedPhone)
 
-    // First, check if patient exists in our database
+    // First, check if patient exists using our secure API route (bypasses RLS)
     console.log('🔍 Searching for patient with phone:', cleanPhone)
-    console.log('🔍 Original phone input:', phoneNumber)
-    console.log('🔍 Formatted phone for search:', cleanPhone)
     
-    const { data: existingPatient, error: patientError } = await supabase
-      .from('patients')
-      .select('*')
-      .eq('phone', cleanPhone)
-      .single()
+    try {
+      const response = await fetch('/api/check-patient', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone: cleanPhone }),
+      })
 
-    console.log('📋 Database search result:', { existingPatient, patientError })
+      if (!response.ok) {
+        throw new Error('Failed to verify patient')
+      }
 
-    if (patientError && patientError.code !== 'PGRST116') {
-      console.error('❌ Database error:', patientError)
-      return { success: false, error: 'Database error occurred' }
-    }
-
-    if (!existingPatient) {
-      // Enhanced debug: Let's check all patients and their phone formats
-      console.log('🔍 Patient not found. Running comprehensive debug...')
+      const result = await response.json()
       
-      const { data: allPatients, error: debugError } = await supabase
-        .from('patients')
-        .select('id, phone, full_name, email, created_at')
-        .order('created_at', { ascending: false })
-        .limit(20)
-      
-      console.log('🔍 Debug - All recent patients in database:', allPatients)
-      console.log('🔍 Debug - Looking for phone:', cleanPhone)
-      console.log('🔍 Debug - Phone length:', cleanPhone.length)
-      
-      // Try different phone format searches
-      const phoneVariations = [
-        cleanPhone,
-        `+91${cleanPhone}`,
-        cleanPhone.substring(1), // Remove first digit
-        `0${cleanPhone}`, // Add leading zero
-      ]
-      
-      for (const variation of phoneVariations) {
-        const { data: variantResult } = await supabase
-          .from('patients')
-          .select('id, phone, full_name')
-          .eq('phone', variation)
-          .limit(1)
-        
-        if (variantResult && variantResult.length > 0) {
-          console.log(`🎯 Found patient with phone variation "${variation}":`, variantResult[0])
+      if (!result.exists) {
+        return { 
+          success: false, 
+          error: `Phone number not registered. Please contact your doctor to verify your phone number is correctly saved as: ${cleanPhone}` 
         }
       }
       
-      // Also search by partial phone match
-      const { data: partialMatches } = await supabase
-        .from('patients')
-        .select('id, phone, full_name')
-        .ilike('phone', `%${cleanPhone.substring(-8)}%`) // Last 8 digits
-        .limit(5)
+      console.log('✅ Patient found via API:', result.patient)
       
-      console.log('🔍 Debug - Partial phone matches (last 8 digits):', partialMatches)
-      
-      return { success: false, error: `Phone number not registered. Please contact your doctor to verify your phone number is correctly saved as: ${cleanPhone}` }
-    }
-
-    // Use Supabase phone auth with Twilio
-    const { error } = await supabase.auth.signInWithOtp({
-      phone: formattedPhone,
-      options: {
-        data: {
-          role: 'patient',
-          patient_id: existingPatient.id
+      // Patient exists, proceed with OTP
+      const { error } = await supabase.auth.signInWithOtp({
+        phone: formattedPhone,
+        options: {
+          data: {
+            role: 'patient',
+            patient_id: result.patient.id
+          }
         }
-      }
-    })
+      })
 
-    if (error) {
-      console.error('❌ SMS OTP error:', error)
-      
-      if (error.message.includes('rate limit')) {
-        return { success: false, error: 'Too many requests. Please wait a few minutes before trying again.' }
+      if (error) {
+        console.error('❌ SMS OTP error:', error)
+        // ... error handling ...
+        if (error.message.includes('rate limit')) {
+          return { success: false, error: 'Too many requests. Please wait a few minutes before trying again.' }
+        }
+        return { success: false, error: error.message }
       }
-      
-      if (error.message.includes('Invalid phone number')) {
-        return { success: false, error: 'Invalid phone number format. Please check and try again.' }
-      }
-      
-      if (error.message.includes('SMS') || error.message.includes('provider')) {
-        return { success: false, error: 'SMS service temporarily unavailable. Please try again later.' }
-      }
-      
-      return { success: false, error: error.message }
+
+      console.log('✅ SMS OTP sent successfully via Twilio')
+      return { success: true }
+
+    } catch (apiError) {
+      console.error('❌ Patient check API error:', apiError)
+      return { success: false, error: 'Service temporarily unavailable. Please try again.' }
     }
 
-    console.log('✅ SMS OTP sent successfully via Twilio')
-    return { success: true }
   } catch (error) {
     console.error('❌ SMS OTP error:', error)
     return { success: false, error: 'Failed to send SMS OTP. Please try again.' }
@@ -422,32 +654,32 @@ export async function verifyPatientOTP(
     if (authLinkedPatient) {
       patientProfile = authLinkedPatient
     } else {
-      // Fallback: get patient by phone number and link auth_user_id
-      const { data: phonePatient, error: phoneError } = await supabase
-        .from('patients')
-        .select('*')
-        .eq('phone', cleanPhone)
-        .single()
+      // Fallback: Use server-side API to link profile (bypassing RLS)
+      try {
+        const response = await fetch('/api/patient/link-profile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: cleanPhone,
+            userId: authData.user.id
+          }),
+        })
 
-      if (phoneError || !phonePatient) {
-        console.error('❌ Patient profile not found:', phoneError)
-        return { success: false, error: 'Patient profile not found. Please contact your doctor.' }
-      }
+        const result = await response.json()
 
-      // Link the auth user to the patient profile
-      const { data: updatedPatient, error: updateError } = await supabase
-        .from('patients')
-        .update({ auth_user_id: authData.user.id })
-        .eq('id', phonePatient.id)
-        .select()
-        .single()
+        if (!response.ok || !result.success || !result.patient) {
+          console.error('❌ Failed to link patient profile via API:', result.error)
+          return { success: false, error: result.error || 'Patient profile not found. Please contact your doctor.' }
+        }
 
-      if (updateError) {
-        console.warn('⚠️ Failed to link auth user to patient profile:', updateError)
-        patientProfile = phonePatient // Use unlinked profile
-      } else {
-        patientProfile = updatedPatient
-        console.log('✅ Linked auth user to patient profile')
+        patientProfile = result.patient
+        console.log('✅ Linked auth user to patient profile via API')
+
+      } catch (apiError) {
+        console.error('❌ API call failed:', apiError)
+        return { success: false, error: 'Failed to verify patient profile. Please try again.' }
       }
     }
 

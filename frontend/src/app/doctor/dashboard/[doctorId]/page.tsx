@@ -136,7 +136,11 @@ export default function DoctorDashboard({
 
     // Search filter
     if (searchTerm.trim()) {
-      filtered = searchPatients(doctorId, searchTerm)
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(patient => 
+        patient.fullName.toLowerCase().includes(term) ||
+        patient.patientId.toLowerCase().includes(term)
+      )
     }
 
     // Disease filter

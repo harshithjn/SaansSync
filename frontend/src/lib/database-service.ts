@@ -112,9 +112,9 @@ export async function createPatientAccount(
             .insert({
                 // id: generateUUID(), // If ID is not auto-generated, we might need this. valid-uuid needed.
                 full_name: fullName,
-                // disease_type: dbDiseaseType, // Not in patients table schema? It's in patient_data
+                disease_type: dbDiseaseType,
                 doctor_id: doctorId || null,
-                // phone: patientData?.mobileNumber || '', // Not in patients table
+                phone: patientData?.mobileNumber || '',
                 // gender: patientData?.sex || null, // Not in patients table
                 email: email,
                 patient_data: {
@@ -385,11 +385,24 @@ export async function getDoctorPatients(_doctorIdParam: string) {
             console.warn(`Security Warning: URL parameter ${_doctorIdParam} mismatch with Auth ID ${authUserId}`)
         }
         
-        // 3. Query 'patients' table using AUTHENTICATED ID
+        // 3. Resolve Doctor PK
+        let doctorPK = authUserId
+        const { data: doctorData } = await supabase
+            .from('doctors')
+            .select('id')
+            .eq('auth_user_id', authUserId)
+            .maybeSingle()
+        
+        if (doctorData) {
+            doctorPK = doctorData.id
+        }
+
+        // 4. Query 'patients' table using DOCTOR PK
+        // We also check auth_user_id to handle legacy/incorrectly linked patients
         const { data, error } = await supabase
             .from('patients')
-            .select('id, full_name, email, patient_data, created_at')
-            .eq('doctor_id', authUserId)
+            .select('id, full_name, email, patient_data, created_at, doctor_id')
+            .or(`doctor_id.eq.${doctorPK},doctor_id.eq.${authUserId}`)
 
         if (error) {
             console.error('Get doctor patients error:', {
@@ -424,11 +437,23 @@ export async function getDoctorDailyLogs(_doctorIdParam: string) {
         if (!session) return []
         const authUserId = session.user.id
 
+        // Resolve Doctor PK
+        let doctorPK = authUserId
+        const { data: doctorData } = await supabase
+            .from('doctors')
+            .select('id')
+            .eq('auth_user_id', authUserId)
+            .maybeSingle()
+        
+        if (doctorData) {
+            doctorPK = doctorData.id
+        }
+
         // Get all patients for this doctor first using the main table
         const { data: patients, error: patientsError } = await supabase
             .from('patients')
             .select('id, full_name, patient_data')
-            .eq('doctor_id', authUserId)
+            .or(`doctor_id.eq.${doctorPK},doctor_id.eq.${authUserId}`)
 
         if (patientsError) {
             console.error('Get doctor patients error:', patientsError)
@@ -484,11 +509,23 @@ export async function getDoctorAlerts(_doctorIdParam: string) {
         const authUserId = session.user.id
         console.log('Getting alerts for authenticated doctor:', authUserId)
         
-        // 2. Query 'saanssync_alerts' table using AUTHENTICATED ID
+        // Resolve Doctor PK
+        let doctorPK = authUserId
+        const { data: doctorData } = await supabase
+            .from('doctors')
+            .select('id')
+            .eq('auth_user_id', authUserId)
+            .maybeSingle()
+        
+        if (doctorData) {
+            doctorPK = doctorData.id
+        }
+
+        // 2. Query 'saanssync_alerts' table using DOCTOR PK or Auth ID
         const { data: alerts, error: alertsError } = await supabase
             .from('saanssync_alerts')
             .select('*')
-            .eq('doctor_id', authUserId)
+            .or(`doctor_id.eq.${doctorPK},doctor_id.eq.${authUserId}`)
             .order('created_at', { ascending: false })
 
         if (alertsError) {

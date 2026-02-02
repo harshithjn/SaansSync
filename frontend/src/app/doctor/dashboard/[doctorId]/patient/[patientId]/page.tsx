@@ -11,6 +11,7 @@ import { Prescription } from "@/lib/patient-types"
 import { getDoctorPatientFolders } from "@/lib/doctor-patient-mapping"
 import { getPatientProfile } from "@/lib/database-service"
 import { getPatientPrescriptions, formatPrescriptionCard } from "@/lib/prescription-service"
+import { diagnosisToDiseaseType } from "@/lib/supabase-auth"
 import { ArrowLeft, User, Calendar, MapPin, Phone, Mail, AlertTriangle, Pill, FileText, TrendingUp, Download, Edit, Bell, MessageSquare, Trash2, Share, Import, MoreHorizontal, FileOutput } from "lucide-react"
 import Link from "next/link"
 import PrescriptionModal from "@/components/doctor/PrescriptionModal"
@@ -47,8 +48,7 @@ export default function PatientDetailView({
 
       // Load patient folder
       const folders = getDoctorPatientFolders(resolvedParams.doctorId)
-      const folder = folders.find(f => f.patientId === resolvedParams.patientId)
-      setPatientFolder(folder || null)
+      let folder = folders.find(f => f.patientId === resolvedParams.patientId)
 
       // Load patient data from database
       let data = await getPatientProfile(resolvedParams.patientId)
@@ -69,6 +69,28 @@ export default function PatientDetailView({
         )
       }
       setPatientData(data)
+
+      // Fallback: If folder is missing or has incomplete data (like age 0), construct from patient data
+      if (!folder || folder.age === 0) {
+        console.log('⚠️ Reconstructing patient folder from database profile')
+        const diseaseType = data.diagnosis?.primaryCategory 
+           ? diagnosisToDiseaseType(data.diagnosis.primaryCategory)
+           : (folder?.diseaseType || 'Unknown')
+
+        folder = {
+           ...(folder || {}),
+           patientId: resolvedParams.patientId,
+           fullName: data.fullName,
+           age: parseInt(data.age) || 0,
+           diseaseType: diseaseType as any,
+           redFlagScore: folder?.redFlagScore || 1,
+           alertCount: folder?.alertCount || 0,
+           folderColor: folder?.folderColor || 'green',
+           doctorId: resolvedParams.doctorId,
+           lastLogDate: folder?.lastLogDate || new Date().toISOString()
+        }
+      }
+      setPatientFolder(folder || null)
 
       // Load prescriptions
       await loadPrescriptions(resolvedParams.patientId)
@@ -426,7 +448,7 @@ export default function PatientDetailView({
               <span className="text-sm text-gray-600">Basic Information</span>
             </div>
             <div className="space-y-1">
-              <p><span className="font-medium">Age:</span> {patientFolder.age} years</p>
+              <p><span className="font-medium">Age:</span> {patientData?.age || patientFolder.age} years</p>
               <p><span className="font-medium">Gender:</span> {patientData.sex}</p>
               <p><span className="font-medium">Disease:</span> {patientFolder.diseaseType}</p>
             </div>

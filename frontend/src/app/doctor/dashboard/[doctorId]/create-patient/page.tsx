@@ -384,7 +384,6 @@ export default function CreatePatientPage() {
             // Remove localStorage storage - use database only
             const { createPatientFolder, createPatientFolderAsync } = await import('@/lib/doctor-patient-mapping')
             const { createPatientAccount } = await import('@/lib/database-service')
-            const { supabase } = await import('@/lib/supabase')
 
             const pathParts = window.location.pathname.split('/')
             const urlDoctorId = pathParts[3]
@@ -398,11 +397,34 @@ export default function CreatePatientPage() {
             }
 
             // Always use database-only approach in production
-            const { supabaseAdmin } = await import('@/lib/supabase')
+            const { supabaseAdmin, supabase } = await import('@/lib/supabase')
             
             if (!supabaseAdmin) {
                 throw new Error('Service role not configured. Please set NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY in environment variables.')
             }
+
+            // Get authenticated doctor ID to ensure visibility in dashboard
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session?.user) {
+                throw new Error('Not authenticated. Please login again.')
+            }
+            const authUserId = session.user.id
+            console.log('Using authenticated user ID:', authUserId)
+
+            // Get the correct doctor PK from doctors table
+            const { data: doctorProfile, error: doctorError } = await supabase
+                .from('doctors')
+                .select('id')
+                .eq('auth_user_id', authUserId)
+                .single()
+
+            if (doctorError || !doctorProfile) {
+                console.error('Doctor profile lookup failed:', doctorError)
+                throw new Error('Doctor profile not found. Please contact support.')
+            }
+
+            const doctorPK = doctorProfile.id
+            console.log('Resolved Doctor PK:', doctorPK)
             
             const cleanPhoneForStorage = patientData.mobileNumber.replace(/\D/g, '')
             
@@ -417,7 +439,7 @@ export default function CreatePatientPage() {
             
             const { data: insertedPatient, error } = await supabaseAdmin.from('patients').insert({
                 // Let database generate UUID automatically - don't specify id
-                doctor_id: doctorId,
+                doctor_id: doctorPK, // Use resolved Doctor PK
                 phone: cleanPhoneForStorage, // Store clean phone number
                 email: credentials.email,
                 full_name: patientData.fullName,
@@ -437,7 +459,7 @@ export default function CreatePatientPage() {
             
             // Create doctor-patient assignment (required for RLS policies)
             const { error: assignmentError } = await supabaseAdmin.from('doctor_patient_assignments').insert({
-                doctor_id: doctorId,
+                doctor_id: doctorPK, // Use resolved Doctor PK
                 patient_id: patientId,
                 status: 'active'
             })
@@ -471,7 +493,7 @@ export default function CreatePatientPage() {
             await generatePrescription(patientData, patientId, urlDoctorId, doctorName, [], undefined)
             const genMsg = 'Prescription card generated from current medications. View it in the patient folder under Medications → Previous prescriptions.'
 
-            toast.success('Patient created', `Patient ID: ${patientId}. Login: ${credentials.email} / patient123. ${genMsg}`)
+            toast.success('Patient created', `Patient ID: ${patientId}. Login using phone no: ${patientData.mobileNumber}. ${genMsg}`)
 
             setPatientData(initialPatientData)
             setCurrentStep(1)

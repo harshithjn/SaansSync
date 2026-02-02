@@ -1,28 +1,33 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Stethoscope, User, Mail, Eye, EyeOff } from 'lucide-react'
+import { Stethoscope, User, Lock, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Header } from '@/components/common/Header'
 import { DoctorRegistrationModal } from '@/components/doctor/DoctorRegistrationModal'
-import { signInDoctorWithOTP, verifyDoctorOTP } from '@/lib/auth-service'
+import { PasswordSetupModal } from '@/components/doctor/PasswordSetupModal'
+import { signInDoctorWithPassword } from '@/lib/auth-service'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [step, setStep] = useState<'email' | 'otp'>('email')
   const [email, setEmail] = useState('')
-  const [otp, setOtp] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  
+  // Modals
   const [showRegistrationModal, setShowRegistrationModal] = useState(false)
+  const [showPasswordSetupModal, setShowPasswordSetupModal] = useState(false)
+  const [passwordModalMode, setPasswordModalMode] = useState<'setup' | 'reset'>('setup')
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!email) {
-      setError("Please enter your email address")
+    if (!email || !password) {
+      setError("Please enter email and password")
       return
     }
 
@@ -30,12 +35,13 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const result = await signInDoctorWithOTP(email.trim())
+      const result = await signInDoctorWithPassword(email.trim(), password)
       
-      if (result.success) {
-        setStep('otp')
+      if (result.success && result.doctorProfile) {
+        // Redirect to dashboard
+        router.push(`/doctor/dashboard/${result.doctorProfile.id}`)
       } else {
-        setError(result.error || 'Failed to send OTP')
+        setError(result.error || 'Login failed')
       }
     } catch (error) {
       console.error('Login error:', error)
@@ -45,70 +51,13 @@ export default function LoginPage() {
     }
   }
 
-  const handleOTPSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!otp) {
-      setError("Please enter the OTP")
-      return
-    }
-
-    setLoading(true)
-    setError('')
-
-    try {
-      const result = await verifyDoctorOTP(email.trim(), otp.trim())
-      
-      if (result.success && result.doctorProfile) {
-        // Redirect to dashboard
-        router.push(`/doctor/dashboard/${result.doctorProfile.id}`)
-      } else {
-        setError(result.error || 'OTP verification failed')
-        
-        // If account is pending/rejected, show appropriate message
-        if (result.error?.includes('pending')) {
-          router.push('/doctor/pending-approval')
-        }
-      }
-    } catch (error) {
-      console.error('OTP verification error:', error)
-      setError("An unexpected error occurred")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleBackToEmail = () => {
-    setStep('email')
-    setOtp('')
-    setError('')
-  }
-
-  const handleResendOTP = async () => {
-    setLoading(true)
-    setError('')
-
-    try {
-      const result = await signInDoctorWithOTP(email.trim())
-      
-      if (result.success) {
-        setError('')
-        // Show success message briefly
-        setError("OTP resent successfully!")
-        setTimeout(() => setError(""), 3000)
-      } else {
-        setError(result.error || 'Failed to resend OTP')
-      }
-    } catch (error) {
-      console.error('Resend OTP error:', error)
-      setError("Failed to resend OTP. Please try again.")
-    } finally {
-      setLoading(false)
-    }
+  const openPasswordSetup = (mode: 'setup' | 'reset') => {
+    setPasswordModalMode(mode)
+    setShowPasswordSetupModal(true)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-      {/* Header */}
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-green-50">
       <Header currentPage="login" />
 
       <div className="flex items-center justify-center py-12 px-4">
@@ -120,155 +69,139 @@ export default function LoginPage() {
               </div>
               <h1 className="text-2xl font-bold text-gray-900">Doctor Login</h1>
               <p className="text-gray-600 mt-2">
-                {step === 'email' 
-                  ? 'Secure access for healthcare professionals'
-                  : 'Enter the OTP sent to your email'
-                }
+                Secure access for healthcare professionals
               </p>
             </div>
 
-            {step === 'email' ? (
-              <form onSubmit={handleEmailSubmit} className="space-y-5">
-                <div className="space-y-2">
-                  <label htmlFor="email" className="text-base font-medium text-gray-700">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="doctor@hospital.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                      required
-                      disabled={loading}
-                    />
-                  </div>
-                </div>
-
-                {error && (
-                  <div className={`p-3 border rounded-lg ${
-                    error.includes('successfully') 
-                      ? 'bg-green-50 border-green-200 text-green-700'
-                      : 'bg-red-50 border-red-200 text-red-700'
-                  }`}>
-                    <p className="text-sm">{error}</p>
-                  </div>
-                )}
-
-                <Button
-                  type="submit"
-                  className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white"
-                  disabled={loading}
-                >
-                  {loading ? 'Sending OTP...' : 'Send OTP'}
-                </Button>
-              </form>
-            ) : (
-              <form onSubmit={handleOTPSubmit} className="space-y-5">
-                <div className="space-y-2">
-                  <label htmlFor="otp" className="text-base font-medium text-gray-700">
-                    Enter OTP
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <Input
-                      id="otp"
-                      type="text"
-                      placeholder="123456"
-                      value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 text-center text-lg tracking-widest"
-                      required
-                      disabled={loading}
-                      maxLength={6}
-                    />
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    OTP sent to {email}
-                  </p>
-                </div>
-
-                {error && (
-                  <div className={`p-3 border rounded-lg ${
-                    error.includes('successfully') 
-                      ? 'bg-green-50 border-green-200 text-green-700'
-                      : 'bg-red-50 border-red-200 text-red-700'
-                  }`}>
-                    <p className="text-sm">{error}</p>
-                  </div>
-                )}
-
-                <div className="space-y-3">
-                  <Button
-                    type="submit"
-                    className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white"
+            <form onSubmit={handleLogin} className="space-y-5">
+              <div className="space-y-2">
+                <label htmlFor="email" className="text-base font-medium text-gray-700">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="doctor@hospital.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                    required
                     disabled={loading}
-                  >
-                    {loading ? 'Verifying...' : 'Verify & Login'}
-                  </Button>
-
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleBackToEmail}
-                      className="flex-1 h-12 text-base"
-                      disabled={loading}
-                    >
-                      Change Email
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleResendOTP}
-                      className="flex-1 h-12 text-base"
-                      disabled={loading}
-                    >
-                      Resend OTP
-                    </Button>
-                  </div>
+                  />
                 </div>
-              </form>
-            )}
+              </div>
 
-            {/* Other login options */}
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="text-center mb-4">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label htmlFor="password" className="text-base font-medium text-gray-700">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => openPasswordSetup('reset')}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10 h-12 border-gray-300 focus:border-blue-500 focus:ring-blue-500 rounded-xl"
+                    required
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <div className="p-3 border rounded-lg bg-red-50 border-red-200 text-red-700">
+                  <p className="text-sm">{error}</p>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full h-12 text-base bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg transition-all"
+                disabled={loading}
+              >
+                {loading ? 'Logging in...' : 'Login'}
+              </Button>
+            </form>
+
+            <div className="mt-6 space-y-4">
+               {/* First time setup link */}
+               <div className="text-center p-3 bg-blue-50 rounded-xl border border-blue-100">
+                <p className="text-sm text-blue-800 mb-2">First time logging in after approval?</p>
                 <button
-                  onClick={() => setShowRegistrationModal(true)}
-                  className="text-blue-600 hover:text-blue-700 text-sm font-medium underline"
-                  disabled={loading}
+                  onClick={() => openPasswordSetup('setup')}
+                  className="text-blue-700 hover:text-blue-800 font-bold text-sm underline"
                 >
-                  Create your account
+                  Set up your password here
                 </button>
               </div>
 
-              <p className="text-center text-sm text-gray-600 mb-4">Other login options:</p>
-              <div className="flex gap-3">
-                <Link href="/patient/login" className="flex-1">
-                  <Button variant="outline" className="w-full text-sm">
-                    Patient Login
-                  </Button>
-                </Link>
-                <Link href="/admin/login" className="flex-1">
-                  <Button variant="outline" className="w-full text-sm">
-                    Admin Login
-                  </Button>
-                </Link>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-gray-200" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-white px-2 text-gray-500">Or</span>
+                </div>
+              </div>
+
+              <div className="text-center">
+                <button
+                  onClick={() => setShowRegistrationModal(true)}
+                  className="text-gray-600 hover:text-blue-600 text-sm font-medium transition-colors"
+                >
+                  Don't have an account? <span className="text-blue-600 font-bold">Register Now</span>
+                </button>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100">
+                <p className="text-center text-sm text-gray-500 mb-3">Other login options:</p>
+                <div className="flex gap-3">
+                  <Link href="/patient/login" className="flex-1">
+                    <Button variant="outline" className="w-full text-sm rounded-xl h-10">
+                      Patient Login
+                    </Button>
+                  </Link>
+                  <Link href="/admin/login" className="flex-1">
+                    <Button variant="outline" className="w-full text-sm rounded-xl h-10">
+                      Admin Login
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Doctor Registration Modal */}
       <DoctorRegistrationModal
         isOpen={showRegistrationModal}
         onClose={() => setShowRegistrationModal(false)}
+      />
+
+      <PasswordSetupModal
+        isOpen={showPasswordSetupModal}
+        onClose={() => setShowPasswordSetupModal(false)}
+        mode={passwordModalMode}
       />
     </div>
   )

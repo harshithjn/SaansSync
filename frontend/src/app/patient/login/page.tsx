@@ -50,8 +50,13 @@ export default function PatientLoginPage() {
             const searchResult = await findPatientByPhone(cleanMobile)
             console.log('🔍 Manual search result:', searchResult)
 
-            // Send OTP using real auth service
-            const result = await signInPatientWithOTP(cleanMobile)
+            // Send OTP using real auth service with timeout
+            const otpPromise = signInPatientWithOTP(cleanMobile)
+            const timeoutPromise = new Promise<{ success: boolean; error?: string }>((_, reject) => {
+                setTimeout(() => reject(new Error('Request timed out. Please check your internet connection and try again.')), 15000)
+            })
+
+            const result = await Promise.race([otpPromise, timeoutPromise]) as { success: boolean; error?: string }
             
             if (result.success) {
                 setStep('otp')
@@ -63,7 +68,8 @@ export default function PatientLoginPage() {
 
         } catch (error) {
             console.error('Login error:', error)
-            setError("An error occurred. Please try again.")
+            const errorMessage = error instanceof Error ? error.message : "An error occurred. Please try again."
+            setError(errorMessage)
             setIsLoading(false)
         }
     }
@@ -127,7 +133,7 @@ export default function PatientLoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
+        <div className="min-h-screen bg-linear-to-br from-green-50 via-white to-blue-50">
             <Header currentPage="login" />
 
             <div className="flex items-center justify-center py-12 px-4">

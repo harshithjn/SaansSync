@@ -145,7 +145,7 @@ export default function Layout({
                   {authState.profile?.full_name || 'Doctor'}
                 </p>
                 <p className="text-xs text-gray-500 truncate">
-                  {authState.user?.email || 'doctor@example.com'}
+                  {authState.profile?.email || authState.user?.email || authState.profile?.phone || authState.user?.phone || 'No contact info'}
                 </p>
               </div>
             </div>
