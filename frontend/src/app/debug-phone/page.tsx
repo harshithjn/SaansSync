@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card } from "@/components/ui/card"
 import { debugPatientPhoneNumbers, findPatientByPhone } from "@/lib/auth-service"
-import { supabase } from "@/lib/supabase"
+import api from "@/lib/api"
 
 export default function DebugPhonePage() {
     const [phoneInput, setPhoneInput] = useState("")
@@ -16,17 +16,8 @@ export default function DebugPhonePage() {
     const loadAllPatients = async () => {
         setLoading(true)
         try {
-            const { data: patients, error } = await supabase
-                .from('patients')
-                .select('id, phone, full_name, email, created_at')
-                .order('created_at', { ascending: false })
-                .limit(20)
-            
-            if (error) {
-                console.error('Error loading patients:', error)
-            } else {
-                setAllPatients(patients || [])
-            }
+            const data = await api.get<any[]>('/admin/patients/recent')
+            setAllPatients(data || [])
         } catch (error) {
             console.error('Error:', error)
         } finally {
@@ -34,9 +25,10 @@ export default function DebugPhonePage() {
         }
     }
 
+
     const handleSearch = async () => {
         if (!phoneInput.trim()) return
-        
+
         setLoading(true)
         try {
             const result = await findPatientByPhone(phoneInput)
@@ -62,12 +54,12 @@ export default function DebugPhonePage() {
             <div className="max-w-4xl mx-auto space-y-6">
                 <Card className="p-6">
                     <h1 className="text-2xl font-bold mb-4">Phone Number Debug Tool</h1>
-                    
+
                     <div className="space-y-4">
                         <Button onClick={runDebug} disabled={loading}>
                             {loading ? 'Loading...' : 'Run Debug & Refresh'}
                         </Button>
-                        
+
                         <div className="flex gap-2">
                             <Input
                                 value={phoneInput}
@@ -79,7 +71,7 @@ export default function DebugPhonePage() {
                                 Search
                             </Button>
                         </div>
-                        
+
                         {searchResult && (
                             <Card className="p-4">
                                 <h3 className="font-semibold mb-2">Search Result:</h3>
@@ -93,7 +85,7 @@ export default function DebugPhonePage() {
 
                 <Card className="p-6">
                     <h2 className="text-xl font-semibold mb-4">All Patients ({allPatients.length})</h2>
-                    
+
                     {allPatients.length === 0 ? (
                         <p className="text-gray-500">No patients found in database</p>
                     ) : (
@@ -125,7 +117,7 @@ export default function DebugPhonePage() {
                                             </span>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="mt-2">
                                         <Button
                                             size="sm"

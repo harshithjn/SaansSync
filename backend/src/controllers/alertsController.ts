@@ -1,15 +1,20 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
-import * as alertsService from '../services/alertsService'
+import * as alertsService from '../services/alertsService' // DAO
+import * as alertEvaluationService from '../services/alertService' // Complex Logic
 
 const alertSchema = z.object({
   patient_id: z.string().uuid(),
   doctor_id: z.string().uuid(),
-  patient_name: z.string().optional(),
   level: z.string(),
   reason_text: z.string().min(1, 'Reason is required'),
-  triggers: z.array(z.string()).optional(),
-  disease_type: z.string()
+  disease_type: z.string(),
+  alert_data: z.record(z.string(), z.any()).optional()
+})
+
+const evaluateSchema = z.object({
+  diseaseType: z.string(),
+  submission: z.any() // Full Log object
 })
 
 export async function createAlert(req: Request, res: Response) {
@@ -24,20 +29,71 @@ export async function createAlert(req: Request, res: Response) {
   }
 }
 
+export async function evaluateAlert(req: Request, res: Response) {
+  try {
+    const patientId = req.params.patientId;
+    const { diseaseType, submission } = evaluateSchema.parse(req.body);
+
+    // Ensure patientId in submission matches params
+    submission.patientId = patientId;
+    submission.diseaseType = diseaseType;
+
+    const result = await alertEvaluationService.evaluateAndStoreAlert(patientId, diseaseType, submission);
+    res.json({ success: true, evaluation: result });
+
+  } catch (err: any) {
+    console.error('evaluateAlert error', err);
+    res.status(500).json({ success: false, error: err?.message || 'Failed to evaluate alert' });
+  }
+}
+
 export async function getAlerts(req: Request, res: Response) {
   try {
     const doctorId = (req.query.doctorId as string) || (req.body && req.body.doctorId)
-    if (!doctorId) return res.status(400).json({ success: false, error: 'doctorId required' })
+    const patientId = (req.query.patientId as string) || (req.body && req.body.patientId)
 
-    const alerts = await alertsService.getAlertsByDoctor(doctorId)
-    res.json({ success: true, alerts })
+    if (!doctorId && !patientId) {
+      return res.status(400).json({ success: false, error: 'doctorId or patientId required' })
+    }
+
+    if (doctorId) {
+      const alerts = await alertsService.getAlertsByDoctor(doctorId)
+      return res.json({ success: true, alerts })
+    }
+
+    const alerts = await alertsService.getAlertsByPatient(patientId as string)
+    return res.json({ success: true, alerts })
   } catch (err: any) {
     console.error('getAlerts error', err)
     res.status(500).json({ success: false, error: err?.message || 'Failed to fetch alerts' })
   }
 }
 
+export async function acknowledgeAlert(req: Request, res: Response) {
+  try {
+    const alertId = req.params.alertId
+    // Using service for consistency or direct DB
+    // Simple enough for direct DB or service call? 
+    // Let's use service if available, but alertsService doesn't have it explicitly yet?
+    // The previous file content had logic inline. Let's keep it but clean import.
+    const { requireAdminClient } = await import('../config/supabaseClient')
+    const admin = requireAdminClient()
+
+    const { error } = await admin
+      .from('saanssync_alerts')
+      .update({ acknowledged: true, acknowledged_at: new Date().toISOString() })
+      .eq('id', alertId)
+
+    if (error) return res.status(500).json({ success: false, error: error.message })
+    return res.json({ success: true })
+  } catch (err: any) {
+    return res.status(500).json({ success: false, error: err?.message || 'Failed to acknowledge alert' })
+  }
+}
+
 export default {
   createAlert,
-  getAlerts
+  evaluateAlert,
+  getAlerts,
+  acknowledgeAlert
 }

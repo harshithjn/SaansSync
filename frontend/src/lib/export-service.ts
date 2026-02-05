@@ -9,7 +9,7 @@ export function exportPatientData(
     options: ExportOptions
 ): { data: string; filename: string; mimeType: string } {
     const patients = getDoctorPatientFolders(doctorId)
-    const filteredPatients = options.patientIds.length > 0 
+    const filteredPatients = options.patientIds.length > 0
         ? patients.filter(p => options.patientIds.includes(p.patientId))
         : patients
 
@@ -49,7 +49,7 @@ function generateExportData(patients: PatientFolder[], options: ExportOptions) {
         const diseaseData = getDiseaseSpecificData(patient.patientId, patient.diseaseType)
         const alerts = getPatientAlerts(patient.patientId)
         const filteredAlerts = alerts.filter(alert => {
-            const alertDate = new Date(alert.createdAt)
+            const alertDate = new Date(alert.createdAt || new Date())
             return alertDate >= startDate && alertDate <= endDate
         })
 
@@ -98,16 +98,16 @@ function generatePatientSummary(
     alerts: any[]
 ) {
     return {
-        riskLevel: patient.redFlagScore >= 9 ? 'Critical' : 
-                  patient.redFlagScore >= 7 ? 'High' : 
-                  patient.redFlagScore >= 4 ? 'Moderate' : 'Low',
+        riskLevel: patient.redFlagScore >= 9 ? 'Critical' :
+            patient.redFlagScore >= 7 ? 'High' :
+                patient.redFlagScore >= 4 ? 'Moderate' : 'Low',
         alertCount: alerts.length,
         criticalAlerts: alerts.filter(a => a.type === 'critical').length,
         lastActivity: patient.lastLogDate,
         currentSpO2: commonData?.spo2.atRest || 'N/A',
-        conditionStatus: commonData?.conditionStatus.isStatic ? 'Static' : 
-                        commonData?.conditionStatus.hasWorsening ? 'Worsening' : 
-                        commonData?.conditionStatus.hasImprovement ? 'Improving' : 'Unknown',
+        conditionStatus: commonData?.conditionStatus.isStatic ? 'Static' :
+            commonData?.conditionStatus.hasWorsening ? 'Worsening' :
+                commonData?.conditionStatus.hasImprovement ? 'Improving' : 'Unknown',
         mMRCScale: commonData?.mMRCScale || 'N/A',
         aqiLevel: commonData?.aqi.value || 'N/A'
     }
@@ -329,7 +329,7 @@ export function generateExportSummary(doctorId: string): {
     criticalAlerts: number
 } {
     const patients = getDoctorPatientFolders(doctorId)
-    
+
     const byDisease: Record<string, number> = {}
     const byRiskLevel: Record<string, number> = {
         'Low': 0,
@@ -344,13 +344,13 @@ export function generateExportSummary(doctorId: string): {
     patients.forEach(patient => {
         // Count by disease
         byDisease[patient.diseaseType] = (byDisease[patient.diseaseType] || 0) + 1
-        
+
         // Count by risk level
-        const riskLevel = patient.redFlagScore >= 9 ? 'Critical' : 
-                         patient.redFlagScore >= 7 ? 'High' : 
-                         patient.redFlagScore >= 4 ? 'Moderate' : 'Low'
+        const riskLevel = patient.redFlagScore >= 9 ? 'Critical' :
+            patient.redFlagScore >= 7 ? 'High' :
+                patient.redFlagScore >= 4 ? 'Moderate' : 'Low'
         byRiskLevel[riskLevel]++
-        
+
         // Count alerts
         const alerts = getPatientAlerts(patient.patientId)
         totalAlerts += alerts.length

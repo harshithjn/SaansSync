@@ -44,10 +44,10 @@ function storeOTP(transferOTP: TransferOTP): void {
     try {
         const stored = localStorage.getItem(TRANSFER_OTP_STORAGE_KEY)
         const allOTPs = stored ? JSON.parse(stored) : {}
-        
+
         // Store by patient ID (overwrite any existing OTP)
         allOTPs[transferOTP.patientId] = transferOTP
-        
+
         localStorage.setItem(TRANSFER_OTP_STORAGE_KEY, JSON.stringify(allOTPs))
     } catch (error) {
         console.error('Error storing transfer OTP:', error)
@@ -82,7 +82,7 @@ function markOTPAsUsed(patientId: string): void {
     try {
         const stored = localStorage.getItem(TRANSFER_OTP_STORAGE_KEY)
         const allOTPs = stored ? JSON.parse(stored) : {}
-        
+
         if (allOTPs[patientId]) {
             allOTPs[patientId].isUsed = true
             localStorage.setItem(TRANSFER_OTP_STORAGE_KEY, JSON.stringify(allOTPs))
@@ -99,14 +99,14 @@ function storeAuditLog(auditLog: TransferAuditLog): void {
     try {
         const stored = localStorage.getItem(TRANSFER_AUDIT_STORAGE_KEY)
         const allLogs = stored ? JSON.parse(stored) : []
-        
+
         allLogs.push(auditLog)
-        
+
         // Keep only last 1000 audit logs
         if (allLogs.length > 1000) {
             allLogs.splice(0, allLogs.length - 1000)
         }
-        
+
         localStorage.setItem(TRANSFER_AUDIT_STORAGE_KEY, JSON.stringify(allLogs))
     } catch (error) {
         console.error('Error storing audit log:', error)
@@ -117,14 +117,14 @@ function storeAuditLog(auditLog: TransferAuditLog): void {
 function findCurrentDoctor(patientId: string): string | null {
     // Check all doctors to find who has this patient
     const allDoctors = ['doctor@gmail.com'] // In production, this would be a proper doctor list
-    
+
     for (const doctorId of allDoctors) {
         const folders = getDoctorPatientFolders(doctorId)
-        if (folders.some(folder => folder.patientId === patientId)) {
+        if (Array.isArray(folders) && folders.some(folder => folder.patientId === patientId)) {
             return doctorId
         }
     }
-    
+
     return null
 }
 
@@ -157,7 +157,7 @@ export async function initiatePatientTransfer(patientId: string): Promise<{
         // Generate new OTP
         const otp = generateOTP()
         const expiresAt = getOTPExpiry()
-        
+
         const transferOTP: TransferOTP = {
             patientId,
             otp,
@@ -247,7 +247,7 @@ export async function importPatientWithOTP(
         }
 
         // STEP 3: Execute transfer
-        
+
         // Remove patient from old doctor
         const removed = removeDoctorPatientMapping(oldDoctorId, patientId)
         if (!removed) {
@@ -260,7 +260,7 @@ export async function importPatientWithOTP(
         // Add patient to new doctor
         const redFlagScore = Math.floor(Math.random() * 10) + 1 // In production, use actual score
         const alertCount = Math.floor(Math.random() * 3) // In production, use actual count
-        
+
         createPatientFolder(patientData, newDoctorId, patientId, redFlagScore, alertCount)
 
         // Mark OTP as used
@@ -304,7 +304,7 @@ export function getTransferStatus(patientId: string): {
     timeRemaining?: number
 } {
     const storedOTP = getStoredOTP(patientId)
-    
+
     if (!storedOTP || !isOTPValid(storedOTP)) {
         return { hasPending: false }
     }
@@ -337,9 +337,9 @@ export function getTransferHistory(patientId: string): TransferAuditLog[] {
     try {
         const stored = localStorage.getItem(TRANSFER_AUDIT_STORAGE_KEY)
         const allLogs = stored ? JSON.parse(stored) : []
-        
+
         return allLogs.filter((log: TransferAuditLog) => log.patientId === patientId)
-            .sort((a: TransferAuditLog, b: TransferAuditLog) => 
+            .sort((a: TransferAuditLog, b: TransferAuditLog) =>
                 new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
             )
     } catch (error) {
@@ -355,17 +355,17 @@ export function cleanupExpiredOTPs(): void {
     try {
         const stored = localStorage.getItem(TRANSFER_OTP_STORAGE_KEY)
         const allOTPs = stored ? JSON.parse(stored) : {}
-        
+
         const now = new Date()
         const validOTPs: { [key: string]: TransferOTP } = {}
-        
+
         Object.keys(allOTPs).forEach(patientId => {
             const otp = allOTPs[patientId]
             if (isOTPValid(otp) && new Date(otp.expiresAt) > now) {
                 validOTPs[patientId] = otp
             }
         })
-        
+
         localStorage.setItem(TRANSFER_OTP_STORAGE_KEY, JSON.stringify(validOTPs))
     } catch (error) {
         console.error('Error cleaning up expired OTPs:', error)
@@ -376,7 +376,7 @@ export function cleanupExpiredOTPs(): void {
 export function formatTimeRemaining(milliseconds: number): string {
     const minutes = Math.floor(milliseconds / (1000 * 60))
     const seconds = Math.floor((milliseconds % (1000 * 60)) / 1000)
-    
+
     if (minutes > 0) {
         return `${minutes}m ${seconds}s`
     } else {

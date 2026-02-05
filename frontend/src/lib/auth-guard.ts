@@ -2,9 +2,9 @@
 import { redirect } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { 
-  getCurrentSession, 
-  resolveUserProfile, 
+import {
+  getCurrentSession,
+  resolveUserProfile,
   isCurrentUserAdmin,
   requireAuth,
   requireApprovedDoctor,
@@ -25,23 +25,23 @@ import {
 export async function guardDoctorRoute(doctorId?: string) {
   try {
     const doctorProfile = await requireApprovedDoctor()
-    
+
     // If doctorId is provided, verify it matches the authenticated doctor
     if (doctorId && doctorProfile.id !== doctorId) {
       console.log('❌ Doctor ID mismatch')
       redirect('/login')
     }
-    
+
     return doctorProfile
   } catch (error) {
     console.log('❌ Doctor route guard failed:', error)
-    
+
     // Check if user exists but is not approved
     const userProfile = await resolveUserProfile()
     if (userProfile.role === 'doctor' && !userProfile.approved) {
       redirect('/doctor/pending-approval')
     }
-    
+
     redirect('/login')
   }
 }
@@ -81,9 +81,9 @@ export async function guardPublicRoute() {
   try {
     const session = await getCurrentSession()
     if (!session) return // Not authenticated, allow access
-    
+
     const userProfile = await resolveUserProfile()
-    
+
     // Redirect based on role and approval status
     if (userProfile.role === 'doctor') {
       if (userProfile.approved) {
@@ -113,7 +113,7 @@ export async function guardPublicRoute() {
 export interface AuthState {
   user: any | null
   loading: boolean
-  role: 'doctor' | 'patient' | null
+  role: 'doctor' | 'patient' | 'admin' | null
   approved?: boolean
   profile?: any
 }
@@ -137,7 +137,7 @@ export function useAuth(): AuthState {
     const updateAuthState = async () => {
       try {
         const session = await getCurrentSession()
-        
+
         if (!session?.user) {
           if (mounted) {
             setAuthState({ user: null, loading: false, role: null })
@@ -147,7 +147,7 @@ export function useAuth(): AuthState {
 
         // Resolve profile from database (NO caching)
         const userProfile = await resolveUserProfile()
-        
+
         if (mounted) {
           setAuthState({
             user: session.user,
@@ -277,7 +277,7 @@ export async function checkClientAuth() {
   try {
     const session = await getCurrentSession()
     if (!session) return null
-    
+
     const userProfile = await resolveUserProfile()
     return userProfile
   } catch (error) {
@@ -295,11 +295,11 @@ export async function checkDoctorDashboardAccess(
 ): Promise<boolean> {
   try {
     const userProfile = await resolveUserProfile()
-    
+
     if (userProfile.role !== 'doctor' || !userProfile.approved) {
       return false
     }
-    
+
     return userProfile.profile?.id === requestedDoctorId
   } catch (error) {
     console.error('❌ Check doctor dashboard access error:', error)
@@ -317,7 +317,7 @@ export async function checkPatientDataAccess(
 ): Promise<boolean> {
   try {
     const userProfile = await resolveUserProfile()
-    
+
     if (userProfile.role === 'patient') {
       // Patients can only access their own data
       return userProfile.profile?.id === requestedPatientId

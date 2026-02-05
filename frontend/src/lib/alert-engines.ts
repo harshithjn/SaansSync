@@ -4,7 +4,7 @@
  * RED / YELLOW / GREEN with reason_text for doctor dashboard
  */
 
-export type AlertLevel = 'RED' | 'YELLOW' | 'GREEN'
+export type AlertLevel = 'RED' | 'ORANGE' | 'YELLOW' | 'GREEN'
 export type DiseaseType = 'ILD' | 'ASTHMA' | 'COPD' | 'BRONCHIECTASIS' | 'POST_ICU'
 
 export type AsthmaControlLevel = 'well-controlled' | 'partly-controlled' | 'poorly-controlled'

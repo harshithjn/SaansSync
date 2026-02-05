@@ -1,0 +1,20 @@
+import { Request, Response } from 'express';
+import { AuthedRequest } from '../middleware/jwtMiddleware';
+export declare function startDoctorRegistration(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function completeDoctorRegistration(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function doctorLogin(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function doctorLoginOtp(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function verifyDoctorOtp(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function setupDoctorPassword(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function startPasswordReset(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function completePasswordReset(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function patientLoginOtp(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function verifyPatientOtp(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function patientLogin(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function adminLogin(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function doctorSignup(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function testEmail(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function exchangeCallback(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function authMe(req: AuthedRequest, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function signOut(_req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+//# sourceMappingURL=authController.d.ts.map

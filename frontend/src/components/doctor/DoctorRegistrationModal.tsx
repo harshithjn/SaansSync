@@ -19,6 +19,7 @@ export function DoctorRegistrationModal({ isOpen, onClose }: DoctorRegistrationM
         phoneNumber: '',
         altPhoneNumber: '',
         email: '',
+        password: '',
         otp: ''
     })
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -30,8 +31,13 @@ export function DoctorRegistrationModal({ isOpen, onClose }: DoctorRegistrationM
     const handleSendOTP = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        if (!formData.name || !formData.phoneNumber || !formData.email) {
+        if (!formData.name || !formData.phoneNumber || !formData.email || !formData.password) {
             toast.error('Please fill in all mandatory fields')
+            return
+        }
+
+        if (formData.password.length < 8) {
+            toast.error('Password must be at least 8 characters long')
             return
         }
 
@@ -91,6 +97,7 @@ export function DoctorRegistrationModal({ isOpen, onClose }: DoctorRegistrationM
                 formData.otp,
                 formData.email,
                 formData.name,
+                formData.password,
                 formData.altPhoneNumber
             )
 
@@ -115,6 +122,7 @@ export function DoctorRegistrationModal({ isOpen, onClose }: DoctorRegistrationM
             phoneNumber: '',
             altPhoneNumber: '',
             email: '',
+            password: '',
             otp: ''
         })
         onClose()
@@ -139,7 +147,7 @@ export function DoctorRegistrationModal({ isOpen, onClose }: DoctorRegistrationM
                             <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
                                 <li>Admin reviews your application.</li>
                                 <li>Once approved, you will be notified.</li>
-                                <li>You will then <strong>set your password</strong> for future logins.</li>
+                                <li>You will then <strong>login with your email and password</strong>.</li>
                             </ol>
                         </div>
                         <Button
@@ -205,6 +213,22 @@ export function DoctorRegistrationModal({ isOpen, onClose }: DoctorRegistrationM
                                     />
                                 </div>
 
+                                <div className="space-y-2">
+                                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                        <Lock className="w-4 h-4 text-blue-600" />
+                                        Set Password *
+                                    </label>
+                                    <Input
+                                        type="password"
+                                        value={formData.password}
+                                        onChange={(e) => handleInputChange('password', e.target.value)}
+                                        placeholder="Minimum 8 characters"
+                                        minLength={8}
+                                        className="h-12 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl"
+                                        required
+                                    />
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
@@ -261,6 +285,8 @@ export function DoctorRegistrationModal({ isOpen, onClose }: DoctorRegistrationM
                                     />
                                 </div>
 
+
+
                                 <div className="flex gap-3">
                                     <Button
                                         type="button"
@@ -283,6 +309,6 @@ export function DoctorRegistrationModal({ isOpen, onClose }: DoctorRegistrationM
                     </>
                 )}
             </div>
-        </div>
+        </div >
     )
 }

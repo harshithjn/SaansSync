@@ -20,9 +20,11 @@ export async function listPrescriptions(req: Request, res: Response) {
   try {
     const patientId = req.query.patientId as string
     const doctorId = req.query.doctorId as string
+    const startDate = req.query.startDate as string
+    const endDate = req.query.endDate as string
     if (!patientId && !doctorId) return res.status(400).json({ success: false, error: 'patientId or doctorId required' })
 
-    const prescriptions = await prescriptionsService.getPrescriptions({ patientId, doctorId })
+    const prescriptions = await prescriptionsService.getPrescriptions({ patientId, doctorId, startDate, endDate })
     res.json({ success: true, prescriptions })
   } catch (err: any) {
     console.error('listPrescriptions error', err)

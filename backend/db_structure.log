@@ -1,0 +1,20 @@
+--- DB STRUCTURE LOG ---
+
+Inspecting table: patients
+Columns for patients: id, user_id, doctor_id, disease_type, age, gender, contact_number, location, address, baseline_spo2_rest, baseline_spo2_exertion, baseline_mmrc, baseline_oxygen_type, baseline_oxygen_flow, personal_best_pefr, baseline_sputum_color, baseline_sputum_volume, ild_diagnosis_date, ild_type, baseline_kbild_score, created_at, updated_at, phone, patient_data, full_name, email, auth_user_id
+
+Inspecting table: daily_logs
+daily_logs is empty, trying dummy insert...
+Insert error for daily_logs: null value in column "log_date" of relation "daily_logs" violates not-null constraint
+
+Inspecting table: doctors
+Columns for doctors: id, auth_user_id, email, full_name, phone, alt_phone, approval_status, created_at, updated_at
+
+Inspecting table: patient_folders
+Columns for patient_folders: patient_id, doctor_id, full_name, age, disease_type, last_log_date, folder_color, red_flag_score, alert_count, updated_at
+
+Inspecting table: saanssync_alerts
+saanssync_alerts is empty, trying dummy insert...
+Insert error for saanssync_alerts: null value in column "patient_id" of relation "saanssync_alerts" violates not-null constraint
+
+--- END LOG ---

@@ -4,16 +4,24 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Phone, Shield, Users, Activity, Heart } from "lucide-react"
-import { signInPatientWithOTP, verifyPatientOTP, debugPatientPhoneNumbers, findPatientByPhone } from "@/lib/auth-service"
+import { Phone, Shield, Users, Activity, Heart, Mail, Lock } from "lucide-react"
+import { signInPatientWithOTP, verifyPatientOTP, signInPatientWithPassword, findPatientByPhone } from "@/lib/auth-service"
 import { getDashboardRoute } from "@/lib/auth-types"
 import { Header } from '@/components/common/Header'
 
 export default function PatientLoginPage() {
     const router = useRouter()
+    const [loginMethod, setLoginMethod] = useState<'otp' | 'password'>('password') // Default to password for demo
+
+    // OTP State
     const [step, setStep] = useState<'mobile' | 'otp'>('mobile')
     const [mobileNumber, setMobileNumber] = useState("")
     const [otp, setOtp] = useState("")
+
+    // Password State
+    const [email, setEmail] = useState("")
+    const [password, setPassword] = useState("")
+
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState("")
 
@@ -31,45 +39,28 @@ export default function PatientLoginPage() {
         setError("")
 
         try {
-            // Debug: Check what's in the database
-            await debugPatientPhoneNumbers()
-            
-            // Clean mobile number (remove formatting)
             const cleanMobile = mobileNumber.replace(/\D/g, '')
-            console.log('🔍 Login attempt - Original input:', mobileNumber)
-            console.log('🔍 Login attempt - Clean mobile:', cleanMobile)
-            console.log('🔍 Login attempt - Mobile length:', cleanMobile.length)
-
             if (cleanMobile.length < 10) {
                 setError("Please enter a valid 10-digit mobile number")
                 setIsLoading(false)
                 return
             }
 
-            // Manual search to debug
-            const searchResult = await findPatientByPhone(cleanMobile)
-            console.log('🔍 Manual search result:', searchResult)
-
-            // Send OTP using real auth service with timeout
             const otpPromise = signInPatientWithOTP(cleanMobile)
             const timeoutPromise = new Promise<{ success: boolean; error?: string }>((_, reject) => {
-                setTimeout(() => reject(new Error('Request timed out. Please check your internet connection and try again.')), 15000)
+                setTimeout(() => reject(new Error('Request timed out.')), 15000)
             })
 
             const result = await Promise.race([otpPromise, timeoutPromise]) as { success: boolean; error?: string }
-            
+
             if (result.success) {
                 setStep('otp')
-                setIsLoading(false)
             } else {
                 setError(result.error || 'Failed to send OTP')
-                setIsLoading(false)
             }
-
         } catch (error) {
-            console.error('Login error:', error)
-            const errorMessage = error instanceof Error ? error.message : "An error occurred. Please try again."
-            setError(errorMessage)
+            setError(error instanceof Error ? error.message : "An error occurred.")
+        } finally {
             setIsLoading(false)
         }
     }
@@ -81,52 +72,40 @@ export default function PatientLoginPage() {
 
         try {
             const cleanMobile = mobileNumber.replace(/\D/g, '')
-            
-            // Verify OTP using real auth service
             const result = await verifyPatientOTP(cleanMobile, otp)
-            
+
             if (result.success && result.patientProfile) {
-                // Get dashboard route from patient data
                 const diagnosis = result.patientProfile.patient_data?.diagnosis?.primaryCategory
                 const dashboardRoute = getDashboardRoute(diagnosis)
                 router.push(dashboardRoute)
             } else {
                 setError(result.error || 'OTP verification failed')
             }
-
         } catch (error) {
-            console.error('OTP verification error:', error)
-            setError("An error occurred during login. Please try again.")
+            setError("An error occurred during login.")
         } finally {
             setIsLoading(false)
         }
     }
 
-    const handleBackToMobile = () => {
-        setStep('mobile')
-        setOtp("")
-        setError("")
-    }
-
-    const handleResendOTP = async () => {
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
         setIsLoading(true)
         setError("")
 
         try {
-            const cleanMobile = mobileNumber.replace(/\D/g, '')
-            const result = await signInPatientWithOTP(cleanMobile)
-            
-            if (result.success) {
-                setError("")
-                // Show success message briefly
-                setError("OTP resent successfully!")
-                setTimeout(() => setError(""), 3000)
+            const result = await signInPatientWithPassword(email.trim(), password)
+
+            if (result.success && result.patientProfile) {
+                const diagnosis = result.patientProfile.patient_data?.diagnosis?.primaryCategory
+                const dashboardRoute = getDashboardRoute(diagnosis)
+                console.log('Redirecting to dashboard:', dashboardRoute)
+                router.push(dashboardRoute)
             } else {
-                setError(result.error || 'Failed to resend OTP')
+                setError(result.error || 'Invalid email or password')
             }
         } catch (error) {
-            console.error('Resend OTP error:', error)
-            setError("Failed to resend OTP. Please try again.")
+            setError("An error occurred during login.")
         } finally {
             setIsLoading(false)
         }
@@ -141,53 +120,73 @@ export default function PatientLoginPage() {
                     <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-200">
                         <div className="text-center mb-8">
                             <div className="w-20 h-20 rounded-xl bg-green-100 flex items-center justify-center mx-auto mb-6">
-                                {step === 'mobile' ? (
+                                {loginMethod === 'otp' ? (
                                     <Phone className="w-10 h-10 text-green-600" />
                                 ) : (
-                                    <Shield className="w-10 h-10 text-green-600" />
+                                    <Lock className="w-10 h-10 text-green-600" />
                                 )}
                             </div>
                             <h1 className="text-3xl font-bold text-gray-900 mb-2">Patient Portal</h1>
                             <p className="text-gray-600">
-                                {step === 'mobile'
-                                    ? 'Enter your mobile number to continue'
-                                    : 'Enter the OTP sent to your mobile'
-                                }
+                                {loginMethod === 'otp' ? 'Login via Mobile OTP' : 'Login via Email & Password'}
                             </p>
                         </div>
 
-                        {step === 'mobile' ? (
-                            <form onSubmit={handleMobileSubmit} className="space-y-6">
-                                <div className="space-y-2">
-                                    <label htmlFor="mobile" className="text-base font-medium text-gray-700">
-                                        Mobile Number
-                                    </label>
-                                    <div className="relative">
-                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                        <Input
-                                            id="mobile"
-                                            type="tel"
-                                            value={mobileNumber}
-                                            onChange={(e) => setMobileNumber(formatMobileNumber(e.target.value))}
-                                            placeholder="123-456-7890"
-                                            className="pl-10 h-12 border-gray-300 focus:border-green-500 focus:ring-green-500"
-                                            required
-                                            disabled={isLoading}
-                                            maxLength={12}
-                                        />
+                        {/* Login Method Toggle */}
+                        <div className="flex p-1 bg-gray-100 rounded-lg mb-6">
+                            <button
+                                onClick={() => { setLoginMethod('password'); setError('') }}
+                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${loginMethod === 'password' ? 'bg-white shadow text-green-700' : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                            >
+                                Email Login
+                            </button>
+                            <button
+                                onClick={() => { setLoginMethod('otp'); setError('') }}
+                                className={`flex-1 py-2 text-sm font-medium rounded-md transition-all ${loginMethod === 'otp' ? 'bg-white shadow text-green-700' : 'text-gray-500 hover:text-gray-700'
+                                    }`}
+                            >
+                                Mobile OTP
+                            </button>
+                        </div>
+
+                        {/* Password Form */}
+                        {loginMethod === 'password' && (
+                            <form onSubmit={handlePasswordSubmit} className="space-y-6">
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-base font-medium text-gray-700">Email Address</label>
+                                        <div className="relative mt-1">
+                                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                            <Input
+                                                type="email"
+                                                value={email}
+                                                onChange={(e) => setEmail(e.target.value)}
+                                                placeholder="patient@example.com"
+                                                className="pl-10 h-12"
+                                                required
+                                            />
+                                        </div>
                                     </div>
-                                    <p className="text-sm text-gray-500">
-                                        Enter your registered mobile number
-                                    </p>
+                                    <div>
+                                        <label className="text-base font-medium text-gray-700">Password</label>
+                                        <div className="relative mt-1">
+                                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                            <Input
+                                                type="password"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                placeholder="••••••••"
+                                                className="pl-10 h-12"
+                                                required
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {error && (
-                                    <div className={`p-3 border rounded-lg ${
-                                        error.includes('successfully') 
-                                            ? 'bg-green-50 border-green-200 text-green-700'
-                                            : 'bg-red-50 border-red-200 text-red-700'
-                                    }`}>
-                                        <p className="text-sm">{error}</p>
+                                    <div className="p-3 border rounded-lg bg-red-50 border-red-200 text-red-700 text-sm">
+                                        {error}
                                     </div>
                                 )}
 
@@ -196,107 +195,80 @@ export default function PatientLoginPage() {
                                     className="w-full h-12 text-base bg-green-600 hover:bg-green-700 text-white"
                                     disabled={isLoading}
                                 >
-                                    {isLoading ? 'Sending OTP...' : 'Send OTP'}
+                                    {isLoading ? 'Logging in...' : 'Login'}
                                 </Button>
-                            </form>
-                        ) : (
-                            <form onSubmit={handleOtpSubmit} className="space-y-6">
-                                <div className="space-y-2">
-                                    <label htmlFor="otp" className="text-base font-medium text-gray-700">
-                                        Enter OTP
-                                    </label>
-                                    <div className="relative">
-                                        <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                                        <Input
-                                            id="otp"
-                                            type="text"
-                                            value={otp}
-                                            onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                                            placeholder="123456"
-                                            className="pl-10 h-12 border-gray-300 focus:border-green-500 focus:ring-green-500 text-center text-lg tracking-widest"
-                                            required
-                                            disabled={isLoading}
-                                            maxLength={6}
-                                        />
-                                    </div>
-                                    <p className="text-sm text-gray-500">
-                                        OTP sent to {mobileNumber} via SMS
-                                    </p>
-                                    <p className="text-xs text-gray-400">
-                                        SMS may take 1-2 minutes to arrive
-                                    </p>
-                                </div>
-
-                                {error && (
-                                    <div className={`p-3 border rounded-lg ${
-                                        error.includes('successfully') 
-                                            ? 'bg-green-50 border-green-200 text-green-700'
-                                            : 'bg-red-50 border-red-200 text-red-700'
-                                    }`}>
-                                        <p className="text-sm">{error}</p>
-                                    </div>
-                                )}
-
-                                <div className="space-y-3">
-                                    <Button
-                                        type="submit"
-                                        className="w-full h-12 text-base bg-green-600 hover:bg-green-700 text-white"
-                                        disabled={isLoading}
-                                    >
-                                        {isLoading ? 'Verifying...' : 'Verify & Login'}
-                                    </Button>
-
-                                    <div className="flex gap-2">
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={handleBackToMobile}
-                                            className="flex-1 h-12 text-base"
-                                            disabled={isLoading}
-                                        >
-                                            Change Number
-                                        </Button>
-
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            onClick={handleResendOTP}
-                                            className="flex-1 h-12 text-base"
-                                            disabled={isLoading}
-                                        >
-                                            Resend OTP
-                                        </Button>
-                                    </div>
-                                </div>
                             </form>
                         )}
 
-                        {/* Patient Portal Features Preview */}
-                        <div className="mt-8 p-6 bg-green-50 rounded-xl">
-                            <h3 className="font-semibold text-green-900 mb-4 text-center">Your Health Dashboard</h3>
-                            <div className="grid grid-cols-3 gap-4 text-center">
-                                <div>
-                                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mx-auto mb-2">
-                                        <Activity className="w-5 h-5 text-green-600" />
+                        {/* OTP Form */}
+                        {loginMethod === 'otp' && (
+                            step === 'mobile' ? (
+                                <form onSubmit={handleMobileSubmit} className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-base font-medium text-gray-700">Mobile Number</label>
+                                        <div className="relative">
+                                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                            <Input
+                                                type="tel"
+                                                value={mobileNumber}
+                                                onChange={(e) => setMobileNumber(formatMobileNumber(e.target.value))}
+                                                placeholder="123-456-7890"
+                                                className="pl-10 h-12 focus:ring-green-500"
+                                                required
+                                                maxLength={12}
+                                            />
+                                        </div>
                                     </div>
-                                    <p className="text-xs text-green-700">Health Tracking</p>
-                                </div>
-                                <div>
-                                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mx-auto mb-2">
-                                        <Heart className="w-5 h-5 text-green-600" />
-                                    </div>
-                                    <p className="text-xs text-green-700">Medications</p>
-                                </div>
-                                <div>
-                                    <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mx-auto mb-2">
-                                        <Users className="w-5 h-5 text-green-600" />
-                                    </div>
-                                    <p className="text-xs text-green-700">Doctor Care</p>
-                                </div>
-                            </div>
-                        </div>
 
-                        <div className="mt-6 text-center">
+                                    {error && (
+                                        <div className={`p-3 border rounded-lg text-sm ${error.includes('successfully')
+                                                ? 'bg-green-50 border-green-200 text-green-700'
+                                                : 'bg-red-50 border-red-200 text-red-700'
+                                            }`}>
+                                            {error}
+                                        </div>
+                                    )}
+
+                                    <Button type="submit" className="w-full h-12 bg-green-600 hover:bg-green-700 text-white" disabled={isLoading}>
+                                        {isLoading ? 'Sending OTP...' : 'Send OTP'}
+                                    </Button>
+                                </form>
+                            ) : (
+                                <form onSubmit={handleOtpSubmit} className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-base font-medium text-gray-700">Enter OTP</label>
+                                        <div className="relative">
+                                            <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                            <Input
+                                                value={otp}
+                                                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                                placeholder="123456"
+                                                className="pl-10 h-12 text-center text-lg tracking-widest focus:ring-green-500"
+                                                required
+                                                maxLength={6}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {error && (
+                                        <div className="p-3 border rounded-lg bg-red-50 border-red-200 text-red-700 text-sm">
+                                            {error}
+                                        </div>
+                                    )}
+
+                                    <div className="space-y-3">
+                                        <Button type="submit" className="w-full h-12 bg-green-600 hover:bg-green-700 text-white" disabled={isLoading}>
+                                            {isLoading ? 'Verifying...' : 'Verify & Login'}
+                                        </Button>
+                                        <Button type="button" variant="outline" onClick={() => { setStep('mobile'); setOtp(''); setError(''); }} className="w-full h-12">
+                                            Change Number
+                                        </Button>
+                                    </div>
+                                </form>
+                            )
+                        )}
+
+                        <div className="mt-8 pt-6 border-t border-gray-100 text-center">
                             <p className="text-sm text-gray-500">
                                 Need help? Contact your healthcare provider
                             </p>

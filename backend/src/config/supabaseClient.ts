@@ -5,28 +5,41 @@ const supabaseUrl = process.env.SUPABASE_URL ?? ''
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? ''
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? ''
 
+// DEBUG: Monitor Service Role Key
+try {
+  if (supabaseServiceKey) {
+    const parts = supabaseServiceKey.split('.');
+    if (parts.length > 1) {
+      const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
+      const logPath = require('path').join(process.cwd(), 'debug_rls_monitor.log');
+      require('fs').appendFileSync(logPath, `[${new Date().toISOString()}] Service Key Role: ${payload.role}\n`);
+    }
+  }
+} catch (e) { /* ignore */ }
+
+
 if (!supabaseUrl) {
   console.warn('SUPABASE_URL not configured')
 }
 
 export const supabase: SupabaseClient | null = (supabaseUrl && supabaseAnonKey)
-  ? createClient(supabaseUrl, supabaseAnonKey, { 
-      auth: { 
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false
-      } 
-    })
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    }
+  })
   : null
 
 export const supabaseAdmin: SupabaseClient | null = (supabaseUrl && supabaseServiceKey)
-  ? createClient(supabaseUrl, supabaseServiceKey, { 
-      auth: { 
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false
-      } 
-    })
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false
+    }
+  })
   : null
 
 export function requireAdminClient(): SupabaseClient {

@@ -6,8 +6,22 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getDoctorAlertsSaansSync, acknowledgeSaansSyncAlert, type StoredDoctorAlert } from "@/lib/alert-engines"
+import { getDoctorAlerts, acknowledgeAlert } from "@/lib/database-service"
 import { AlertTriangle, Bell, CheckCircle, Clock, Search } from "lucide-react"
+
+// Define the interface locally or use what comes from the API
+interface StoredDoctorAlert {
+  id: string
+  patientId: string
+  patientName?: string
+  doctorId: string
+  level: string
+  reason_text: string
+  triggers: string[]
+  diseaseType: string
+  timestamp: string
+  acknowledged: boolean
+}
 
 export default function AlertsPage({
   params,
@@ -20,6 +34,7 @@ export default function AlertsPage({
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [loading, setLoading] = useState(true)
   const [statistics, setStatistics] = useState({
     total: 0,
     red: 0,
@@ -37,29 +52,85 @@ export default function AlertsPage({
     initializeParams()
   }, [params])
 
-  const loadAlerts = (docId: string) => {
-    const doctorAlerts = getDoctorAlertsSaansSync(docId)
-    setAlerts(doctorAlerts)
-    setFilteredAlerts(doctorAlerts)
-    setStatistics({
-      total: doctorAlerts.filter(a => !a.acknowledged).length,
-      red: doctorAlerts.filter(a => a.level === 'RED' && !a.acknowledged).length,
-      yellow: doctorAlerts.filter(a => a.level === 'YELLOW' && !a.acknowledged).length,
-      green: doctorAlerts.filter(a => a.level === 'GREEN').length,
-      acknowledged: doctorAlerts.filter(a => a.acknowledged).length
-    })
+  const loadAlerts = async (docId: string) => {
+    setLoading(true)
+    try {
+      const rawAlerts = await getDoctorAlerts(docId)
+
+      // Map backend fields to frontend expected fields
+      const mappedAlerts: StoredDoctorAlert[] = (rawAlerts || []).map((a: {
+        id: string;
+        patient_id: string;
+        patient_name?: string;
+        doctor_id: string;
+        level: string;
+        reason_text: string;
+        alert_data?: { drivers?: string[] };
+        disease_type?: string;
+        created_at: string;
+        acknowledged?: boolean | number;
+      }) => ({
+        id: a.id,
+        patientId: a.patient_id,
+        patientName: a.patient_name || a.patient_id, // Fallback if name not joined
+        doctorId: a.doctor_id,
+        level: a.level,
+        reason_text: a.reason_text,
+        triggers: a.alert_data?.drivers || [],
+        diseaseType: a.disease_type || 'Unknown',
+        timestamp: a.created_at,
+        acknowledged: !!a.acknowledged
+      }))
+
+      // Sort by severity: RED > ORANGE > YELLOW > GREEN
+      const severityMap: { [key: string]: number } = {
+        'RED': 0,
+        'ORANGE': 1,
+        'YELLOW': 2,
+        'GREEN': 3
+      }
+
+      mappedAlerts.sort((a, b) => {
+        // Unacknowledged first
+        if (a.acknowledged !== b.acknowledged) {
+          return a.acknowledged ? 1 : -1
+        }
+        // Then by severity
+        const sevA = severityMap[a.level] ?? 99
+        const sevB = severityMap[b.level] ?? 99
+        if (sevA !== sevB) {
+          return sevA - sevB
+        }
+        // Then by timestamp
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      })
+
+      setAlerts(mappedAlerts)
+      setFilteredAlerts(mappedAlerts as StoredDoctorAlert[])
+      setStatistics({
+        total: mappedAlerts.filter(a => !a.acknowledged).length,
+        red: mappedAlerts.filter(a => a.level === 'RED' && !a.acknowledged).length,
+        yellow: mappedAlerts.filter(a => (a.level === 'YELLOW' || a.level === 'ORANGE') && !a.acknowledged).length,
+        green: mappedAlerts.filter(a => a.level === 'GREEN').length,
+        acknowledged: mappedAlerts.filter(a => a.acknowledged).length
+      })
+    } catch (e) {
+      console.error("Failed to load alerts", e)
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Filter alerts based on search and filters
   useEffect(() => {
-    let filtered = alerts
+    let filtered = [...alerts]
 
     if (searchTerm.trim()) {
       filtered = filtered.filter(alert =>
         alert.reason_text.toLowerCase().includes(searchTerm.toLowerCase()) ||
         alert.patientId.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (alert.patientName && alert.patientName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        alert.triggers.some(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
+        (Array.isArray(alert.triggers) && alert.triggers.some(t => t.toLowerCase().includes(searchTerm.toLowerCase())))
       )
     }
 
@@ -76,8 +147,8 @@ export default function AlertsPage({
     setFilteredAlerts(filtered)
   }, [searchTerm, filterType, filterStatus, alerts])
 
-  const handleAcknowledgeAlert = (alertId: string) => {
-    acknowledgeSaansSyncAlert(alertId)
+  const handleAcknowledgeAlert = async (alertId: string) => {
+    await acknowledgeAlert(alertId)
     loadAlerts(doctorId)
   }
 
@@ -85,6 +156,8 @@ export default function AlertsPage({
     switch (level) {
       case 'RED':
         return <AlertTriangle className="w-5 h-5 text-red-600" />
+      case 'ORANGE':
+        return <AlertTriangle className="w-5 h-5 text-orange-600" />
       case 'YELLOW':
         return <Bell className="w-5 h-5 text-yellow-600" />
       case 'GREEN':
@@ -98,6 +171,8 @@ export default function AlertsPage({
     switch (level) {
       case 'RED':
         return "bg-red-600 text-white"
+      case 'ORANGE':
+        return "bg-orange-600 text-white"
       case 'YELLOW':
         return "bg-yellow-600 text-white"
       case 'GREEN':
@@ -112,6 +187,8 @@ export default function AlertsPage({
     switch (level) {
       case 'RED':
         return "border-red-200 bg-red-50"
+      case 'ORANGE':
+        return "border-orange-200 bg-orange-50"
       case 'YELLOW':
         return "border-yellow-200 bg-yellow-50"
       case 'GREEN':

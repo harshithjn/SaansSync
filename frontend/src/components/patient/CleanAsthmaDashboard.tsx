@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { PatientDashboardLayout } from "./PatientDashboardLayout"
+import { DashboardCard } from "@/components/ui/DashboardCard"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,10 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
 import { fetchRealTimeAQI, getAQIColor, shouldAlertForAQI, forceRefreshAQI } from "@/lib/aqi-service"
-import { createDailyLog, canLogToday, getPatientProfile } from "@/lib/database-service"
+import { createDailyLog, canLogToday, getPatientProfile, getPatientAlerts, acknowledgeAlert } from "@/lib/database-service"
 import { calculateRedFlagScore } from "@/lib/red-flag-scoring"
 import { PatientData } from "@/lib/patient-types"
-import { useLanguage } from "@/lib/language-context"
+import { useLanguage, LanguageToggle } from "@/lib/language-context"
+import { getPatientMedications, getPatientReports } from "@/lib/database-service"
 import { getPersonalizedAlerts, getCurrentAlerts } from "@/lib/personalized-alerts"
 import {
     getAlertColor,
@@ -54,13 +57,15 @@ interface CleanAsthmaDashboardProps {
     patientId: string
     patientName?: string
     diagnosis?: string
+    headless?: boolean
 }
 
-export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis }: CleanAsthmaDashboardProps) {
+export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis, headless = false }: CleanAsthmaDashboardProps) {
     const { t, language } = useLanguage()
 
     // Patient Data State
     const [patientData, setPatientData] = useState<PatientData | null>(null)
+    const [reports, setReports] = useState<{ pftRecords: any[], reports: any[] }>({ pftRecords: [], reports: [] })
 
     // AQI State
     const [aqiData, setAqiData] = useState<any>(null)
@@ -68,7 +73,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
 
     // Logging State
     const [canLog, setCanLog] = useState(true)
-    const [remainingLogs, setRemainingLogs] = useState(2)
+    const [remainingLogs, setRemainingLogs] = useState(1)
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     // Personalized Alerts
@@ -76,6 +81,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
 
     // Alert System (RED/YELLOW/GREEN from SaansSync engine)
     const [currentAlert, setCurrentAlert] = useState<AlertOutput | null>(null)
+    const [activeAlerts, setActiveAlerts] = useState<any[]>([])
 
     // Form Data
     const [formData, setFormData] = useState({
@@ -160,6 +166,30 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
         try {
             const data = await getPatientProfile(patientId)
             setPatientData(data)
+
+            // Load meds and reports
+            const meds = await getPatientMedications(patientId)
+            if (meds && meds.length > 0) {
+                setFormData(prev => ({
+                    ...prev,
+                    medications: meds.map((m: any, i: number) => ({
+                        medicationId: `med-${i}`,
+                        drugName: m.name || m.drugName,
+                        dose: m.dose || m.frequency,
+                        frequency: m.frequency,
+                        dateTaken: new Date().toISOString().split('T')[0],
+                        taken: false
+                    }))
+                }))
+            }
+
+            const reps = await getPatientReports(patientId)
+            setReports(reps)
+
+            // Load active alerts
+            const alerts = await getPatientAlerts(patientId)
+            setActiveAlerts(alerts?.filter((a: any) => !a.acknowledged) || [])
+
             console.log('Loaded patient data:', data)
         } catch (error) {
             console.error('Error loading patient data:', error)
@@ -182,7 +212,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
         try {
             const dbCanLog = await canLogToday(patientId)
             setCanLog(dbCanLog)
-            setRemainingLogs(dbCanLog ? 2 : 0) // Simplified - just show if can log or not
+            setRemainingLogs(dbCanLog ? 1 : 0) // Simplified - just show if can log or not
         } catch (error) {
             console.error('Error checking logging status:', error)
             setCanLog(false)
@@ -219,7 +249,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
             spo2Rest: formData.spo2AtRest,
             spo2Exertion: formData.spo2OnExertion,
             rescuePuffsToday: formData.rescueInhalerPuffs,
-            controllerTaken: formData.medications.some(m => m.taken),
+            controllerTaken: Array.isArray(formData.medications) && formData.medications.some(m => m.taken),
             mMrcToday: formData.mMRCScale,
             temperatureF: formData.feverTemperature ? parseFloat(formData.feverTemperature) : undefined,
             coughVas: formData.cough,
@@ -264,7 +294,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                 spo2Rest: formData.spo2AtRest,
                 spo2Exertion: formData.spo2OnExertion,
                 rescuePuffsToday: formData.rescueInhalerPuffs,
-                controllerTaken: formData.medications.some(m => m.taken),
+                controllerTaken: Array.isArray(formData.medications) && formData.medications.some(m => m.taken),
                 mMrcToday: formData.mMRCScale,
                 temperatureF: formData.feverTemperature ? parseFloat(formData.feverTemperature) : undefined,
                 coughVas: formData.cough,
@@ -361,6 +391,16 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
         }
     }
 
+    const handleAcknowledge = async (alertId: string) => {
+        try {
+            await acknowledgeAlert(alertId)
+            setActiveAlerts(prev => prev.filter(a => a.id !== alertId))
+            toast.success("Alert dismissed")
+        } catch (e) {
+            toast.error("Failed to dismiss alert")
+        }
+    }
+
     const handleMedicationChange = (index: number, taken: boolean) => {
         const updatedMeds = [...formData.medications]
         updatedMeds[index].taken = taken
@@ -382,140 +422,185 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
     }
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto p-4">
-            {/* Header with Patient Info */}
-            <div className="text-center mb-6">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                    <User className="w-6 h-6 text-blue-600" />
-                    <h1 className="text-2xl font-bold text-gray-900">
-                        {patientData?.fullName || patientName || 'Patient Dashboard'}
-                    </h1>
+        <PatientDashboardLayout
+            patientId={patientId}
+            patientName={patientData?.fullName || patientName || 'Patient'}
+            diagnosis={patientData?.diagnosis?.primaryCategory || diagnosis || 'Bronchial Asthma'}
+            headless={headless}
+        >
+
+            {/* Backend Health Alerts */}
+            {activeAlerts.length > 0 && (
+                <div className="space-y-4 mb-6">
+                    {activeAlerts.map((alert) => (
+                        <Card key={alert.id} className={`p-4 border-l-4 shadow-md ${alert.level === 'RED' ? 'border-red-500 bg-red-50' : 'border-yellow-500 bg-yellow-50'
+                            }`}>
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-4">
+                                    <div className={`p-2 rounded-full ${alert.level === 'RED' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'
+                                        }`}>
+                                        <AlertTriangle className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h4 className={`font-bold ${alert.level === 'RED' ? 'text-red-900' : 'text-yellow-900'
+                                            }`}>
+                                            Health Alert: {alert.level}
+                                        </h4>
+                                        <p className="text-sm text-gray-700 mt-1">{alert.reason_text}</p>
+                                        <div className="flex items-center gap-4 mt-2">
+                                            <Badge variant="outline" className="text-[10px] uppercase font-bold">
+                                                {alert.disease_type}
+                                            </Badge>
+                                            <span className="text-[10px] text-gray-500">
+                                                {new Date(alert.created_at).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleAcknowledge(alert.id)}
+                                    className="text-gray-400 hover:text-gray-600"
+                                >
+                                    Dismiss
+                                </Button>
+                            </div>
+                        </Card>
+                    ))}
                 </div>
-                {patientData?.mobileNumber && (
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                        <Phone className="w-4 h-4 text-gray-500" />
-                        <p className="text-sm text-gray-600">{patientData.mobileNumber}</p>
-                    </div>
-                )}
-                <div className="flex items-center justify-center gap-2 mb-2">
-                    <Stethoscope className="w-5 h-5 text-green-600" />
-                    <p className="text-lg text-gray-700 font-medium">
-                        {patientData?.diagnosis.primaryCategory || diagnosis || 'Bronchial Asthma'}
-                    </p>
-                </div>
-                <p className="text-gray-600">{t('dashboard.title')} - {language === 'hi' ? 'दमा निगरानी' : 'Asthma Monitoring'}</p>
-                <Badge variant="outline" className="mt-2">
-                    Patient ID: {patientId}
-                </Badge>
-            </div>
+            )}
 
             {/* Personalized Alerts */}
             {personalizedAlerts.length > 0 && (
-                <Card className="p-4 bg-blue-50 border-blue-200">
-                    <div className="flex items-center gap-2 mb-3">
-                        <AlertTriangle className="w-5 h-5 text-blue-600" />
-                        <h3 className="font-medium text-blue-900">Personalized Reminders</h3>
-                    </div>
+                <DashboardCard
+                    title="Personalized Reminders"
+                    subtitle="Action items for your care plan"
+                    className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100/50"
+                >
                     <div className="space-y-2">
                         {personalizedAlerts.filter(alert => alert.isActive).map((alert, index) => (
-                            <div key={index} className="flex items-center justify-between p-2 bg-white rounded border">
-                                <span className="text-sm">{alert.name}</span>
-                                <Badge variant="outline" className="text-xs">
+                            <div key={index} className="flex items-center justify-between p-3 bg-white/80 backdrop-blur-sm rounded-xl border border-blue-100/50 shadow-sm hover:translate-x-1 transition-transform">
+                                <span className="font-medium text-gray-700 text-sm">{alert.name}</span>
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-none">
                                     {alert.frequency} {alert.interval && alert.interval}
                                 </Badge>
                             </div>
                         ))}
                     </div>
-                </Card>
+                </DashboardCard>
             )}
 
             {/* Current Alert Display (RED/YELLOW/GREEN) */}
             {currentAlert && currentAlert.level !== 'GREEN' && (
                 <Card
-                    className="p-4 border-2"
+                    className="p-5 border-none shadow-lg relative overflow-hidden"
                     style={{
-                        backgroundColor: getAlertBackgroundColor(currentAlert.level),
-                        borderColor: getAlertColor(currentAlert.level)
+                        background: `linear-gradient(135deg, ${getAlertBackgroundColor(currentAlert.level)} 0%, white 100%)`
                     }}
                 >
-                    <div className="flex items-center gap-2 mb-3">
-                        <AlertTriangle
-                            className="w-5 h-5"
-                            style={{ color: getAlertColor(currentAlert.level) }}
-                        />
-                        <h3
-                            className="font-medium"
-                            style={{ color: getAlertColor(currentAlert.level) }}
-                        >
-                            {currentAlert.level} Alert
-                        </h3>
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <AlertTriangle className="w-24 h-24" style={{ color: getAlertColor(currentAlert.level) }} />
                     </div>
-                    <p className="text-sm font-medium mb-2">{currentAlert.reason_text}</p>
-                    {currentAlert.triggers.length > 0 && (
-                        <ul className="text-sm space-y-1">
-                            {currentAlert.triggers.map((trigger, index) => (
-                                <li key={index} className="flex items-start gap-2">
-                                    <span className="text-red-500 mt-1">•</span>
-                                    <span>{trigger}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
+
+                    <div className="flex items-start gap-4 relative z-10">
+                        <div className="p-3 bg-white rounded-full shadow-sm">
+                            <AlertTriangle
+                                className="w-6 h-6"
+                                style={{ color: getAlertColor(currentAlert.level) }}
+                            />
+                        </div>
+                        <div>
+                            <h3
+                                className="text-lg font-bold mb-1"
+                                style={{ color: getAlertColor(currentAlert.level) }}
+                            >
+                                {currentAlert.level} Alert
+                            </h3>
+                            <p className="font-medium text-gray-800 mb-2">{currentAlert.reason_text}</p>
+
+                            {currentAlert.triggers.length > 0 && (
+                                <div className="bg-white/60 p-3 rounded-lg backdrop-blur-sm mt-2">
+                                    <ul className="space-y-1">
+                                        {currentAlert.triggers.map((trigger, index) => (
+                                            <li key={index} className="flex items-center gap-2 text-sm text-gray-700">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                                                <span>{trigger}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </Card>
             )}
 
             {/* Virtual Pulmonary Rehabilitation */}
-            <Card className="p-4 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <Play className="w-6 h-6 text-green-600" />
+            <DashboardCard noPadding className="bg-gradient-to-r from-green-400 to-emerald-500 text-white border-none shadow-lg">
+                <div className="bg-white/10 backdrop-blur-sm p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-white/20 p-2.5 rounded-full">
+                            <Play className="w-6 h-6 text-white" />
+                        </div>
                         <div>
-                            <h3 className="font-medium text-green-900">{t('rehabilitation.title')}</h3>
-                            <p className="text-sm text-green-700">{t('rehabilitation.description')}</p>
+                            <h3 className="font-bold text-white text-lg">{t('rehabilitation.title')}</h3>
+                            <p className="text-green-50 text-sm opacity-90">{t('rehabilitation.description')}</p>
                         </div>
                     </div>
-                    <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-50">
+                    <Button variant="secondary" className="bg-white text-green-700 hover:bg-green-50 shadow-sm font-semibold border-none">
                         {t('rehabilitation.start')}
                     </Button>
                 </div>
-            </Card>
+            </DashboardCard>
 
             {/* Logging Status */}
-            <Card className="p-4 bg-blue-50 border-blue-200">
+            <DashboardCard className="border-l-4 border-l-blue-500">
                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-blue-600" />
-                        <span className="font-medium">Daily Health Log</span>
+                    <div className="flex items-center gap-3">
+                        <div className="bg-blue-50 p-2 rounded-full">
+                            <Clock className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-gray-800">Daily Health Log</h3>
+                            <p className="text-xs text-gray-500">Track your progress</p>
+                        </div>
                     </div>
-                    <Badge variant={canLog ? "default" : "secondary"}>
+                    <Badge variant={canLog ? "default" : "secondary"} className={canLog ? "bg-blue-600 hover:bg-blue-700" : ""}>
                         {remainingLogs} logs remaining today
                     </Badge>
                 </div>
-            </Card>
+            </DashboardCard>
 
             {/* AQI Alert */}
             {aqiData && shouldAlertForAQI(aqiData.aqi) && (
-                <Card className="p-4 border-red-200 bg-red-50">
-                    <div className="flex items-center gap-3">
+                <div className="p-4 rounded-xl bg-gradient-to-r from-red-50 to-orange-50 border border-red-100 shadow-sm flex items-center gap-4 animate-pulse">
+                    <div className="bg-white p-2 rounded-full shadow-sm">
                         <AlertTriangle className="w-6 h-6 text-red-600" />
-                        <div>
-                            <h3 className="font-semibold text-red-900">☢️ Air quality is hazardous</h3>
-                            <p className="text-sm text-red-700">Take precautions - avoid outdoor activities</p>
-                        </div>
                     </div>
-                </Card>
+                    <div>
+                        <h3 className="font-bold text-red-900 text-lg">⚠️ Air Quality Alert</h3>
+                        <p className="text-sm text-red-800 font-medium">Hazardous conditions detected. Please minimize outdoor exposure.</p>
+                    </div>
+                </div>
             )}
 
             {/* AQI Display */}
-            <Card className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <Wind className="w-5 h-5 text-blue-600" />
-                        <h3 className="text-lg font-semibold">Air Quality Index</h3>
+            <Card className="p-6 border-none shadow-md bg-white hover:shadow-lg transition-all duration-300">
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-indigo-50 p-2.5 rounded-xl">
+                            <Wind className="w-6 h-6 text-indigo-600" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-900">Air Quality Index</h3>
+                            <p className="text-xs text-gray-500">Real-time environmental data</p>
+                        </div>
                     </div>
                     <Button
                         variant="outline"
                         size="sm"
+                        className="rounded-full hover:bg-indigo-50 hover:text-indigo-600 border-gray-200 transition-colors"
                         onClick={async () => {
                             setAqiLoading(true)
                             try {
@@ -536,40 +621,89 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
 
                 {aqiLoading ? (
                     <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                        <p className="text-sm text-gray-600">Loading air quality data...</p>
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-2"></div>
+                        <p className="text-sm text-gray-600">Syncing environmental data...</p>
                     </div>
                 ) : aqiData ? (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="text-center p-4 rounded-lg" style={{ backgroundColor: `${getAQIColor(aqiData.aqi)}20` }}>
-                            <div className="text-3xl font-bold mb-1" style={{ color: getAQIColor(aqiData.aqi) }}>
+                        <div className="text-center p-5 rounded-2xl transition-transform hover:scale-105"
+                            style={{
+                                background: `linear-gradient(135deg, ${getAQIColor(aqiData.aqi)}15 0%, ${getAQIColor(aqiData.aqi)}30 100%)`,
+                                border: `1px solid ${getAQIColor(aqiData.aqi)}40`
+                            }}>
+                            <div className="text-4xl font-black mb-1 drop-shadow-sm" style={{ color: getAQIColor(aqiData.aqi) }}>
                                 {aqiData.aqi}
                             </div>
-                            <div className="text-sm font-medium">{aqiData.category}</div>
-                            <div className="text-xs text-gray-600 flex items-center justify-center gap-1 mt-1">
+                            <div className="text-sm font-bold uppercase tracking-wider mb-2" style={{ color: getAQIColor(aqiData.aqi) }}>
+                                {aqiData.category}
+                            </div>
+                            <div className="text-xs text-gray-600 flex items-center justify-center gap-1 bg-white/50 py-1 px-2 rounded-full mx-auto w-fit">
                                 <MapPin className="w-3 h-3" />
-                                {aqiData.location}
+                                <span className="truncate max-w-[120px]">{aqiData.location}</span>
                             </div>
                         </div>
 
-                        <div className="text-center p-4 bg-gray-50 rounded-lg">
+                        <div className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
                             <div className="text-2xl font-bold text-gray-700">{aqiData.pm25}</div>
-                            <div className="text-sm font-medium">PM2.5</div>
-                            <div className="text-xs text-gray-600">μg/m³</div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase">PM2.5</div>
+                            <div className="text-[10px] text-gray-400">Fine Particles</div>
                         </div>
 
-                        <div className="text-center p-4 bg-gray-50 rounded-lg">
+                        <div className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
                             <div className="text-2xl font-bold text-gray-700">{aqiData.pm10}</div>
-                            <div className="text-sm font-medium">PM10</div>
-                            <div className="text-xs text-gray-600">μg/m³</div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase">PM10</div>
+                            <div className="text-[10px] text-gray-400">Coarse Particles</div>
                         </div>
                     </div>
                 ) : (
-                    <div className="text-center py-4 text-gray-600">
-                        Unable to load air quality data
+                    <div className="text-center py-8 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                        <Wind className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-gray-500">Unavailable at this location</p>
                     </div>
                 )}
             </Card>
+
+            {/* Reports Display Section */}
+            {(reports.reports.length > 0 || reports.pftRecords.length > 0) && (
+                <Card className="p-4 bg-white border shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                        {/* @ts-ignore */}
+                        <FileText className="w-5 h-5 text-purple-600" />
+                        <h3 className="font-medium text-gray-900">Doctor Reports & Tests</h3>
+                    </div>
+
+                    <div className="space-y-4">
+                        {reports.pftRecords.length > 0 && (
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2">PFT Records</h4>
+                                <div className="grid gap-2">
+                                    {reports.pftRecords.map((rec: any, i: number) => (
+                                        <div key={i} className="flex justify-between p-2 bg-purple-50 rounded text-sm">
+                                            <span>{rec.date}</span>
+                                            <span className="font-medium">FEV1: {rec.fev1}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {reports.reports.length > 0 && (
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Other Reports</h4>
+                                <div className="grid gap-2">
+                                    {reports.reports.map((rep: any, i: number) => (
+                                        <div key={i} className="p-2 bg-gray-50 rounded text-sm">
+                                            <p className="font-medium">{rep.title || 'Report'}</p>
+                                            <p className="text-gray-600">{rep.summary || rep.description}</p>
+                                            <p className="text-xs text-gray-400 mt-1">{rep.date}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </Card>
+            )}
 
             {/* Main Form */}
             <Tabs defaultValue="vitals" className="space-y-4">
@@ -1040,6 +1174,6 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                     )}
                 </div>
             </Card>
-        </div>
+        </PatientDashboardLayout>
     )
 }

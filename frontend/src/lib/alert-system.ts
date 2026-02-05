@@ -29,7 +29,7 @@ export function createAlert(
 
     // Store alert
     storeAlert(alert)
-    
+
     // Update patient folder status
     const alertCount = getPatientAlerts(patientId).filter(a => !a.acknowledged).length
     updatePatientFolderStatus(patientId, redFlagScore, alertCount)
@@ -86,18 +86,18 @@ export function acknowledgeAlert(alertId: string): void {
     try {
         const stored = localStorage.getItem(ALERTS_STORAGE_KEY)
         const alerts: Alert[] = stored ? JSON.parse(stored) : []
-        
+
         const alertIndex = alerts.findIndex(alert => alert.id === alertId)
         if (alertIndex >= 0) {
             alerts[alertIndex].acknowledged = true
             localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(alerts))
-            
+
             // Update patient folder alert count
             const alert = alerts[alertIndex]
-            const activeAlerts = alerts.filter(a => 
+            const activeAlerts = alerts.filter(a =>
                 a.patientId === alert.patientId && !a.acknowledged
             ).length
-            updatePatientFolderStatus(alert.patientId, alert.redFlagScore, activeAlerts)
+            updatePatientFolderStatus(alert.patientId, alert.redFlagScore || 0, activeAlerts)
         }
     } catch (error) {
         console.error('Error acknowledging alert:', error)
@@ -119,8 +119,8 @@ export function processPatientDataForAlerts(
         spo2: commonData.spo2.atRest,
         spo2BaselineDrop: diseaseType === 'ILD' ? (diseaseSpecificData as ILDData).spo2BaselineDrop : undefined,
         respiratoryRate: 20, // Default - would come from actual data
-        hasHemoptysis: diseaseType === 'Bronchiectasis' || diseaseType === 'Post-Infection' 
-            ? (diseaseSpecificData as BronchiectasisData).hasHemoptysis 
+        hasHemoptysis: diseaseType === 'Bronchiectasis' || diseaseType === 'Post-Infection'
+            ? (diseaseSpecificData as BronchiectasisData).hasHemoptysis
             : false,
         mMRCIncrease: commonData.mMRCScale > 2, // Assuming baseline of 2
         medCompliance: true, // Would come from medication tracking
@@ -134,7 +134,7 @@ export function processPatientDataForAlerts(
     // Create alert if score is high enough
     if (redFlagResult.score >= 4) {
         const message = generateAlertMessage(diseaseType, redFlagResult.score, redFlagResult.factors)
-        
+
         return createAlert(
             patientId,
             doctorId,
@@ -151,9 +151,9 @@ export function processPatientDataForAlerts(
 // Generate alert message based on disease type and factors
 function generateAlertMessage(diseaseType: DiseaseType, score: number, factors: string[]): string {
     const severity = score >= 9 ? 'Critical' : score >= 7 ? 'High Risk' : 'Moderate Risk'
-    
+
     let baseMessage = `${severity} alert for ${diseaseType} patient. `
-    
+
     if (score >= 9) {
         baseMessage += 'Immediate medical attention required. '
     } else if (score >= 7) {
@@ -306,7 +306,7 @@ export function getAlertStatistics(doctorId: string): {
     acknowledged: number
 } {
     const alerts = getDoctorAlerts(doctorId)
-    
+
     return {
         total: alerts.length,
         critical: alerts.filter(a => a.type === 'critical' && !a.acknowledged).length,
@@ -323,14 +323,14 @@ export function cleanupOldAlerts(): void {
     try {
         const stored = localStorage.getItem(ALERTS_STORAGE_KEY)
         const alerts: Alert[] = stored ? JSON.parse(stored) : []
-        
+
         const thirtyDaysAgo = new Date()
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-        
-        const recentAlerts = alerts.filter(alert => 
-            new Date(alert.createdAt) > thirtyDaysAgo
+
+        const recentAlerts = alerts.filter(alert =>
+            new Date(alert.createdAt || new Date()) > thirtyDaysAgo
         )
-        
+
         localStorage.setItem(ALERTS_STORAGE_KEY, JSON.stringify(recentAlerts))
     } catch (error) {
         console.error('Error cleaning up old alerts:', error)
@@ -344,7 +344,7 @@ export function initializeDemoAlerts(): void {
     try {
         const stored = localStorage.getItem(ALERTS_STORAGE_KEY)
         const alerts: Alert[] = stored ? JSON.parse(stored) : []
-        
+
         // Only create demo alerts if none exist
         if (alerts.length > 0) return
 
@@ -397,11 +397,11 @@ export function initializeDemoAlerts(): void {
 // Export data for alerts
 export function exportAlertsData(doctorId: string, format: 'csv' | 'json' = 'csv'): string {
     const alerts = getDoctorAlerts(doctorId)
-    
+
     if (format === 'json') {
         return JSON.stringify(alerts, null, 2)
     }
-    
+
     // CSV format
     const headers = ['Alert ID', 'Patient ID', 'Type', 'Disease', 'Score', 'Message', 'Factors', 'Created At', 'Acknowledged']
     const rows = alerts.map(alert => [
@@ -409,16 +409,16 @@ export function exportAlertsData(doctorId: string, format: 'csv' | 'json' = 'csv
         alert.patientId,
         alert.type,
         alert.diseaseType,
-        alert.redFlagScore.toString(),
+        (alert.redFlagScore || 0).toString(),
         alert.message,
-        alert.factors.join('; '),
-        alert.createdAt,
+        (alert.factors || []).join('; '),
+        alert.createdAt || '',
         alert.acknowledged ? 'Yes' : 'No'
     ])
-    
+
     const csvContent = [headers, ...rows]
         .map(row => row.map(cell => `"${cell}"`).join(','))
         .join('\n')
-    
+
     return csvContent
 }

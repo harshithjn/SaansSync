@@ -8,14 +8,14 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 console.log('🔍 Testing Supabase connection from frontend...\n')
 
 console.log('Environment variables:')
-console.log('- NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? '✅ Set' : '❌ Missing')
-console.log('- NEXT_PUBLIC_SUPABASE_ANON_KEY:', supabaseKey ? '✅ Set' : '❌ Missing')
+console.log('- SUPABASE_URL:', supabaseUrl ? '✅ Set' : '❌ Missing')
+console.log('- SUPABASE_ANON_KEY:', supabaseKey ? '✅ Set' : '❌ Missing')
 
 if (!supabaseUrl || !supabaseKey) {
     console.log('\n❌ Environment variables not found!')
     console.log('Make sure .env.local exists in the frontend folder with:')
-    console.log('NEXT_PUBLIC_SUPABASE_URL=https://hvzzscoreonfosgxhjfe.supabase.co')
-    console.log('NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...')
+    console.log('SUPABASE_URL=https://hvzzscoreonfosgxhjfe.supabase.co')
+    console.log('SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...')
     process.exit(1)
 }
 

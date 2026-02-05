@@ -10,7 +10,8 @@ import {
     FileText,
     Pill,
     HelpCircle,
-    Heart
+    Heart,
+    MessageSquare
 } from "lucide-react"
 import { usePatientAuth } from "@/lib/auth-guard"
 import { signOut } from "@/lib/auth-service"
@@ -49,16 +50,22 @@ export default function PatientLayout({
             isActive: pathname === `/patient/reports`
         },
         {
-            name: "Medications",
-            href: `/patient/medications`,
-            icon: Pill,
-            isActive: pathname === `/patient/medications`
+            name: "Messages",
+            href: `/patient/messages`,
+            icon: MessageSquare,
+            isActive: pathname === `/patient/messages`
         },
         {
             name: "Help & Support",
             href: `/patient/help`,
             icon: HelpCircle,
             isActive: pathname === `/patient/help`
+        },
+        {
+            name: "Settings",
+            href: `/patient/settings`,
+            icon: User,
+            isActive: pathname === `/patient/settings`
         }
     ]
 

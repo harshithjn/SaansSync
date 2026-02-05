@@ -1,18 +1,33 @@
 // Backend Server Entry Point - Complete with Database Integration
 import 'dotenv/config'
 import express from 'express'
-import { z } from 'zod'
-import app from './app'
-import { supabase, supabaseAdmin } from './config/supabaseClient'
+import cors from 'cors'
+import helmet from 'helmet'
+import { supabase } from './config/supabaseClient'
+import { requireAuth } from './middleware/jwtMiddleware'
 import prescriptionsRouter from './routes/prescriptions'
 import personalizedAlertsRouter from './routes/personalizedAlerts'
+import authRouter from './routes/auth'
+import adminRouter from './routes/admin'
+import patientRouter from './routes/patient'
+import doctorRouter from './routes/doctor'
+import logsRouter from './routes/logs'
+import exportsRouter from './routes/exports'
+import messageRouter from './routes/messageRoutes'
+import alertsRouter from './routes/alerts'
 
 const PORT = process.env.PORT || 3001
 
+// Create app with basic middleware
+const app = express()
+app.use(helmet())
+app.use(cors())
+app.use(express.json())
+
 // Health check endpoint
 app.get('/health', (req, res) => {
-    res.json({ 
-        status: 'OK', 
+    res.json({
+        status: 'OK',
         timestamp: new Date().toISOString(),
         database: 'connected'
     })
@@ -30,23 +45,23 @@ app.get('/keepalive', async (req, res) => {
 
         if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned, which is fine
             console.error('Keepalive error:', error)
-            return res.status(500).json({ 
-                status: 'error', 
+            return res.status(500).json({
+                status: 'error',
                 message: 'Database connection failed',
-                error: error.message 
+                error: error.message
             })
         }
 
-        res.json({ 
-            status: 'alive', 
+        res.json({
+            status: 'alive',
             timestamp: new Date().toISOString(),
             database: 'active'
         })
     } catch (error) {
         console.error('Keepalive error:', error)
-        res.status(500).json({ 
-            status: 'error', 
-            message: 'Database keepalive failed' 
+        res.status(500).json({
+            status: 'error',
+            message: 'Database keepalive failed'
         })
     }
 })
@@ -54,33 +69,6 @@ app.get('/keepalive', async (req, res) => {
 // Basic API endpoint
 app.get('/api', (req, res) => {
     res.json({ message: 'SaansSync Backend API - Working with Database!' })
-})
-
-// --- Patient auth (email + default password; requires service role) ---
-app.post('/api/auth/patient', async (req, res) => {
-    if (!supabaseAdmin) return res.status(503).json({ success: false, error: 'Service role not configured. Set SUPABASE_SERVICE_ROLE_KEY.' })
-    try {
-        const { email, password } = req.body
-        if (!email || !password) return res.status(400).json({ success: false, error: 'email and password required' })
-        const { data: row, error } = await supabaseAdmin
-            .from('patients')
-            .select('id, email, full_name, patient_data, default_password')
-            .eq('email', String(email).toLowerCase().trim())
-            .maybeSingle()
-        if (error) return res.status(500).json({ success: false, error: error.message })
-        if (!row) return res.status(401).json({ success: false, error: 'Invalid email or password' })
-        const stored = row.default_password ?? (row.patient_data as Record<string, unknown>)?.defaultPassword
-        if (stored !== password) return res.status(401).json({ success: false, error: 'Invalid email or password' })
-        const pd = row.patient_data as Record<string, unknown> | null
-        const diagnosis = pd?.diagnosis as Record<string, unknown> | undefined
-        const primaryCategory = (diagnosis?.primaryCategory as string) ?? ''
-        res.json({
-            success: true,
-            session: { patientId: row.id, email: row.email, role: 'PATIENT', primaryDiagnosisCategory: primaryCategory, token: '' }
-        })
-    } catch (e) {
-        res.status(500).json({ success: false, error: (e as Error).message })
-    }
 })
 
 // Database status endpoint
@@ -96,22 +84,36 @@ app.get('/api/db-status', async (req, res) => {
         if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned, which is fine
             return res.status(500).json({ status: 'error', connected: false, error: error.message })
         }
-        
+
         res.json({ status: 'connected', connected: true, timestamp: new Date().toISOString() })
     } catch (error) {
         res.status(500).json({ status: 'error', connected: false, message: 'Database connection failed' })
     }
 })
 
-// Alerts routes moved to modular router (see src/routes/alerts.ts)
-import alertsRouter from './routes/alerts'
+// Register all routes BEFORE auth middleware
+app.use('/api/auth', authRouter)
+app.use('/api/admin', adminRouter)
+app.use('/api/patient', patientRouter)
+app.use('/api/doctor', doctorRouter)
+app.use('/api/logs', logsRouter)
+app.use('/api/exports', exportsRouter)
+app.use('/api/messages', messageRouter)
 app.use('/api/alerts', alertsRouter)
-
-// Prescriptions routes (modular)
 app.use('/api/prescriptions', prescriptionsRouter)
-
-// Personalized alerts routes (modular)
 app.use('/api/personalized-alerts', personalizedAlertsRouter)
+
+// Global auth middleware AFTER routes - applies to all routes except excluded ones
+app.use((req, res, next) => {
+    if (
+        req.path.startsWith('/api/auth') ||
+        req.path === '/health' ||
+        req.path === '/keepalive' ||
+        req.path === '/api/db-status' ||
+        req.path === '/api'
+    ) return next()
+    return requireAuth(req as any, res as any, next as any)
+})
 
 // Automatic keepalive every 10 minutes
 setInterval(async () => {
@@ -122,7 +124,7 @@ setInterval(async () => {
             .from('doctors')
             .select('count')
             .limit(1)
-        
+
         if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned, which is fine
             console.error('Auto-keepalive failed:', error)
         } else {
@@ -135,12 +137,12 @@ setInterval(async () => {
 
 // Global Error Handler
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Unhandled Error:', err.stack);
-  res.status(500).json({
-    status: 'error',
-    message: 'Internal Server Error',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
+    console.error('Unhandled Error:', err.stack);
+    res.status(500).json({
+        status: 'error',
+        message: 'Internal Server Error',
+        error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
 });
 
 // Start server

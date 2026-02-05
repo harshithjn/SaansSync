@@ -133,7 +133,7 @@ export function initializeDefaultMedicationAlert(patientId: string): void {
     const existingAlerts = getPersonalizedAlerts(patientId)
 
     // Check if medication alert already exists
-    const hasMedicationAlert = existingAlerts.some(alert =>
+    const hasMedicationAlert = Array.isArray(existingAlerts) && existingAlerts.some(alert =>
         alert.name.toLowerCase().includes('medication') ||
         alert.type === 'custom' && alert.name.toLowerCase().includes('medication')
     )

@@ -9,9 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PatientFolder, DoctorInstruction, Alert } from "@/lib/monitoring-types"
 import { Prescription } from "@/lib/patient-types"
 import { getDoctorPatientFolders } from "@/lib/doctor-patient-mapping"
-import { getPatientProfile } from "@/lib/database-service"
+import { getPatientProfile, getPatientAlerts, acknowledgeAlert, getPatientInstructions, addPatientInstruction, updatePatientData } from "@/lib/database-service"
 import { getPatientPrescriptions, formatPrescriptionCard } from "@/lib/prescription-service"
 import { diagnosisToDiseaseType } from "@/lib/supabase-auth"
+import { resolveUserProfile } from "@/lib/session-manager"
 import { ArrowLeft, User, Calendar, MapPin, Phone, Mail, AlertTriangle, Pill, FileText, TrendingUp, Download, Edit, Bell, MessageSquare, Trash2, Share, Import, MoreHorizontal, FileOutput } from "lucide-react"
 import Link from "next/link"
 import PrescriptionModal from "@/components/doctor/PrescriptionModal"
@@ -73,21 +74,21 @@ export default function PatientDetailView({
       // Fallback: If folder is missing or has incomplete data (like age 0), construct from patient data
       if (!folder || folder.age === 0) {
         console.log('⚠️ Reconstructing patient folder from database profile')
-        const diseaseType = data.diagnosis?.primaryCategory 
-           ? diagnosisToDiseaseType(data.diagnosis.primaryCategory)
-           : (folder?.diseaseType || 'Unknown')
+        const diseaseType = data.diagnosis?.primaryCategory
+          ? diagnosisToDiseaseType(data.diagnosis.primaryCategory)
+          : (folder?.diseaseType || 'Unknown')
 
         folder = {
-           ...(folder || {}),
-           patientId: resolvedParams.patientId,
-           fullName: data.fullName,
-           age: parseInt(data.age) || 0,
-           diseaseType: diseaseType as any,
-           redFlagScore: folder?.redFlagScore || 1,
-           alertCount: folder?.alertCount || 0,
-           folderColor: folder?.folderColor || 'green',
-           doctorId: resolvedParams.doctorId,
-           lastLogDate: folder?.lastLogDate || new Date().toISOString()
+          ...(folder || {}),
+          patientId: resolvedParams.patientId,
+          fullName: data.fullName,
+          age: parseInt(data.age) || 0,
+          diseaseType: diseaseType as any,
+          redFlagScore: folder?.redFlagScore || 1,
+          alertCount: folder?.alertCount || 0,
+          folderColor: folder?.folderColor || 'green',
+          doctorId: resolvedParams.doctorId,
+          lastLogDate: folder?.lastLogDate || new Date().toISOString()
         }
       }
       setPatientFolder(folder || null)
@@ -104,6 +105,16 @@ export default function PatientDetailView({
       // Load messages
       loadMessages(resolvedParams.patientId)
 
+      // Resolve doctor session for name
+      try {
+        const up = await resolveUserProfile()
+        if (up.profile) {
+          setDoctorSession({ name: (up.profile as any).full_name })
+        }
+      } catch (e) {
+        console.warn("Could not resolve doctor session", e)
+      }
+
       setLoading(false)
     }
 
@@ -119,27 +130,24 @@ export default function PatientDetailView({
     }
   }
 
-  const loadInstructions = (patientId: string) => {
+  const loadInstructions = async (pid: string) => {
     try {
-      const stored = localStorage.getItem(`instructions_${patientId}`)
-      if (stored) {
-        setInstructions(JSON.parse(stored))
-      }
+      const data = await getPatientInstructions(pid)
+      setInstructions(data || [])
     } catch (error) {
       console.error("Error loading instructions:", error)
     }
   }
 
-  const loadAlerts = (patientId: string) => {
+  const loadAlerts = async (pid: string) => {
     try {
-      const stored = localStorage.getItem(`alerts_${patientId}`)
-      if (stored) {
-        setAlerts(JSON.parse(stored))
-      }
+      const data = await getPatientAlerts(pid)
+      setAlerts(data || [])
     } catch (error) {
       console.error("Error loading alerts:", error)
     }
   }
+
 
   const loadMessages = (patientId: string) => {
     try {
@@ -152,12 +160,156 @@ export default function PatientDetailView({
     }
   }
 
-  const getFolderGlowClass = (color: 'green' | 'yellow' | 'red') => {
+  const handleAcknowledgeAlert = async (alertId: string) => {
+    try {
+      const result = await acknowledgeAlert(alertId)
+      if (result.success) {
+        toast.success("Alert acknowledged")
+        loadAlerts(patientId)
+      } else {
+        toast.error("Failed to acknowledge: " + result.error)
+      }
+    } catch (e) {
+      toast.error("An error occurred")
+    }
+  }
+
+  const handleAddInstruction = async () => {
+    const text = prompt("Enter instruction for the patient:")
+    if (!text || !text.trim()) return
+
+    try {
+      const result = await addPatientInstruction(patientId, doctorId, text.trim())
+      if (result.success || result.instruction || result.id) {
+        toast.success("Instruction added and sent to patient dashboard")
+        loadInstructions(patientId)
+      } else {
+        toast.error("Failed to add instruction")
+      }
+    } catch (e) {
+      toast.error("An error occurred")
+    }
+  }
+
+  const handleAddMedication = async () => {
+    // Simple prompt-based medication addition for now
+    const drugName = prompt("Enter drug name:")
+    if (!drugName) return
+    const dose = prompt("Enter dose (e.g., 500mg):")
+    const frequency = prompt("Enter frequency (e.g., Twice daily):")
+
+    try {
+      const newMed = {
+        id: Date.now().toString(),
+        drugName,
+        dose,
+        frequency,
+        startDate: new Date().toISOString(),
+        isActive: true
+      }
+
+      const updatedMeds = [...(patientData.medications || []), newMed]
+      const updatedPatientData = { ...patientData, medications: updatedMeds }
+
+      const result = await updatePatientData(patientId, patientFolder?.fullName || "Patient", updatedPatientData)
+      if (result.success || result === true) {
+        toast.success("Medication added")
+        setPatientData(updatedPatientData)
+      } else {
+        toast.error("Failed to add medication")
+      }
+    } catch (e) {
+      toast.error("An error occurred")
+    }
+  }
+
+  const handleAddPFT = async () => {
+    const fev1 = prompt("Enter FEV1 %:")
+    if (fev1 === null) return
+    const fvc = prompt("Enter FVC %:")
+    if (fvc === null) return
+
+    try {
+      const f1 = parseFloat(fev1)
+      const f2 = parseFloat(fvc)
+      if (isNaN(f1) || isNaN(f2)) {
+        toast.error("Please enter valid numbers")
+        return
+      }
+
+      const newPFT = {
+        date: new Date().toISOString().split('T')[0],
+        fev1: f1,
+        fvc: f2,
+        ratio: (f1 / (f2 || 1)) * 100
+      }
+
+      const updatedPFTs = [...(patientData.pftRecords || []), newPFT]
+      const updatedPatientData = { ...patientData, pftRecords: updatedPFTs }
+
+      const result = await updatePatientData(patientId, patientFolder?.fullName || "Patient", updatedPatientData)
+      if (result.success || result === true) {
+        toast.success("PFT record added")
+        setPatientData(updatedPatientData)
+      } else {
+        toast.error("Failed to add PFT record")
+      }
+    } catch (e) {
+      toast.error("An error occurred")
+    }
+  }
+
+  const handleGenerateAnalytics = () => {
+    if (!patientFolder) return
+    const activeAlerts = alerts.filter(a => !a.acknowledged)
+    const latestLogs = patientFolder.lastLogDate
+
+    let summary = `Health Analytics Summary for ${patientFolder.fullName}\n`
+    summary += `--------------------------------------------------\n`
+    summary += `Risk Score: ${patientFolder.redFlagScore}/10 (${getRiskLabel(patientFolder.redFlagScore)})\n`
+    summary += `Status: ${patientFolder.folderColor.toUpperCase()}\n\n`
+
+    if (activeAlerts.length > 0) {
+      summary += `ACTIVE ALERTS (${activeAlerts.length}):\n`
+      activeAlerts.forEach((a, i) => {
+        summary += `${i + 1}. [${a.level}] ${a.reason_text || a.message}\n`
+      })
+      summary += `\n`
+    } else {
+      summary += `No active health alerts.\n\n`
+    }
+
+    summary += `LATEST VITALS & HISTORY:\n`
+    summary += `- Last Log Date: ${new Date(latestLogs).toLocaleDateString()}\n`
+    summary += `- Diagnosis: ${patientData.diagnosis.primaryCategory}\n`
+    summary += `- Medications: ${patientData.medications?.length || 0} active\n`
+    summary += `- PFT Status: ${patientData.pftRecords?.length || 0} records available\n\n`
+
+    summary += `CLINICAL ASSESSMENT:\n`
+    if (patientFolder.redFlagScore >= 7) {
+      summary += `- CRITICAL: Urgent intervention required. Monitor vitals closely.\n`
+    } else if (patientFolder.redFlagScore >= 4) {
+      summary += `- MODERATE: Follow up scheduled. Review medication compliance.\n`
+    } else {
+      summary += `- STABLE: Patient is responding well to treatment.\n`
+    }
+
+    const w = window.open('', '_blank')
+    if (w) {
+      w.document.write(`<pre style="font-family: monospace; white-space: pre-wrap; padding: 20px; font-size: 14px; max-width: 600px; border: 1px solid #ccc; margin: 20px auto; background: #f9f9f9; border-radius: 8px;">${summary}</pre>`)
+      w.document.close()
+    }
+    toast.success("Analytics generated")
+  }
+
+  const getFolderGlowClass = (color: 'green' | 'yellow' | 'red' | 'orange') => {
     switch (color) {
       case 'green':
         return 'border-green-200 bg-green-50/30'
       case 'yellow':
         return 'border-yellow-200 bg-yellow-50/30'
+      case 'orange':
+        return 'border-orange-200 bg-orange-50/30'
       case 'red':
         return 'border-red-200 bg-red-50/30'
       default:
@@ -204,31 +356,7 @@ export default function PatientDetailView({
   }
 
   const handleSendMessage = () => {
-    const message = prompt(`Send a message to ${patientFolder?.fullName}:`)
-    if (message && message.trim()) {
-      try {
-        // Store message in patient's messages
-        const existingMessages = JSON.parse(localStorage.getItem(`messages_${patientId}`) || '[]')
-        const newMessage = {
-          id: Date.now().toString(),
-          from: 'doctor',
-          doctorId,
-          message: message.trim(),
-          timestamp: new Date().toISOString(),
-          read: false
-        }
-        existingMessages.push(newMessage)
-        localStorage.setItem(`messages_${patientId}`, JSON.stringify(existingMessages))
-
-        // Update local state
-        setMessages(existingMessages)
-
-        toast.success('Message sent successfully')
-      } catch (error) {
-        console.error('Error sending message:', error)
-        toast.error('Failed to send message')
-      }
-    }
+    router.push(`/doctor/messages?patientId=${patientId}`)
   }
 
   const handleExportPatient = () => {
@@ -494,7 +622,6 @@ export default function PatientDetailView({
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
           <TabsTrigger value="alerts">Alerts</TabsTrigger>
           <TabsTrigger value="instructions">Instructions</TabsTrigger>
-          <TabsTrigger value="messages">Messages</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -575,7 +702,7 @@ export default function PatientDetailView({
                 <FileOutput className="w-4 h-4 mr-2" />
                 Generate Prescription
               </Button>
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleAddMedication}>
                 <Pill className="w-4 h-4 mr-2" />
                 Add Medication
               </Button>
@@ -669,10 +796,10 @@ export default function PatientDetailView({
               <Pill className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Medications</h3>
               <p className="text-gray-600 mb-4">No medications have been added for this patient yet.</p>
-<Button onClick={() => setShowPrescriptionModal(true)} disabled={!patientData}>
-                  <FileOutput className="w-4 h-4 mr-2" />
-                  Generate First Prescription
-                </Button>
+              <Button onClick={() => setShowPrescriptionModal(true)} disabled={!patientData}>
+                <FileOutput className="w-4 h-4 mr-2" />
+                Generate First Prescription
+              </Button>
             </Card>
           )}
         </TabsContent>
@@ -680,7 +807,7 @@ export default function PatientDetailView({
         <TabsContent value="pft-history" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">PFT History</h3>
-            <Button>
+            <Button onClick={handleAddPFT}>
               <FileText className="w-4 h-4 mr-2" />
               Add PFT Record
             </Button>
@@ -690,7 +817,7 @@ export default function PatientDetailView({
             <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">PFT History</h3>
             <p className="text-gray-600 mb-4">Track pulmonary function test results over time.</p>
-            <Button>
+            <Button onClick={handleAddPFT}>
               <FileText className="w-4 h-4 mr-2" />
               Add First PFT Record
             </Button>
@@ -710,7 +837,7 @@ export default function PatientDetailView({
             <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Analytics Dashboard</h3>
             <p className="text-gray-600 mb-4">View trends, patterns, and insights from patient data.</p>
-            <Button>
+            <Button onClick={handleGenerateAnalytics}>
               <TrendingUp className="w-4 h-4 mr-2" />
               Generate Analytics
             </Button>
@@ -728,26 +855,28 @@ export default function PatientDetailView({
           {alerts.length > 0 ? (
             <div className="space-y-3">
               {alerts.map((alert) => (
-                <Card key={alert.id} className="p-4 border-l-4 border-red-500">
+                <Card key={alert.id} className={`p-4 border-l-4 ${alert.level === 'RED' ? 'border-red-500' : 'border-yellow-500'}`}>
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3">
-                      <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+                      <AlertTriangle className={`w-5 h-5 mt-0.5 ${alert.level === 'RED' ? 'text-red-600' : 'text-yellow-600'}`} />
                       <div>
-                        <h4 className="font-medium text-red-900">{alert.type.toUpperCase()}</h4>
-                        <p className="text-sm text-red-700 mt-1">{alert.message}</p>
+                        <h4 className={`font-medium ${alert.level === 'RED' ? 'text-red-900' : 'text-yellow-900'}`}>{alert.level} ALERT</h4>
+                        <p className="text-sm text-gray-700 mt-1">{alert.reason_text || alert.message}</p>
                         <div className="flex items-center gap-2 mt-2">
-                          <Badge className="bg-red-100 text-red-800">
-                            Score: {alert.redFlagScore}/10
+                          <Badge className={alert.level === 'RED' ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}>
+                            {alert.disease_type}
                           </Badge>
                           <span className="text-xs text-gray-600">
-                            {new Date(alert.createdAt).toLocaleString()}
+                            {new Date(alert.created_at || alert.createdAt || Date.now()).toLocaleString()}
                           </span>
                         </div>
                       </div>
                     </div>
-                    <Button size="sm" variant="outline">
-                      Acknowledge
-                    </Button>
+                    {!alert.acknowledged && (
+                      <Button size="sm" variant="outline" onClick={() => handleAcknowledgeAlert(alert.id)}>
+                        Acknowledge
+                      </Button>
+                    )}
                   </div>
                 </Card>
               ))}
@@ -764,7 +893,7 @@ export default function PatientDetailView({
         <TabsContent value="instructions" className="space-y-4">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Doctor Instructions</h3>
-            <Button>
+            <Button onClick={handleAddInstruction}>
               <FileText className="w-4 h-4 mr-2" />
               Add Instruction
             </Button>
@@ -798,7 +927,7 @@ export default function PatientDetailView({
               <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No Instructions</h3>
               <p className="text-gray-600 mb-4">No doctor instructions have been added for this patient yet.</p>
-              <Button>
+              <Button onClick={handleAddInstruction}>
                 <FileText className="w-4 h-4 mr-2" />
                 Add First Instruction
               </Button>
@@ -806,52 +935,6 @@ export default function PatientDetailView({
           )}
         </TabsContent>
 
-        <TabsContent value="messages" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Messages</h3>
-            <Button onClick={handleSendMessage}>
-              <MessageSquare className="w-4 h-4 mr-2" />
-              Send Message
-            </Button>
-          </div>
-
-          {messages.length > 0 ? (
-            <div className="space-y-3">
-              {messages.map((message) => (
-                <Card key={message.id} className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant={message.from === 'doctor' ? "default" : "secondary"}>
-                          {message.from === 'doctor' ? 'From Doctor' : 'From Patient'}
-                        </Badge>
-                        <span className="text-xs text-gray-600">
-                          {new Date(message.timestamp).toLocaleString()}
-                        </span>
-                        {!message.read && (
-                          <Badge variant="destructive" className="text-xs">
-                            Unread
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-900">{message.message}</p>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <Card className="p-8 text-center">
-              <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Messages</h3>
-              <p className="text-gray-600 mb-4">No messages have been sent to this patient yet.</p>
-              <Button onClick={handleSendMessage}>
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Send First Message
-              </Button>
-            </Card>
-          )}
-        </TabsContent>
       </Tabs>
 
       {/* Prescription Modal */}

@@ -61,8 +61,8 @@ saanssync/
 
 3. Environment Variables:
    ```
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   NEXT_PUBLIC_API_URL=/api
+   BACKEND_URL=https://your-backend.example.com
    ```
 
 ### Backend (Optional - for heavy processing)
@@ -153,8 +153,7 @@ npm run dev
 
 ### Frontend (.env.local)
 ```
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_API_URL=/api
 ```
 
 ### Backend (.env)
@@ -162,11 +161,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_URL=your_supabase_url
 SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+SUPABASE_JWT_SECRET=your_jwt_secret
 ```
 
 ## Database Setup
 
 1. Create a new Supabase project
-2. Run the SQL schema from `backend/sql/schema.sql`
-3. If needed, run `backend/sql/DISABLE_RLS.sql` for development
+2. Run the SQL schema from `saanssync_schema.sql`
+3. If needed, create a dev-only script to disable RLS for local testing
 4. Update environment variables

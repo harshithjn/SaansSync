@@ -11,10 +11,10 @@ import { PatientFolder } from "@/lib/monitoring-types"
 import { getDoctorPatientFolders } from "@/lib/doctor-patient-mapping"
 import { getPatientProfile } from "@/lib/database-service"
 import { PatientData } from "@/lib/patient-types"
-import { supabase } from "@/lib/supabase"
 import { ArrowLeft, Save, User, Phone, Mail, MapPin, Calendar, Stethoscope } from "lucide-react"
 import Link from "next/link"
 import { toast } from "@/lib/toast"
+import api from '@/lib/api'
 
 export default function EditPatientPage({
   params,
@@ -96,26 +96,21 @@ export default function EditPatientPage({
       }
 
       // Update patient in database
-      const { error } = await supabase
-        .from('patients')
-        .update({
+      try {
+        await api.put(`/patient/${patientId}`, {
           full_name: updatedData.fullName,
-          patient_data: updatedData,
-          updated_at: new Date().toISOString()
+          patient_data: updatedData
         })
-        .eq('id', patientId)
-
-      if (error) {
-        console.error('Database update error:', error)
-        toast.error('Failed to update patient data')
-      } else {
         toast.success('Patient data updated successfully')
         router.push(`/doctor/dashboard/${doctorId}/patient/${patientId}`)
+      } catch (err) {
+        console.error('Error updating patient:', err)
+        toast.error('Error updating patient data')
+      } finally {
+        setIsSaving(false)
       }
-    } catch (error) {
-      console.error('Error updating patient:', error)
-      toast.error('Error updating patient data')
-    } finally {
+    } catch (err) {
+      console.error('Outer Update Error:', err)
       setIsSaving(false)
     }
   }

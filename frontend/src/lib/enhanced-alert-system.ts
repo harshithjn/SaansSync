@@ -1,7 +1,7 @@
 // Enhanced Alert System for ILD and Asthma with Rule-based + Score-based Logic
 import { PatientData } from './patient-types'
 
-export type AlertLevel = 'RED' | 'YELLOW' | 'GREEN'
+export type AlertLevel = 'RED' | 'ORANGE' | 'YELLOW' | 'GREEN'
 export type DiseaseType = 'ILD' | 'ASTHMA' | 'COPD' | 'BRONCHIECTASIS' | 'POST_ICU'
 
 export interface PatientLogData {
@@ -495,6 +495,7 @@ export function initializePatientBaseline(patientId: string, patientData: Patien
 export function getAlertColor(level: AlertLevel): string {
     switch (level) {
         case 'RED': return '#dc2626'
+        case 'ORANGE': return '#f97316'
         case 'YELLOW': return '#d97706'
         case 'GREEN': return '#16a34a'
         default: return '#6b7280'
@@ -1012,6 +1013,7 @@ export function calculateAlert(logData: PatientLogData): AlertResult {
 export function getAlertBackgroundColor(level: AlertLevel): string {
     switch (level) {
         case 'RED': return '#fee2e2'
+        case 'ORANGE': return '#ffedd5'
         case 'YELLOW': return '#fef3c7'
         case 'GREEN': return '#dcfce7'
         default: return '#f3f4f6'

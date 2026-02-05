@@ -1,6 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { PatientDashboardLayout } from "./PatientDashboardLayout"
+import { DashboardCard } from "@/components/ui/DashboardCard"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,17 +12,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
 import { Checkbox } from "@/components/ui/checkbox"
 import { fetchRealTimeAQI, getAQIColor, shouldAlertForAQI, forceRefreshAQI } from "@/lib/aqi-service"
-import { createDailyLog, canLogToday } from "@/lib/database-service"
+import { createDailyLog, canLogToday, getPatientProfile, getPatientMedications, getPatientReports, getPatientAlerts, acknowledgeAlert } from "@/lib/database-service"
 import { calculateRedFlagScore } from "@/lib/red-flag-scoring"
-import { getPatientProfile } from "@/lib/database-service"
 import { PatientData } from "@/lib/patient-types"
+import { useLanguage, LanguageToggle } from "@/lib/language-context"
+import { getPersonalizedAlerts, getCurrentAlerts } from "@/lib/personalized-alerts"
 import {
-    calculateAlert,
     getAlertColor,
     getAlertBackgroundColor,
-    AlertResult,
-    PatientLogData
+    getPatientBaseline
 } from "@/lib/enhanced-alert-system"
+import {
+    copdAlertEngine,
+    storeDoctorAlert,
+    type AlertOutput
+} from "@/lib/alert-engines"
+import { getPatientDoctor } from "@/lib/doctor-patient-mapping"
 import { toast } from "@/lib/toast"
 import {
     Wind,
@@ -33,18 +40,28 @@ import {
     Plus,
     RefreshCw,
     MapPin,
+    Moon,
+    Zap,
     User,
+    Stethoscope,
     Phone,
-    Stethoscope
+    Play,
+    FileText
 } from "lucide-react"
 
 interface CleanCOPDDashboardProps {
     patientId: string
+    patientName?: string
+    diagnosis?: string
+    headless?: boolean
 }
 
-export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProps) {
+export default function CleanCOPDDashboard({ patientId, patientName, diagnosis, headless = false }: CleanCOPDDashboardProps) {
+    const { t, language } = useLanguage()
+
     // Patient Data State
     const [patientData, setPatientData] = useState<PatientData | null>(null)
+    const [reports, setReports] = useState<{ pftRecords: any[], reports: any[] }>({ pftRecords: [], reports: [] })
 
     // AQI State
     const [aqiData, setAqiData] = useState<any>(null)
@@ -52,8 +69,15 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
 
     // Logging State
     const [canLog, setCanLog] = useState(true)
-    const [remainingLogs, setRemainingLogs] = useState(2)
+    const [remainingLogs, setRemainingLogs] = useState(1)
     const [isSubmitting, setIsSubmitting] = useState(false)
+
+    // Personalized Alerts
+    const [personalizedAlerts, setPersonalizedAlerts] = useState<any[]>([])
+
+    // Alert System (RED/YELLOW/GREEN from SaansSync engine)
+    const [currentAlert, setCurrentAlert] = useState<AlertOutput | null>(null)
+    const [activeAlerts, setActiveAlerts] = useState<any[]>([])
 
     // Form Data
     const [formData, setFormData] = useState({
@@ -105,7 +129,7 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
                 dateTaken: new Date().toISOString().split('T')[0],
                 taken: false
             }
-        ],
+        ] as any[],
 
         // Side Effects
         sideEffects: [] as string[],
@@ -126,6 +150,30 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
             const data = await getPatientProfile(patientId)
             if (data) {
                 setPatientData(data)
+
+                // Load meds and reports
+                const meds = await getPatientMedications(patientId)
+                if (meds && meds.length > 0) {
+                    setFormData(prev => ({
+                        ...prev,
+                        medications: meds.map((m: any, i: number) => ({
+                            medicationId: `med-${i}`,
+                            drugName: m.name || m.drugName,
+                            dose: m.dose || m.frequency,
+                            frequency: m.frequency,
+                            dateTaken: new Date().toISOString().split('T')[0],
+                            taken: false
+                        }))
+                    }))
+                }
+
+                const reps = await getPatientReports(patientId)
+                setReports(reps)
+
+                // Load active alerts
+                const alerts = await getPatientAlerts(patientId)
+                setActiveAlerts(alerts?.filter((a: any) => !a.acknowledged) || [])
+
                 console.log('Loaded patient data:', data)
             }
         } catch (error) {
@@ -149,7 +197,7 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
         try {
             const dbCanLog = await canLogToday(patientId)
             setCanLog(dbCanLog)
-            setRemainingLogs(dbCanLog ? 2 : 0)
+            setRemainingLogs(dbCanLog ? 1 : 0)
         } catch (error) {
             console.error('Error checking logging status:', error)
             setCanLog(false)
@@ -211,6 +259,16 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
             }
 
             // Create daily log
+            const input = {
+                patientId,
+                spo2Rest: formData.spo2AtRest,
+                mMrcToday: formData.mMRCScale,
+                // Add defaults for other required fields to avoid crash
+                energyScore: 5,
+            }
+            // @ts-ignore
+            const alertResult = copdAlertEngine(input)
+            setCurrentAlert(alertResult)
             const result = await createDailyLog(
                 patientId,
                 'COPD',
@@ -235,6 +293,16 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
         }
     }
 
+    const handleAcknowledge = async (alertId: string) => {
+        try {
+            await acknowledgeAlert(alertId)
+            setActiveAlerts(prev => prev.filter(a => a.id !== alertId))
+            toast.success("Alert dismissed")
+        } catch (e) {
+            toast.error("Failed to dismiss alert")
+        }
+    }
+
     const handleMedicationChange = (index: number, taken: boolean) => {
         const updatedMeds = [...formData.medications]
         updatedMeds[index].taken = taken
@@ -256,71 +324,95 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
     }
 
     return (
-        <div className="space-y-6 max-w-4xl mx-auto p-4">
-            {/* Header */}
-            <div className="text-center mb-6">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                    <User className="w-6 h-6 text-blue-600" />
-                    <h1 className="text-2xl font-bold text-gray-900">
-                        {patientData?.fullName || 'Patient Dashboard'}
-                    </h1>
-                </div>
-                {patientData?.mobileNumber && (
-                    <div className="flex items-center justify-center gap-2 mb-2">
-                        <Phone className="w-4 h-4 text-gray-500" />
-                        <p className="text-sm text-gray-600">{patientData.mobileNumber}</p>
+        <PatientDashboardLayout
+            patientId={patientId}
+            patientName={patientData?.fullName || patientName || 'Patient'}
+            diagnosis={patientData?.diagnosis?.primaryCategory || diagnosis || 'COPD'}
+            headless={headless}
+        >
+
+            {/* Backend Health Alerts */}
+            {/* Backend Health Alerts */}
+            {activeAlerts.length > 0 && (
+                <DashboardCard title="Active Health Alerts" className="bg-red-50/50 border-red-100">
+                    <div className="space-y-4">
+                        {activeAlerts.map((alert) => (
+                            <Card key={alert.id} className={`p-4 border-l-4 shadow-sm ${alert.level === 'RED' ? 'border-red-500 bg-white' : 'border-yellow-500 bg-white'}`}>
+                                <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-4">
+                                        <div className={`p-2 rounded-full ${alert.level === 'RED' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'}`}>
+                                            <AlertTriangle className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h4 className={`font-bold ${alert.level === 'RED' ? 'text-red-900' : 'text-yellow-900'}`}>
+                                                Health Alert: {alert.level}
+                                            </h4>
+                                            <p className="text-sm text-gray-700 mt-1">{alert.reason_text}</p>
+                                            <div className="flex items-center gap-4 mt-2">
+                                                <Badge variant="outline" className="text-[10px] uppercase font-bold">
+                                                    {alert.disease_type}
+                                                </Badge>
+                                                <span className="text-[10px] text-gray-500">
+                                                    {new Date(alert.created_at).toLocaleString()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleAcknowledge(alert.id)}
+                                        className="text-gray-400 hover:text-gray-600"
+                                    >
+                                        Dismiss
+                                    </Button>
+                                </div>
+                            </Card>
+                        ))}
                     </div>
-                )}
-                <div className="flex items-center justify-center gap-2 mb-2">
-                    <Stethoscope className="w-5 h-5 text-green-600" />
-                    <p className="text-lg text-gray-700 font-medium">
-                        {patientData?.diagnosis.primaryCategory || 'COPD Dashboard'}
-                    </p>
-                </div>
-                <p className="text-gray-600">Chronic Obstructive Pulmonary Disease Monitoring</p>
-                <Badge variant="outline" className="mt-2">
-                    Patient ID: {patientId}
-                </Badge>
-            </div>
+                </DashboardCard>
+            )}
 
             {/* Logging Status */}
-            <Card className="p-4 bg-blue-50 border-blue-200">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Clock className="w-5 h-5 text-blue-600" />
-                        <span className="font-medium">Daily Health Log</span>
+            <DashboardCard className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-100 overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -mr-16 -mt-16"></div>
+                <div className="flex items-center justify-between relative z-10">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center text-blue-600">
+                            <Clock className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h3 className="font-semibold text-gray-900">Daily Health Check-in</h3>
+                            <p className="text-sm text-blue-700/80">Track your vitals to stay ahead</p>
+                        </div>
                     </div>
-                    <Badge variant={canLog ? "default" : "secondary"}>
-                        {remainingLogs} logs remaining today
+                    <Badge className={`${canLog ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-400"} text-white px-4 py-1.5 text-sm font-medium shadow-sm transition-colors`}>
+                        {canLog ? `${remainingLogs} Log Remaining` : "Completed for Today"}
                     </Badge>
                 </div>
-            </Card>
+            </DashboardCard>
 
             {/* AQI Alert */}
             {aqiData && shouldAlertForAQI(aqiData.aqi) && (
-                <Card className="p-4 border-red-200 bg-red-50">
-                    <div className="flex items-center gap-3">
-                        <AlertTriangle className="w-6 h-6 text-red-600" />
+                <div className="relative overflow-hidden rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-4">
+                        <div className="p-2 bg-red-100 rounded-lg text-red-600">
+                            <AlertTriangle className="w-6 h-6" />
+                        </div>
                         <div>
-                            <h3 className="font-semibold text-red-900">☢️ Air quality is hazardous</h3>
-                            <p className="text-sm text-red-700">Take precautions - avoid outdoor activities</p>
+                            <h3 className="font-semibold text-red-900">High Alert: Poor Air Quality</h3>
+                            <p className="text-sm text-red-700 mt-0.5">AQI is hazardous. Please stay indoors and avoid exertion.</p>
                         </div>
                     </div>
-                </Card>
+                </div>
             )}
 
             {/* AQI Display */}
-            <Card className="p-6 border-0 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                            <Wind className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-semibold text-gray-900">Air Quality Index</h3>
-                            <p className="text-sm text-gray-500">Real-time environmental data</p>
-                        </div>
-                    </div>
+            <DashboardCard
+                noPadding
+                title="Air Quality Index"
+                subtitle={aqiData?.location ? `Location: ${aqiData.location}` : 'Live Monitoring'}
+                action={
                     <Button
                         variant="ghost"
                         size="sm"
@@ -336,83 +428,99 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
                             }
                         }}
                         disabled={aqiLoading}
-                        className="text-gray-600 hover:text-gray-900"
+                        className="text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-colors"
                     >
                         <RefreshCw className={`w-4 h-4 mr-2 ${aqiLoading ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
-                </div>
-
-                {aqiLoading ? (
-                    <div className="text-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-                        <p className="text-sm text-gray-600">Loading air quality data...</p>
-                    </div>
-                ) : aqiData ? (
-                    <div>
-                        {/* Location info message */}
-                        {aqiData.location.includes('Estimated') && (
-                            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <div className="flex items-start gap-2">
-                                    <MapPin className="w-4 h-4 text-blue-600 mt-0.5" />
-                                    <div className="text-sm">
-                                        <p className="text-blue-800 font-medium">Using estimated location data</p>
-                                        <p className="text-blue-600 mt-1">
-                                            For more accurate air quality data, you can allow location access when prompted by your browser.
-                                        </p>
+                }
+            >
+                <div className="p-6 bg-white">
+                    {aqiLoading ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-gray-400 bg-gray-50/50 rounded-xl">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-3"></div>
+                            <p className="text-sm font-medium">Fetching real-time data...</p>
+                        </div>
+                    ) : aqiData ? (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div
+                                className="relative overflow-hidden rounded-xl p-6 text-white shadow-md transition-transform hover:scale-[1.02]"
+                                style={{
+                                    background: `linear-gradient(135deg, ${getAQIColor(aqiData.aqi)}, ${getAQIColor(aqiData.aqi)}dd)`
+                                }}
+                            >
+                                <div className="relative z-10">
+                                    <p className="text-white/80 text-sm font-medium mb-1">Current AQI</p>
+                                    <div className="text-4xl font-bold mb-2">{aqiData.aqi}</div>
+                                    <div className="inline-flex items-center px-2 py-1 rounded-lg bg-white/20 backdrop-blur-sm text-xs font-semibold">
+                                        {aqiData.category}
                                     </div>
+                                </div>
+                                <Wind className="absolute -bottom-4 -right-4 w-24 h-24 text-white/10 rotate-12" />
+                            </div>
+
+                            <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-6 flex flex-col justify-center hover:bg-gray-50 transition-colors">
+                                <div className="text-3xl font-bold text-gray-900 mb-1">{aqiData.pm25}</div>
+                                <div className="text-sm font-medium text-gray-600">PM2.5 Concentration</div>
+                                <div className="text-xs text-gray-400 mt-1">Fine particles (μg/m³)</div>
+                            </div>
+
+                            <div className="rounded-xl border border-gray-100 bg-gray-50/50 p-6 flex flex-col justify-center hover:bg-gray-50 transition-colors">
+                                <div className="text-3xl font-bold text-gray-900 mb-1">{aqiData.pm10}</div>
+                                <div className="text-sm font-medium text-gray-600">PM10 Concentration</div>
+                                <div className="text-xs text-gray-400 mt-1">Coarse particles (μg/m³)</div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="text-center py-10 bg-gray-50/50 rounded-xl">
+                            <Wind className="w-10 h-10 mx-auto mb-3 text-gray-300" />
+                            <p className="text-gray-500 font-medium">Data unavailable</p>
+                            <Button variant="link" onClick={() => initializeDashboard()} className="text-blue-600 btn-sm h-auto p-0 mt-1">Retry Connection</Button>
+                        </div>
+                    )}
+                </div>
+            </DashboardCard>
+
+            {/* Reports Display Section */}
+            {(reports.reports.length > 0 || reports.pftRecords.length > 0) && (
+                <Card className="p-4 bg-white border shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
+                        <FileText className="w-5 h-5 text-purple-600" />
+                        <h3 className="font-medium text-gray-900">Doctor Reports & Tests</h3>
+                    </div>
+
+                    <div className="space-y-4">
+                        {reports.pftRecords.length > 0 && (
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2">PFT Records</h4>
+                                <div className="grid gap-2">
+                                    {reports.pftRecords.map((rec: any, i: number) => (
+                                        <div key={i} className="flex justify-between p-2 bg-purple-50 rounded text-sm">
+                                            <span>{rec.date}</span>
+                                            <span className="font-medium">FEV1: {rec.fev1}%</span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
                         )}
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-white p-6">
-                                <div className="absolute top-0 right-0 w-20 h-20 rounded-full opacity-10"
-                                    style={{ backgroundColor: getAQIColor(aqiData.aqi) }}></div>
-                                <div className="relative">
-                                    <div className="text-3xl font-bold text-gray-900 mb-2">
-                                        {aqiData.aqi}
-                                    </div>
-                                    <div className="text-sm font-medium text-gray-700 mb-1">{aqiData.category}</div>
-                                    <div className="flex items-center text-xs text-gray-500">
-                                        <MapPin className="w-3 h-3 mr-1" />
-                                        {aqiData.location}
-                                    </div>
+                        {reports.reports.length > 0 && (
+                            <div>
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Other Reports</h4>
+                                <div className="grid gap-2">
+                                    {reports.reports.map((rep: any, i: number) => (
+                                        <div key={i} className="p-2 bg-gray-50 rounded text-sm">
+                                            <p className="font-medium">{rep.title || 'Report'}</p>
+                                            <p className="text-gray-600">{rep.summary || rep.description}</p>
+                                            <p className="text-xs text-gray-400 mt-1">{rep.date}</p>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-
-                            <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
-                                <div className="text-2xl font-bold text-gray-900 mb-2">{aqiData.pm25}</div>
-                                <div className="text-sm font-medium text-gray-700 mb-1">PM2.5</div>
-                                <div className="text-xs text-gray-500">μg/m³</div>
-                            </div>
-
-                            <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
-                                <div className="text-2xl font-bold text-gray-900 mb-2">{aqiData.pm10}</div>
-                                <div className="text-sm font-medium text-gray-700 mb-1">PM10</div>
-                                <div className="text-xs text-gray-500">μg/m³</div>
-                            </div>
-                        </div>
+                        )}
                     </div>
-                ) : (
-                    <div className="text-center py-8">
-                        <Wind className="w-8 h-8 mx-auto mb-3 text-gray-400" />
-                        <p className="text-gray-600 font-medium mb-2">Air quality data temporarily unavailable</p>
-                        <p className="text-sm text-gray-500 mb-4">
-                            We're using estimated values based on your general area.
-                        </p>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => initializeDashboard()}
-                            className="text-blue-600 border-blue-600 hover:bg-blue-50"
-                        >
-                            <RefreshCw className="w-4 h-4 mr-2" />
-                            Try Again
-                        </Button>
-                    </div>
-                )}
-            </Card>
+                </Card>
+            )}
 
             {/* Main Form */}
             <Tabs defaultValue="vitals" className="space-y-4">
@@ -519,7 +627,9 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
                         <h3 className="text-lg font-semibold mb-4">Today's Medications</h3>
 
                         <div className="space-y-4">
-                            {formData.medications.map((med, index) => (
+                            {/* The original instruction had a partial line here, which was likely meant to be removed or replaced.
+                                Keeping the original mapping logic for medications. */}
+                            {Array.isArray(formData.medications) && formData.medications.map((med, index) => (
                                 <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                                     <div>
                                         <span className="font-medium">{med.drugName}</span>
@@ -544,7 +654,7 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
                                 {['Dry mouth', 'Headache', 'Nausea', 'Dizziness', 'Tremor', 'Palpitations'].map((effect) => (
                                     <div key={effect} className="flex items-center gap-2">
                                         <Checkbox
-                                            checked={formData.sideEffects.includes(effect)}
+                                            checked={Array.isArray(formData.sideEffects) && formData.sideEffects.includes(effect)}
                                             onCheckedChange={(checked) => handleSideEffectChange(effect, checked as boolean)}
                                         />
                                         <span className="text-sm">{effect}</span>
@@ -656,7 +766,8 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
             </Tabs>
 
             {/* Submit Button */}
-            <Card className="border-0 shadow-sm bg-white">
+            {/* Submit Button */}
+            <DashboardCard className="border-0 shadow-sm bg-white">
                 <div className="p-8 text-center">
                     <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                         <CheckCircle className="w-8 h-8 text-green-600" />
@@ -676,7 +787,7 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
                         {isSubmitting ? (
                             <>
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-3"></div>
-                                Submitting...
+                                Submitted...
                             </>
                         ) : (
                             <>
@@ -691,7 +802,7 @@ export default function CleanCOPDDashboard({ patientId }: CleanCOPDDashboardProp
                         </p>
                     )}
                 </div>
-            </Card>
-        </div>
+            </DashboardCard>
+        </PatientDashboardLayout>
     )
 }

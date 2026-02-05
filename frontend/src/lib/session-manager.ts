@@ -1,10 +1,19 @@
-// Professional Session Management - Supabase Only
-// NO localStorage, NO client-side role caching
-import { supabase } from './supabase'
-import type { User, Session } from '@supabase/supabase-js'
+// Professional Session Management - Backend Auth (BFF)
+// No direct Supabase usage on the client
+import api from './api'
+import { onAuthChange, notifyAuthChange } from './auth-events'
+
+export interface AppUser {
+  id: string
+  email?: string | null
+}
+
+export interface AppSession {
+  user: AppUser
+}
 
 export interface UserProfile {
-  role: 'doctor' | 'patient' | null
+  role: 'doctor' | 'patient' | 'admin' | null
   profile: DoctorProfile | PatientProfile | null
   approved?: boolean
 }
@@ -30,25 +39,26 @@ export interface PatientProfile {
   updated_at: string
 }
 
+interface AuthMeResponse {
+  user: AppUser | null
+  role: 'doctor' | 'patient' | 'admin' | null
+  profile: any | null
+  approved?: boolean
+}
+
 // =====================================================
-// CORE SESSION FUNCTIONS - SUPABASE ONLY
+// CORE SESSION FUNCTIONS - BFF ONLY
 // =====================================================
 
 /**
- * Get current Supabase session (single source of truth)
+ * Get current session from backend
  */
-export async function getCurrentSession(): Promise<Session | null> {
+export async function getCurrentSession(): Promise<AppSession | null> {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession()
-    
-    if (error) {
-      console.error('❌ Session error:', error)
-      return null
-    }
-    
-    return session
+    const data = await api.get<AuthMeResponse>('/auth/me')
+    if (!data?.user) return null
+    return { user: data.user }
   } catch (error) {
-    console.error('❌ Get session error:', error)
     return null
   }
 }
@@ -56,67 +66,31 @@ export async function getCurrentSession(): Promise<Session | null> {
 /**
  * Get current user from session
  */
-export async function getCurrentUser(): Promise<User | null> {
+export async function getCurrentUser(): Promise<AppUser | null> {
   const session = await getCurrentSession()
   return session?.user || null
 }
 
 /**
- * Resolve user profile from database (NO caching)
- * This is the ONLY way to determine user role and approval status
+ * Resolve user profile from backend (NO caching)
  */
 export async function resolveUserProfile(): Promise<UserProfile> {
   try {
-    const user = await getCurrentUser()
-    if (!user) {
-      return { role: null, profile: null }
+    const data = await api.get<AuthMeResponse>('/auth/me')
+    if (!data?.user) return { role: null, profile: null }
+    return {
+      role: data.role,
+      profile: data.profile,
+      approved: data.approved
     }
-
-    console.log('🔍 Resolving profile for user:', user.id)
-
-    // Check if user is a doctor
-    const { data: doctorProfile, error: doctorError } = await supabase
-      .from('doctors')
-      .select('*')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (!doctorError && doctorProfile) {
-      console.log('👨‍⚕️ Doctor profile found:', doctorProfile.approval_status)
-      return {
-        role: 'doctor',
-        profile: doctorProfile,
-        approved: doctorProfile.approval_status === 'approved'
-      }
-    }
-
-    // Check if user is a patient
-    const { data: patientProfile, error: patientError } = await supabase
-      .from('patients')
-      .select('*')
-      .eq('auth_user_id', user.id)
-      .single()
-
-    if (!patientError && patientProfile) {
-      console.log('🧑‍🦱 Patient profile found')
-      return {
-        role: 'patient',
-        profile: patientProfile,
-        approved: true // Patients don't need approval
-      }
-    }
-
-    console.log('❓ No profile found for user')
-    return { role: null, profile: null }
-
   } catch (error) {
-    console.error('❌ Profile resolution error:', error)
+    console.error('Profile resolution error:', error)
     return { role: null, profile: null }
   }
 }
 
 /**
- * Check if current user is an admin (email-based)
+ * Check if current user is an admin (email-based fallback)
  */
 export async function isCurrentUserAdmin(): Promise<boolean> {
   try {
@@ -131,27 +105,21 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
 
     return adminEmails.includes(user.email)
   } catch (error) {
-    console.error('❌ Admin check error:', error)
+    console.error('Admin check error:', error)
     return false
   }
 }
 
 /**
- * Sign out user (clears Supabase session)
+ * Sign out user (clears server session cookie)
  */
 export async function signOutUser(): Promise<boolean> {
   try {
-    const { error } = await supabase.auth.signOut()
-    
-    if (error) {
-      console.error('❌ Sign out error:', error)
-      return false
-    }
-    
-    console.log('✅ User signed out successfully')
+    await api.post('/auth/signout')
+    notifyAuthChange(null)
     return true
   } catch (error) {
-    console.error('❌ Sign out error:', error)
+    console.error('Sign out error:', error)
     return false
   }
 }
@@ -160,69 +128,32 @@ export async function signOutUser(): Promise<boolean> {
 // ROUTE PROTECTION HELPERS
 // =====================================================
 
-/**
- * Require authenticated session
- */
-export async function requireAuth(): Promise<Session> {
+export async function requireAuth(): Promise<AppSession> {
   const session = await getCurrentSession()
-  
-  if (!session) {
-    throw new Error('Authentication required')
-  }
-  
+  if (!session) throw new Error('Authentication required')
   return session
 }
 
-/**
- * Require approved doctor
- */
 export async function requireApprovedDoctor(): Promise<DoctorProfile> {
   await requireAuth()
-  
   const userProfile = await resolveUserProfile()
-  
-  if (userProfile.role !== 'doctor') {
-    throw new Error('Doctor role required')
-  }
-  
-  if (!userProfile.approved) {
-    throw new Error('Doctor approval required')
-  }
-  
+  if (userProfile.role !== 'doctor') throw new Error('Doctor role required')
+  if (!userProfile.approved) throw new Error('Doctor approval required')
   return userProfile.profile as DoctorProfile
 }
 
-/**
- * Require patient
- */
 export async function requirePatient(): Promise<PatientProfile> {
   await requireAuth()
-  
   const userProfile = await resolveUserProfile()
-  
-  if (userProfile.role !== 'patient') {
-    throw new Error('Patient role required')
-  }
-  
+  if (userProfile.role !== 'patient') throw new Error('Patient role required')
   return userProfile.profile as PatientProfile
 }
 
-/**
- * Require admin
- */
-export async function requireAdmin(): Promise<User> {
+export async function requireAdmin(): Promise<AppUser> {
   const user = await getCurrentUser()
-  
-  if (!user) {
-    throw new Error('Authentication required')
-  }
-  
+  if (!user) throw new Error('Authentication required')
   const isAdmin = await isCurrentUserAdmin()
-  
-  if (!isAdmin) {
-    throw new Error('Admin role required')
-  }
-  
+  if (!isAdmin) throw new Error('Admin role required')
   return user
 }
 
@@ -230,59 +161,52 @@ export async function requireAdmin(): Promise<User> {
 // SESSION STATE LISTENER
 // =====================================================
 
-/**
- * Listen to auth state changes (for React components)
- */
-export function onAuthStateChange(callback: (session: Session | null) => void) {
-  return supabase.auth.onAuthStateChange((event, session) => {
-    console.log('🔄 Auth state changed:', event, session?.user?.id)
+export function onAuthStateChange(callback: (session: AppSession | null) => void) {
+  let active = true
+
+  // Initial emit
+  getCurrentSession().then((session) => {
+    if (active) callback(session)
+  })
+
+  const unsubscribe = onAuthChange(async () => {
+    if (!active) return
+    const session = await getCurrentSession()
     callback(session)
   })
+
+  return {
+    data: {
+      subscription: {
+        unsubscribe: () => {
+          active = false
+          unsubscribe()
+        }
+      }
+    }
+  }
 }
 
 // =====================================================
-// DOMAIN-SPECIFIC QUERIES
+// DOMAIN-SPECIFIC QUERIES (BFF)
 // =====================================================
 
-/**
- * Get doctor's assigned patients (server-side validated)
- */
 export async function getDoctorPatients(doctorId: string) {
   try {
-    const { data, error } = await supabase.rpc('get_doctor_patients', {
-      doctor_uuid: doctorId
-    })
-
-    if (error) {
-      console.error('❌ Get doctor patients error:', error)
-      return []
-    }
-
+    const data = await api.get<any[]>(`/doctor/${doctorId}/patients`)
     return data || []
   } catch (error) {
-    console.error('❌ Get doctor patients error:', error)
+    console.error('Get doctor patients error:', error)
     return []
   }
 }
 
-/**
- * Assign patient to doctor (server-side validated)
- */
 export async function assignPatientToDoctor(doctorId: string, patientId: string) {
   try {
-    const { data, error } = await supabase.rpc('assign_patient_to_doctor', {
-      doctor_uuid: doctorId,
-      patient_uuid: patientId
-    })
-
-    if (error) {
-      console.error('❌ Assign patient error:', error)
-      return false
-    }
-
-    return data === true
+    const data = await api.post<{ success: boolean }>(`/doctor/${doctorId}/assign-patient`, { patientId })
+    return data?.success === true
   } catch (error) {
-    console.error('❌ Assign patient error:', error)
+    console.error('Assign patient error:', error)
     return false
   }
 }

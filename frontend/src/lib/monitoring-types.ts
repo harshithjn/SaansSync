@@ -2,7 +2,7 @@
 export type DiseaseType = 'Asthma' | 'COPD' | 'ILD' | 'Bronchiectasis' | 'Post-Infection'
 
 export type AlertLevel = 'low' | 'moderate' | 'high' | 'critical'
-export type FolderColor = 'green' | 'yellow' | 'red'
+export type FolderColor = 'green' | 'yellow' | 'orange' | 'red'
 
 // Doctor-Patient Mapping
 export interface DoctorPatientMapping {
@@ -150,13 +150,17 @@ export interface Alert {
     id: string
     patientId: string
     doctorId: string
-    type: 'critical' | 'high-risk' | 'pending-review'
+    type?: 'critical' | 'high-risk' | 'pending-review'
+    level?: 'RED' | 'YELLOW' | 'low' | 'moderate' | 'high' | 'critical'
     message: string
-    factors: string[]
-    redFlagScore: number
-    createdAt: string
+    reason_text?: string
+    factors?: string[]
+    redFlagScore?: number
+    createdAt?: string
+    created_at?: string
     acknowledged: boolean
-    diseaseType: DiseaseType
+    diseaseType?: DiseaseType
+    disease_type?: string
 }
 
 // Patient Folder Display
@@ -211,6 +215,32 @@ export interface PrescribedMedication {
     patientId: string
     doctorId: string
     isActive: boolean
+}
+
+// Doctor Profile
+export interface DoctorProfile {
+    id: string
+    full_name: string
+    email?: string
+    phone?: string
+    specialization?: string
+    hospital_affiliation?: string
+    license_number?: string
+    approval_status: 'pending' | 'approved' | 'rejected'
+}
+
+// Patient Profile for Settings
+export interface PatientProfile {
+    id: string
+    full_name: string
+    email?: string
+    phone?: string
+    patient_data?: {
+        age?: number
+        diagnosis?: {
+            primaryCategory?: string
+        }
+    }
 }
 
 // Doctor Instructions

@@ -46,7 +46,7 @@ export function PasswordSetupModal({ isOpen, onClose, mode }: PasswordSetupModal
                 setStep('otp')
                 toast.success('OTP sent to your mobile number')
             } else {
-                toast.error(result.error.message || 'Failed to send OTP')
+                toast.error((result.error as any)?.message || result.error || 'Failed to send OTP')
             }
         } catch (error) {
             console.error('OTP error:', error)

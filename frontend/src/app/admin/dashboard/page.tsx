@@ -22,9 +22,10 @@ import {
     approveDoctorAccount, 
     rejectDoctorAccount,
     fixApprovedDoctors,
+    getCurrentUserProfile,
+    signOut,
     type DoctorProfile 
 } from '@/lib/auth-service'
-import { supabase } from '@/lib/supabase'
 import { toast } from '@/lib/toast'
 
 export default function AdminDashboard() {
@@ -47,31 +48,19 @@ export default function AdminDashboard() {
 
     const checkAdminAuth = async () => {
         try {
-            // Check for valid Supabase session
-            const { data: { session }, error } = await supabase.auth.getSession()
-            
-            if (error || !session || !session.user) {
-                console.log('❌ No valid admin session found')
+            const auth = await getCurrentUserProfile()
+
+            if (!auth?.role || auth.role !== 'admin') {
+                console.log('? No valid admin session found')
                 window.location.href = '/admin/login'
                 return
             }
 
-            // Verify admin role
-            const userEmail = session.user.email
-            const adminEmails = ['harshithj1121@gmail.com', 'admin@healthplatform.com', 'admin@saanssync.com']
-            
-            if (!adminEmails.includes(userEmail || '')) {
-                console.log('❌ User is not an admin:', userEmail)
-                window.location.href = '/admin/login'
-                return
-            }
-
-            console.log('✅ Admin authenticated:', userEmail)
+            console.log('? Admin authenticated')
             setIsAuthenticated(true)
             loadDoctors()
-            
         } catch (error) {
-            console.error('❌ Auth check error:', error)
+            console.error('? Auth check error:', error)
             window.location.href = '/admin/login'
         } finally {
             setCheckingAuth(false)
@@ -115,7 +104,7 @@ export default function AdminDashboard() {
             if (error && typeof error === 'object' && 'message' in error) {
                 const errorMessage = (error as any).message
                 if (errorMessage.includes('Service role key not configured')) {
-                    toast.error('Admin functions require service role key. Please add NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY to your environment.')
+                    toast.error('Admin functions require server service role configuration. Please set SUPABASE_SERVICE_ROLE_KEY on the backend.')
                 } else {
                     toast.error(`Failed to load doctors: ${errorMessage}`)
                 }
@@ -186,14 +175,11 @@ export default function AdminDashboard() {
 
     const handleLogout = async () => {
         try {
-            // Sign out from Supabase
-            await supabase.auth.signOut()
-            
+            await signOut()
             toast.success('Logged out successfully')
             window.location.href = '/admin/login'
         } catch (error) {
-            console.error('❌ Logout error:', error)
-            // Force redirect even if logout fails
+            console.error('? Logout error:', error)
             toast.success('Logged out successfully')
             window.location.href = '/admin/login'
         }

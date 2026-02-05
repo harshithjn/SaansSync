@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card } from '@/components/ui/card'
 import { Shield, Mail, Lock, AlertCircle } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
 import { toast } from '@/lib/toast'
+import { signInAdminWithPassword } from '@/lib/auth-service'
 
 export default function AdminLoginPage() {
     const router = useRouter()
@@ -22,95 +22,15 @@ export default function AdminLoginPage() {
         setError('')
 
         try {
-            // Simple admin authentication - hardcoded for demo
-            const adminCredentials = {
-                'harshithj1121@gmail.com': 'admin123',
-                'admin@healthplatform.com': 'admin123',
-                'admin@saanssync.com': 'admin123'
-            }
+            const result = await signInAdminWithPassword(email, password)
 
-            // Check credentials
-            if (!adminCredentials[email as keyof typeof adminCredentials]) {
-                setError('Invalid admin email')
+            if (result?.success) {
+                toast.success('Admin login successful!')
+                router.push('/admin/dashboard')
                 return
             }
 
-            if (adminCredentials[email as keyof typeof adminCredentials] !== password) {
-                setError('Invalid admin password')
-                return
-            }
-
-            // Create a simple admin session (for demo purposes)
-            // In production, you'd want proper JWT tokens
-            const adminSession = {
-                email,
-                role: 'admin',
-                full_name: 'System Administrator',
-                timestamp: Date.now()
-            }
-
-            // Create admin Supabase session for database operations
-            try {
-                console.log('🔐 Creating admin Supabase session...')
-                
-                // Try to sign in with admin credentials
-                const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-                    email,
-                    password: 'admin123'
-                })
-
-                if (signInData?.session && signInData?.user) {
-                    console.log('✅ Admin Supabase session created')
-                    toast.success('Admin login successful!')
-                    router.push('/admin/dashboard')
-                    return
-                }
-
-                if (signInError) {
-                    console.log('❌ Admin sign in failed:', signInError.message)
-                    
-                    // If sign in fails, try to create admin account
-                    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                        email,
-                        password: 'admin123',
-                        options: {
-                            data: {
-                                role: 'admin',
-                                full_name: 'System Administrator'
-                            }
-                        }
-                    })
-
-                    if (signUpError) {
-                        if (signUpError.message.includes('rate limit')) {
-                            setError('Too many attempts. Please wait and try again.')
-                            return
-                        }
-                        console.error('❌ Admin account creation failed:', signUpError.message)
-                        setError(`Account creation failed: ${signUpError.message}`)
-                        return
-                    }
-
-                    if (signUpData.user && !signUpData.session) {
-                        setError('Admin account created. Please check email for verification, then try logging in again.')
-                        return
-                    }
-
-                    if (signUpData.session) {
-                        console.log('✅ Admin account created and signed in')
-                        toast.success('Admin account created successfully!')
-                        router.push('/admin/dashboard')
-                        return
-                    }
-                }
-
-                setError('Failed to create admin session. Please try again.')
-                
-            } catch (supabaseError) {
-                console.error('❌ Admin auth error:', supabaseError)
-                setError('Authentication system error. Please try again.')
-            }
-
+            setError(result?.error || 'Invalid admin credentials')
         } catch (error) {
             console.error('Admin login error:', error)
             setError('An unexpected error occurred')

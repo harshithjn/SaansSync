@@ -8,14 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { useDoctorAuth } from '@/lib/auth-guard'
-import { getDoctorPatients, getDoctorAlerts } from "@/lib/database-service"
-import { getDoctorPatientFolders, getDoctorPatientFoldersAsync, getDoctorAlertCounts, searchPatients } from "@/lib/doctor-patient-mapping"
+import { getDoctorPatients, getDoctorAlerts, getDoctorPatientFolders } from "@/lib/database-service"
+import { getDoctorAlertCounts, searchPatients } from "@/lib/doctor-patient-mapping"
 import { getDoctorAlertsSaansSync } from "@/lib/alert-engines"
-import { PatientFolder } from "@/lib/monitoring-types"
+import { PatientFolder, FolderColor } from "@/lib/monitoring-types"
 import { Users, AlertTriangle, TrendingUp, Clock, Search, Plus, Bell, Edit, UserPlus } from "lucide-react"
 import ImportPatientModal from "@/components/doctor/ImportPatientModal"
 
-import { supabase } from '@/lib/supabase'
 
 export default function DoctorDashboard({
   params,
@@ -24,7 +23,7 @@ export default function DoctorDashboard({
 }) {
   const authState = useDoctorAuth() // Use the new auth system
   const [doctorId, setDoctorId] = useState<string>("")
-  
+
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedDisease, setSelectedDisease] = useState("all")
   const [selectedRisk, setSelectedRisk] = useState("all")
@@ -32,7 +31,6 @@ export default function DoctorDashboard({
   const [alertCounts, setAlertCounts] = useState({
     critical: 0,
     highRisk: 0,
-    pendingReview: 0,
     total: 0
   })
   const [filteredPatients, setFilteredPatients] = useState<PatientFolder[]>([])
@@ -49,79 +47,45 @@ export default function DoctorDashboard({
       // 2. Initialize production system (no demo patients needed)
       console.log('Production mode - using database patients only')
 
-      // 3. Load Data (now safe to call)
+      // 3. Load Data
       try {
-        console.log('Loading patients from database for doctor:', resolvedParams.doctorId)
-        
-        // Note: getDoctorPatients internally validates session again and uses auth.uid()
-        const dbPatients = await getDoctorPatients(resolvedParams.doctorId)
-        console.log('Database patients:', dbPatients)
-        
-        // ... rest of logic ...
-        
-        // Convert database patients to PatientFolder format
-        const dbFolders: PatientFolder[] = dbPatients.map(patient => ({
-          patientId: patient.id,
-          patientName: patient.full_name,
-          fullName: patient.full_name,
-          age: 0, // Default age, would come from patient data
-          doctorId: resolvedParams.doctorId,
-          diseaseType: patient.disease_type || 'Unknown',
-          redFlagScore: 1, // Default, will be updated from latest log
-          alertCount: 0, // Will be calculated from alerts
-          lastLogDate: new Date().toISOString().split('T')[0],
-          folderColor: 'green' as const
-        }))
-        
-        // Get alerts from database
+        console.log('Loading patient folders for doctor:', resolvedParams.doctorId)
+
+        // Fetch optimized patient folders (contains sync'd scores and colors)
+        const updatedFolders = await getDoctorPatientFolders(resolvedParams.doctorId)
+        console.log('Synced Folders:', updatedFolders)
+
+        // Get alerts for count summary
         const dbAlerts = await getDoctorAlerts(resolvedParams.doctorId)
-        console.log('Database alerts:', dbAlerts)
-        
-        // Update alert counts
-        const criticalAlerts = dbAlerts.filter(a => !a.acknowledged && a.type === 'critical')
-        const highRiskAlerts = dbAlerts.filter(a => !a.acknowledged && a.type === 'high-risk')
-        const pendingAlerts = dbAlerts.filter(a => !a.acknowledged && a.type === 'pending-review')
-        
+
+        // Update alert counts (RED/ORANGE/YELLOW for summary cards)
+        const activeAlerts = dbAlerts.filter(a => !a.acknowledged)
+
         setAlertCounts({
-          critical: criticalAlerts.length,
-          highRisk: highRiskAlerts.length,
-          pendingReview: pendingAlerts.length,
-          total: dbAlerts.filter(a => !a.acknowledged).length
+          critical: activeAlerts.filter(a => a.level === 'RED').length,
+          highRisk: activeAlerts.filter(a => a.level === 'YELLOW' || a.level === 'ORANGE').length,
+          total: activeAlerts.length
         })
-        
-        // Update patient folders with alert counts and red flag scores
-        const updatedFolders = dbFolders.map(folder => {
-          const patientAlerts = dbAlerts.filter(a => a.patient_id === folder.patientId && !a.acknowledged)
-          const maxRedFlag = Math.max(...patientAlerts.map(a => a.red_flag_score || 1), 1)
-          
-          return {
-            ...folder,
-            alertCount: patientAlerts.length,
-            redFlagScore: maxRedFlag,
-            folderColor: maxRedFlag >= 7 ? 'red' as const : maxRedFlag >= 4 ? 'yellow' as const : 'green' as const
-          }
-        })
-        
+
         setPatientFolders(updatedFolders)
         setFilteredPatients(updatedFolders)
-        
-        console.log('✅ Loaded', updatedFolders.length, 'patients from database')
-        
+
+        console.log('✅ Loaded', updatedFolders.length, 'patients from synced folders')
+
       } catch (error) {
         console.error('Database loading failed, falling back to localStorage:', error)
-        
+
         // Fallback to localStorage
-        const folders = await getDoctorPatientFoldersAsync(resolvedParams.doctorId)
+        const folders = await getDoctorPatientFolders(resolvedParams.doctorId)
         setPatientFolders(folders)
         setFilteredPatients(folders)
 
-        // Load alert counts (RED/YELLOW from SaansSync; fallback to folder-based)
+        // Load alert counts (RED/YELLOW/ORANGE from SaansSync; fallback to folder-based)
         const saansSyncAlerts = getDoctorAlertsSaansSync(resolvedParams.doctorId)
-        const activeAlerts = saansSyncAlerts.filter(a => !a.acknowledged && (a.level === 'RED' || a.level === 'YELLOW'))
+        const activeAlerts = saansSyncAlerts.filter(a => !a.acknowledged && (a.level === 'RED' || a.level === 'YELLOW' || a.level === 'ORANGE'))
         setAlertCounts({
           critical: saansSyncAlerts.filter(a => !a.acknowledged && a.level === 'RED').length,
-          highRisk: saansSyncAlerts.filter(a => !a.acknowledged && a.level === 'YELLOW').length,
-          pendingReview: 0,
+          highRisk: saansSyncAlerts.filter(a => !a.acknowledged && (a.level === 'YELLOW' || a.level === 'ORANGE')).length,
           total: activeAlerts.length
         })
       }
@@ -132,12 +96,12 @@ export default function DoctorDashboard({
 
   // Filter patients based on search and filters
   useEffect(() => {
-    let filtered = patientFolders
+    let filtered: PatientFolder[] = patientFolders
 
     // Search filter
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase()
-      filtered = filtered.filter(patient => 
+      filtered = filtered.filter(patient =>
         patient.fullName.toLowerCase().includes(term) ||
         patient.patientId.toLowerCase().includes(term)
       )
@@ -161,15 +125,17 @@ export default function DoctorDashboard({
       })
     }
 
-    setFilteredPatients(filtered)
+    setFilteredPatients(filtered as PatientFolder[])
   }, [searchTerm, selectedDisease, selectedRisk, patientFolders, doctorId])
 
-  const getFolderGlowClass = (color: 'green' | 'yellow' | 'red') => {
+  const getFolderGlowClass = (color: FolderColor) => {
     switch (color) {
       case 'green':
         return 'border-green-200 bg-green-50/30 shadow-green-100 hover:shadow-green-200'
       case 'yellow':
         return 'border-yellow-200 bg-yellow-50/30 shadow-yellow-100 hover:shadow-yellow-200'
+      case 'orange':
+        return 'border-orange-200 bg-orange-50/30 shadow-orange-100 hover:shadow-orange-200'
       case 'red':
         return 'border-red-200 bg-red-50/30 shadow-red-100 hover:shadow-red-200 animate-pulse'
       default:
@@ -257,19 +223,7 @@ export default function DoctorDashboard({
             </div>
             <div>
               <p className="text-2xl font-semibold text-gray-900">{alertCounts.highRisk}</p>
-              <p className="text-sm text-gray-600">High Risk</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-sm bg-yellow-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Clock className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-semibold text-gray-900">{alertCounts.pendingReview}</p>
-              <p className="text-sm text-gray-600">Pending Review</p>
+              <p className="text-sm text-gray-600">High Risk Alerts</p>
             </div>
           </div>
         </Card>
@@ -454,9 +408,9 @@ export default function DoctorDashboard({
         doctorId={doctorId}
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
-        onSuccess={() => {
+        onSuccess={async () => {
           // Refresh patient folders after successful import
-          const folders = getDoctorPatientFolders(doctorId)
+          const folders = await getDoctorPatientFolders(doctorId)
           setPatientFolders(folders)
           setFilteredPatients(folders)
         }}

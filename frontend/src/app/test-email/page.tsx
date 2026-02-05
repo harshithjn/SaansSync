@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { supabase } from '@/lib/supabase'
 import { toast } from '@/lib/toast'
+import api from '@/lib/api'
 
 export default function TestEmailPage() {
   const [email, setEmail] = useState('')
@@ -18,23 +18,12 @@ export default function TestEmailPage() {
 
     setLoading(true)
     try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password: 'test123456',
-        options: {
-          data: {
-            full_name: 'Test User',
-            role: 'doctor'
-          }
-        }
-      })
+      const result = await api.post<{ success: boolean; error?: string }>('/auth/test-email', { email })
 
-      if (error) {
-        toast.error(`Error: ${error.message}`)
-        console.error('Signup error:', error)
-      } else {
+      if (result?.success) {
         toast.success('Test email sent! Check your inbox.')
-        console.log('Signup success:', data)
+      } else {
+        toast.error(`Error: ${result?.error || 'Failed to send test email'}`)
       }
     } catch (error) {
       toast.error('Unexpected error occurred')
