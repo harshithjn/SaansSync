@@ -10,18 +10,19 @@ import { Label } from "@/components/ui/label"
 import {
     User,
     Mail,
-    Phone,
     Shield,
     Settings as SettingsIcon,
     Bell,
     Lock,
     Save,
-    Award
+    Award,
+    ChevronRight,
+    Camera
 } from "lucide-react"
 import { getDoctorProfile } from "@/lib/database-service"
 import { DoctorProfile } from "@/lib/monitoring-types"
 import { resolveUserProfile } from "@/lib/session-manager"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 
 export default function DoctorSettingsPage() {
     const params = useParams()
@@ -34,10 +35,7 @@ export default function DoctorSettingsPage() {
     useEffect(() => {
         const loadProfile = async () => {
             try {
-                // Fetch basic status from DB
                 const dbProfile = await getDoctorProfile(doctorId)
-
-                // Overlay with session data for security (name, email, phone)
                 const sessionRes = await resolveUserProfile()
                 const sessionProfile = sessionRes.profile as any
 
@@ -45,15 +43,14 @@ export default function DoctorSettingsPage() {
                     setProfile({
                         ...dbProfile,
                         full_name: sessionProfile.full_name || dbProfile.full_name,
-                        email: sessionProfile.email || dbProfile.email,
-                        phone: sessionProfile.mobile || sessionProfile.phone || dbProfile.phone
+                        email: sessionProfile.email || dbProfile.email
                     })
                 } else {
                     setProfile(dbProfile)
                 }
             } catch (error) {
-                console.error("Failed to load doctor profile:", error)
-                toast.error("Failed to load profile settings")
+                console.error(error)
+                toast.error("Failed to load clinical profile")
             } finally {
                 setLoading(false)
             }
@@ -65,174 +62,128 @@ export default function DoctorSettingsPage() {
     }, [doctorId])
 
     const handleSave = () => {
-        toast.success("Settings saved successfully")
+        toast.success("Profile updated successfully")
         setIsEditing(false)
     }
 
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-        )
+        return <div className="py-24 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">Loading settings...</div>
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 font-outfit">Account Settings</h1>
-                    <p className="text-gray-500">Manage your professional profile and application preferences</p>
+        <div className="max-w-4xl mx-auto space-y-12 font-['Matter_Regular',sans-serif]">
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Account Settings</p>
+                    <h1 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tighter">Settings</h1>
                 </div>
                 <Button
-                    variant={isEditing ? "outline" : "default"}
-                    onClick={() => isEditing ? setIsEditing(false) : setIsEditing(true)}
+                    onClick={() => isEditing ? handleSave() : setIsEditing(true)}
+                    className={`h-12 px-8 rounded-xl font-bold text-[10px] uppercase tracking-widest transition-all shadow-xl shadow-slate-100 ${
+                        isEditing ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-slate-950 hover:bg-slate-800 text-white'
+                    }`}
                 >
-                    {isEditing ? "Cancel" : "Edit Profile"}
+                    {isEditing ? <><Save className="w-4 h-4 mr-2" /> Save Changes</> : "Edit Profile"}
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
                 {/* Profile Overview Card */}
-                <Card className="p-6 col-span-1 space-y-6 shadow-sm border-0 bg-white/50 backdrop-blur-sm">
-                    <div className="flex flex-col items-center text-center space-y-3">
-                        <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center border-4 border-white shadow-sm">
-                            <User className="w-12 h-12 text-primary" />
+                <div className="space-y-6">
+                    <Card className="p-8 border-none bg-white rounded-[2.5rem] shadow-sm border border-slate-50 flex flex-col items-center text-center">
+                        <div className="relative group mb-6">
+                            <div className="w-24 h-24 bg-slate-50 rounded-[1.75rem] flex items-center justify-center border-4 border-white shadow-sm overflow-hidden ring-1 ring-slate-100">
+                                <User className="w-12 h-12 text-slate-300" />
+                            </div>
+                            <button className="absolute bottom-[-8px] right-[-8px] w-10 h-10 bg-white rounded-xl shadow-lg border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-950 transition-all">
+                                <Camera className="w-4 h-4" />
+                            </button>
                         </div>
+                        
                         <div>
-                            <h2 className="text-xl font-bold text-gray-900">{profile?.full_name}</h2>
-                            <Badge variant="secondary" className="mt-1">
-                                {profile?.approval_status === 'approved' ? 'Verified Doctor' : 'Pending Verification'}
+                            <h2 className="text-xl font-bold text-slate-900 tracking-tight">{profile?.full_name}</h2>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-4 flex items-center justify-center gap-2">
+                                <Shield className="w-3 h-3 text-emerald-500" />
+                                {profile?.approval_status === 'approved' ? 'Active Doctor' : 'Under Review'}
+                            </p>
+                            <Badge variant="secondary" className="bg-slate-50 text-slate-500 border-none font-bold text-[9px] uppercase tracking-widest px-3 py-1">
+                                {profile?.specialization || 'Pulmonologist'}
                             </Badge>
                         </div>
+                    </Card>
+
+                    <div className="space-y-2">
+                        <SettingItem icon={Bell} label="Notifications" />
+                        <SettingItem icon={Lock} label="Security Keys" />
+                        <SettingItem icon={Shield} label="Privacy Policy" />
                     </div>
+                </div>
 
-                    <div className="space-y-4 pt-4 border-t border-gray-100">
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                            <Mail className="w-4 h-4" />
-                            <span className="truncate">{profile?.email || 'No email provided'}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                            <Phone className="w-4 h-4" />
-                            <span>{profile?.phone || 'No phone provided'}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                            <Shield className="w-4 h-4" />
-                            <span>License: {profile?.license_number || 'N/A'}</span>
-                        </div>
-                    </div>
-                </Card>
-
-                {/* Detailed Settings Forms */}
-                <div className="md:col-span-2 space-y-6">
-                    <Card className="p-6 shadow-sm border-0 bg-white">
-                        <div className="flex items-center gap-2 mb-6">
-                            <SettingsIcon className="w-5 h-5 text-primary" />
-                            <h3 className="text-lg font-bold">Personal Information</h3>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="fullName">Full Name</Label>
-                                <Input
-                                    id="fullName"
-                                    defaultValue={profile?.full_name}
-                                    disabled={!isEditing}
-                                    placeholder="Dr. John Doe"
-                                />
+                {/* Forms */}
+                <div className="md:col-span-2 space-y-8">
+                    <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50">
+                        <div className="flex items-center gap-4 mb-10">
+                            <div className="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center">
+                                <User className="w-5 h-5" />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">Email Address</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        defaultValue={profile?.email}
-                                        disabled={!isEditing}
-                                        placeholder="doctor@example.com"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="phone">Phone Number</Label>
-                                    <Input
-                                        id="phone"
-                                        type="tel"
-                                        defaultValue={profile?.phone}
-                                        disabled={!isEditing}
-                                        placeholder="+1 234 567 890"
-                                    />
-                                </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 tracking-tight">Profile Details</h3>
+                                <p className="text-[10px] font-medium text-slate-400">Professional information and contact.</p>
                             </div>
                         </div>
-                    </Card>
 
-                    <Card className="p-6 shadow-sm border-0 bg-white">
-                        <div className="flex items-center gap-2 mb-6">
-                            <Award className="w-5 h-5 text-primary" />
-                            <h3 className="text-lg font-bold">Professional Details</h3>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="hospital">Hospital / Clinic Affiliation</Label>
+                        <div className="grid grid-cols-1 gap-8">
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Full Name</Label>
                                 <Input
-                                    id="hospital"
-                                    defaultValue={profile?.hospital_affiliation || "City Medical Center"}
+                                    type="email"
+                                    defaultValue={profile?.email}
                                     disabled={!isEditing}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="specialization">Specialization</Label>
-                                <Input
-                                    id="specialization"
-                                    defaultValue={profile?.specialization || "Pulmonologist"}
-                                    disabled={!isEditing}
+                                    className="h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-slate-900"
                                 />
                             </div>
                         </div>
                     </Card>
 
-                    <Card className="p-6 shadow-sm border-0 bg-white">
-                        <div className="flex items-center gap-2 mb-6">
-                            <Lock className="w-5 h-5 text-primary" />
-                            <h3 className="text-lg font-bold">Security & Alerts</h3>
+                    <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50">
+                        <div className="flex items-center gap-4 mb-10">
+                            <div className="w-10 h-10 bg-amber-50 text-amber-500 rounded-xl flex items-center justify-center">
+                                <Award className="w-5 h-5" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 tracking-tight">Medical Credentials</h3>
+                                <p className="text-[10px] font-medium text-slate-400">Affiliations and medical licenses.</p>
+                            </div>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                                <div className="flex items-center gap-3">
-                                    <Bell className="w-4 h-4 text-gray-500" />
-                                    <div>
-                                        <p className="text-sm font-medium">Email Notifications</p>
-                                        <p className="text-xs text-gray-500">Receive alerts for critical patients via email</p>
-                                    </div>
-                                </div>
-                                <Button variant="ghost" size="sm">Configure</Button>
-                            </div>
-                            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
-                                <div className="flex items-center gap-3">
-                                    <Shield className="w-4 h-4 text-gray-500" />
-                                    <div>
-                                        <p className="text-sm font-medium">Two-Factor Authentication</p>
-                                        <p className="text-xs text-gray-500">Add an extra layer of security to your account</p>
-                                    </div>
-                                </div>
-                                <Button variant="ghost" size="sm" disabled>Enabled</Button>
+                        <div className="grid grid-cols-1 gap-8">
+                            <div className="space-y-3">
+                                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Hospital Affiliation</Label>
+                                <Input
+                                    defaultValue={profile?.license_number || "LCN-99102-X"}
+                                    disabled={true}
+                                    className="h-14 bg-slate-100 border-none rounded-2xl px-6 font-bold text-slate-400"
+                                />
                             </div>
                         </div>
                     </Card>
-
-                    {isEditing && (
-                        <div className="flex justify-end gap-3">
-                            <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
-                            <Button className="gap-2" onClick={handleSave}>
-                                <Save className="w-4 h-4" />
-                                Save Changes
-                            </Button>
-                        </div>
-                    )}
                 </div>
             </div>
+        </div>
+    )
+}
+
+function SettingItem({ icon: Icon, label }: any) {
+    return (
+        <div className="flex items-center justify-between p-5 bg-white rounded-2xl border border-slate-50 shadow-sm hover:bg-slate-50 transition-all cursor-pointer group">
+            <div className="flex items-center gap-4">
+                <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-slate-950 group-hover:text-white transition-all flex items-center justify-center">
+                    <Icon className="w-4 h-4" />
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">{label}</span>
+            </div>
+            <ChevronRight className="w-4 h-4 text-slate-200" />
         </div>
     )
 }

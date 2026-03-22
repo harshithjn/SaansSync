@@ -52,6 +52,7 @@ router.post('/password/reset/complete', authController.completePasswordReset);
 router.post('/patient/login-otp', authController.patientLoginOtp);
 router.post('/patient/verify-otp', authController.verifyPatientOtp);
 router.post('/patient/login', authController.patientLogin);
+router.post('/patient/signup', authController.patientSignup);
 router.post('/admin/login', authController.adminLogin);
 router.post('/callback', authController.exchangeCallback);
 router.post('/test-email', authController.testEmail);

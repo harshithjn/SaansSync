@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express'
-import { supabase } from '../config/supabaseClient'
+import jwt from 'jsonwebtoken'
+import prisma from '../config/db'
+
+const JWT_SECRET = process.env.JWT_SECRET || 'saanssync_local_secret'
 
 export interface AuthUser {
   id: string
@@ -12,30 +15,36 @@ export interface AuthedRequest extends Request {
 }
 
 export async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
-  const header = (req.headers.authorization || req.headers.Authorization) as string | undefined
-  if (!header || !header.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, error: 'Missing Authorization header' })
-  }
-
-  const token = header.split(' ')[1]
-
-  if (!supabase) {
-    return res.status(500).json({ success: false, error: 'Supabase client not configured' })
-  }
-
   try {
-    const { data: { user }, error } = await supabase.auth.getUser(token)
+    const authHeader = req.headers.authorization
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null
 
-    if (error || !user) {
-      console.error('Token verification failed:', error?.message)
-      return res.status(401).json({ success: false, error: 'Invalid or expired token', details: error?.message })
+    if (!token) {
+      return res.status(401).json({ success: false, error: 'Authorization token missing' })
     }
 
-    req.user = {
-      id: user.id,
-      email: user.email,
-      role: user.role
+    const decoded = jwt.verify(token, JWT_SECRET) as any
+    if (!decoded || !decoded.id) {
+      return res.status(401).json({ success: false, error: 'Invalid or expired token' })
     }
+
+    let role = decoded.role || 'UNKNOWN'
+    let email = decoded.email || ''
+
+    // Map DB roles if needed
+    const doctor = await prisma.doctor.findUnique({ where: { id: decoded.id } })
+    if (doctor) {
+      role = 'DOCTOR'
+      email = doctor.email
+    } else {
+      const patient = await prisma.patient.findUnique({ where: { id: decoded.id } })
+      if (patient) {
+        role = 'PATIENT'
+        email = patient.email
+      }
+    }
+
+    req.user = { id: decoded.id, email, role }
     return next()
   } catch (err) {
     console.error('Auth middleware error:', err)
@@ -44,17 +53,15 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
 }
 
 export async function optionalAuth(req: AuthedRequest, _res: Response, next: NextFunction) {
-  const header = (req.headers.authorization || req.headers.Authorization) as string | undefined
-  if (!header || !header.startsWith('Bearer ')) return next()
-
-  const token = header.split(' ')[1]
-
-  if (!supabase) return next()
-
   try {
-    const { data: { user } } = await supabase.auth.getUser(token)
-    if (user) {
-      req.user = { id: user.id, email: user.email, role: user.role }
+    const authHeader = req.headers.authorization
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null
+
+    if (token) {
+      const decoded = jwt.verify(token, JWT_SECRET) as any
+      if (decoded && decoded.id) {
+        req.user = { id: decoded.id, email: decoded.email, role: decoded.role }
+      }
     }
   } catch {
     // ignore

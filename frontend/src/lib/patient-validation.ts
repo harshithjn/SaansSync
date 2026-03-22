@@ -7,10 +7,6 @@ export const validateStep1 = (data: PatientData): StepValidation => {
         errors.push({ field: 'fullName', message: 'Full name is required' })
     }
 
-    const mobileDigits = data.mobileNumber.replace(/\D/g, '')
-    if (mobileDigits.length < 10) {
-        errors.push({ field: 'mobileNumber', message: 'Mobile number must contain at least 10 digits' })
-    }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -206,13 +202,6 @@ export const isValueAbnormal = (key: string, value: string): boolean => {
     return numValue < range.min || numValue > range.max
 }
 
-export const formatMobileNumber = (input: string): string => {
-    const digits = input.replace(/\D/g, '')
-    if (digits.length <= 3) return digits
-    if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`
-    if (digits.length <= 10) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`
-}
 
 export const extractDigits = (input: string): string => {
     return input.replace(/\D/g, '')

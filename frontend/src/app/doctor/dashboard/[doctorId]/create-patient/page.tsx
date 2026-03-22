@@ -7,8 +7,25 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "../../../../../components/ui/badge"
+import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { 
+    ArrowLeft, 
+    ArrowRight, 
+    User, 
+    Stethoscope, 
+    Activity, 
+    Wind, 
+    Pill, 
+    ChevronRight, 
+    CheckCircle2, 
+    Trash2, 
+    Plus, 
+    FileText,
+    Shield,
+    Calendar,
+    Search
+} from "lucide-react"
 
 import {
     PatientData,
@@ -35,22 +52,15 @@ import {
     validateStep2,
     validateStep3,
     validateStep4,
-    formatMobileNumber,
-    isValueAbnormal
 } from '@/lib/patient-validation'
 import { toast } from '@/lib/toast'
 
 const initialPatientData: PatientData = {
-    // Step 1 - Updated Basic Information
     fullName: "",
-    mobileNumber: "",
-    alternateMobileNumber: "",
     emailId: "",
     age: "",
     sex: "",
     registrationDate: new Date().toISOString().split('T')[0],
-
-    // Step 2 - Updated Diagnosis Structure
     diagnosis: {
         primaryCategory: "",
         subtype: "",
@@ -65,14 +75,8 @@ const initialPatientData: PatientData = {
     occupationalExposure: "",
     smokingStatus: "",
     packYears: "",
-
-    // Step 3
     medications: [],
-
-    // Step 4
     pftRecords: [],
-
-    // Step 5
     requiresRespiratorySupport: "",
     ltot: { enabled: false, oxygenLitres: "" },
     bipap: {
@@ -116,14 +120,12 @@ export default function CreatePatientPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [validationErrors, setValidationErrors] = useState<{ [key: string]: string }>({})
 
-    // Clear validation errors when step changes
     useEffect(() => {
         setValidationErrors({})
     }, [currentStep])
 
     const updatePatientData = (field: string, value: any) => {
         setPatientData(prev => ({ ...prev, [field]: value }))
-        // Clear validation error for this field
         if (validationErrors[field]) {
             setValidationErrors(prev => {
                 const newErrors = { ...prev }
@@ -139,7 +141,6 @@ export default function CreatePatientPage() {
             diagnosis: {
                 ...prev.diagnosis,
                 [field]: value,
-                // Reset dependent fields when primary category changes
                 ...(field === 'primaryCategory' && {
                     subtype: "",
                     ctdType: "",
@@ -147,7 +148,6 @@ export default function CreatePatientPage() {
                     fibroticiLD: "",
                     customSubtype: ""
                 }),
-                // Reset conditional fields when subtype changes
                 ...(field === 'subtype' && {
                     ctdType: "",
                     sarcoidosisStage: "",
@@ -156,7 +156,6 @@ export default function CreatePatientPage() {
             }
         }))
 
-        // Clear validation errors for diagnosis fields
         if (validationErrors[field]) {
             setValidationErrors(prev => {
                 const newErrors = { ...prev }
@@ -168,214 +167,48 @@ export default function CreatePatientPage() {
 
     const getSubtypeOptions = () => {
         switch (patientData.diagnosis.primaryCategory) {
-            case "Interstitial Lung Disease (ILD)":
-                return ILD_SUBTYPES
-
-            case "Bronchial Asthma":
-                return OAD_SUBTYPES
-
-            case "COPD (Chronic Obstructive Pulmonary Disease)":
-                return COPD_SUBTYPES
-
-            case "Bronchiectasis":
-                return BRONCHIECTASIS_SUBTYPES
-
-            case "Post ICU Recovery":
-                return POST_ICU_SUBTYPES
-
-            default:
-                return []
+            case "Interstitial Lung Disease (ILD)": return ILD_SUBTYPES
+            case "Bronchial Asthma": return OAD_SUBTYPES
+            case "COPD (Chronic Obstructive Pulmonary Disease)": return COPD_SUBTYPES
+            case "Bronchiectasis": return BRONCHIECTASIS_SUBTYPES
+            case "Post ICU Recovery": return POST_ICU_SUBTYPES
+            default: return []
         }
     }
 
-
     const validateCurrentStep = () => {
-        // Step 6 is read-only preview - no validation needed
-        if (currentStep === 6) {
-            return true
-        }
-
+        if (currentStep === 6) return true
         let validation
         switch (currentStep) {
-            case 1:
-                validation = validateStep1(patientData)
-                break
-            case 2:
-                validation = validateStep2(patientData)
-                break
-            case 3:
-                validation = validateStep4(patientData) // PFT
-                break
-            case 4:
-                validation = { isValid: true, errors: [] } // Respiratory Support - no validation needed
-                break
-            case 5:
-                validation = validateStep3(patientData) // Medications
-                break
-            default:
-                validation = { isValid: true, errors: [] }
+            case 1: validation = validateStep1(patientData); break
+            case 2: validation = validateStep2(patientData); break
+            case 3: validation = validateStep4(patientData); break // PFT
+            case 4: validation = { isValid: true, errors: [] }; break // Resp Support
+            case 5: validation = validateStep3(patientData); break // Meds
+            default: validation = { isValid: true, errors: [] }
         }
 
         const errorMap: { [key: string]: string } = {}
-        validation.errors.forEach(error => {
-            errorMap[error.field] = error.message
-        })
+        validation.errors.forEach(error => { errorMap[error.field] = error.message })
         setValidationErrors(errorMap)
-
         return validation.isValid
     }
 
     const handleNext = () => {
-        // Clean up incomplete medications before validation
         if (currentStep === 5) {
             const completeMedications = patientData.medications.filter(med =>
                 med.route && med.drugName && med.dose && med.frequency && med.startDate
             )
-            if (completeMedications.length !== patientData.medications.length) {
-                setPatientData(prev => ({
-                    ...prev,
-                    medications: completeMedications
-                }))
-            }
+            setPatientData(prev => ({ ...prev, medications: completeMedications }))
         }
 
         if (validateCurrentStep()) {
-            setCurrentStep(prev => {
-                const nextStep = prev + 1
-                // Clear validation errors when moving to any new step
-                setValidationErrors({})
-                return nextStep
-            })
+            setCurrentStep(prev => prev + 1)
         }
     }
 
     const handleBack = () => {
-        // Clear validation errors when going back
-        setValidationErrors({})
         setCurrentStep(prev => Math.max(1, prev - 1))
-    }
-    const addMedication = () => {
-        const newMedication: Medication = {
-            id: Date.now().toString(),
-            route: "",
-            drugName: "",
-            customDrugName: "",
-            dose: "",
-            frequency: "",
-            startDate: "",
-            endDate: "",
-            isActive: true
-        }
-        setPatientData(prev => ({
-            ...prev,
-            medications: [...prev.medications, newMedication]
-        }))
-    }
-
-    const updateMedication = (id: string, field: string, value: string) => {
-        setPatientData(prev => ({
-            ...prev,
-            medications: prev.medications.map(med => {
-                if (med.id === id) {
-                    const updatedMed = { ...med, [field]: value }
-
-                    // Handle drug name selection logic
-                    if (field === 'drugName') {
-                        if (value === 'Other') {
-                            // Keep the "Other" selection but clear custom name
-                            updatedMed.customDrugName = ""
-                        } else {
-                            // Clear custom name when selecting predefined drug
-                            updatedMed.customDrugName = ""
-                        }
-                    }
-
-                    // Auto-format custom drug name to uppercase
-                    if (field === 'customDrugName') {
-                        updatedMed.customDrugName = value.toUpperCase()
-                    }
-
-                    // Update active status based on end date
-                    if (field === 'endDate' || field === 'startDate') {
-                        const today = new Date()
-                        const endDate = updatedMed.endDate ? new Date(updatedMed.endDate) : null
-                        updatedMed.isActive = !endDate || endDate >= today
-                    }
-
-                    return updatedMed
-                }
-                return med
-            })
-        }))
-    }
-
-    const removeMedication = (id: string) => {
-        setPatientData(prev => ({
-            ...prev,
-            medications: prev.medications.filter(med => med.id !== id)
-        }))
-    }
-
-    const addPFTRecord = () => {
-        const newRecord: PFTRecord = {
-            id: Date.now().toString(),
-            fvc: "",
-            fev1: "",
-            fvcLitres: "",
-            fev1Litres: "",
-            dlco: "",
-            sixMWD: "",
-            minSpO2: "",
-            maxSpO2: "",
-            testDate: new Date().toISOString().split('T')[0]
-        }
-        setPatientData(prev => ({
-            ...prev,
-            pftRecords: [...prev.pftRecords, newRecord]
-        }))
-    }
-
-    const updatePFTRecord = (id: string, field: string, value: string) => {
-        setPatientData(prev => ({
-            ...prev,
-            pftRecords: prev.pftRecords.map(record =>
-                record.id === id ? { ...record, [field]: value } : record
-            )
-        }))
-    }
-
-    const removePFTRecord = (id: string) => {
-        setPatientData(prev => ({
-            ...prev,
-            pftRecords: prev.pftRecords.filter(record => record.id !== id)
-        }))
-    }
-
-    const handleComorbidityChange = (comorbidity: string, checked: boolean) => {
-        if (checked) {
-            setPatientData(prev => ({
-                ...prev,
-                comorbidities: [...prev.comorbidities, comorbidity]
-            }))
-        } else {
-            setPatientData(prev => ({
-                ...prev,
-                comorbidities: prev.comorbidities.filter(c => c !== comorbidity)
-            }))
-        }
-    }
-
-    const updateRespiratoryConfig = (configType: string, field: string, value: any) => {
-        setPatientData(prev => {
-            const currentConfig = prev[configType as keyof PatientData] as any
-            return {
-                ...prev,
-                [configType]: {
-                    ...currentConfig,
-                    [field]: value
-                }
-            }
-        })
     }
 
     const handleCreatePatient = async () => {
@@ -383,17 +216,13 @@ export default function CreatePatientPage() {
         try {
             const { createPatientFolderAsync } = await import('@/lib/doctor-patient-mapping')
             const { createPatientAccount } = await import('@/lib/database-service')
-            const { generatePrescription } = await import('@/lib/prescription-service')
-
+            
             const pathParts = window.location.pathname.split('/')
-            const urlDoctorId = pathParts[3]
-            const doctorId = urlDoctorId
+            const doctorId = pathParts[3]
 
-            // Generate simple credentials for patient (will be replaced by real auth)
             const credentials = {
-                username: patientData.emailId || `patient_${Date.now()}`,
-                email: patientData.emailId || `patient_${Date.now()}@temp.com`,
-                password: Math.random().toString(36).substring(2, 15)
+                email: patientData.emailId,
+                password: Math.random().toString(36).substring(2, 12)
             }
 
             const result = await createPatientAccount(
@@ -406,1411 +235,515 @@ export default function CreatePatientPage() {
             )
 
             if (!(result as any)?.success || !(result as any)?.profile?.id) {
-                throw new Error((result as any)?.error || 'Failed to create patient')
+                throw new Error((result as any)?.error || 'Registration failed')
             }
 
             const patientId = (result as any).profile.id
-
             await createPatientFolderAsync(patientData, doctorId, patientId, 1, 0)
 
-            const doctorName = 'Dr. Unknown'
-            await generatePrescription(patientData, patientId, urlDoctorId, doctorName, [], undefined)
-            const genMsg = 'Prescription card generated from current medications. View it in the patient folder under Medications ? Previous prescriptions.'
-
-            toast.success('Patient created', `Patient ID: ${patientId}. Login using phone no: ${patientData.mobileNumber}. ${genMsg}`)
-
-            setPatientData(initialPatientData)
-            setCurrentStep(1)
-            setTimeout(() => {
-                router.push(`/doctor/dashboard/${urlDoctorId}`)
-            }, 1000)
+            toast.success('Registration Complete', `Patient profile created. Credentials sent to ${patientData.emailId}`)
+            router.push(`/doctor/dashboard/${doctorId}`)
         } catch (error) {
-            console.error('Patient creation error:', error)
-
-            const errorMessage = (error as Error)?.message || 'Unknown error'
-
-            if (errorMessage.includes('row-level security') || errorMessage.includes('permission denied')) {
-                toast.error('Database permission error', 'Please verify backend service role configuration.')
-            } else {
-                toast.error('Error creating patient', errorMessage)
-            }
+            toast.error('System Error', (error as Error).message)
         } finally {
             setIsSubmitting(false)
         }
     }
 
-    const getActiveMedicationsCount = () => {
-        return patientData.medications.filter(med => med.isActive).length
-    }
-
-    const getPastMedicationsCount = () => {
-        return patientData.medications.filter(med => !med.isActive).length
-    }
-
-    const formatDiagnosisDisplay = () => {
-        let display = patientData.diagnosis.primaryCategory
-        if (patientData.diagnosis.subtype) {
-            if (patientData.diagnosis.subtype === "Others" && patientData.diagnosis.customSubtype) {
-                display += ` / ${patientData.diagnosis.customSubtype}`
-            } else {
-                display += ` / ${patientData.diagnosis.subtype}`
-            }
-        }
-        if (patientData.diagnosis.ctdType) {
-            display += ` / ${patientData.diagnosis.ctdType}`
-        }
-        if (patientData.diagnosis.sarcoidosisStage) {
-            display += ` / ${patientData.diagnosis.sarcoidosisStage}`
-        }
-        if (patientData.diagnosis.fibroticiLD) {
-            display += ` / Fibrotic: ${patientData.diagnosis.fibroticiLD}`
-        }
-        return display
-    }
-    // Step 1: Updated Basic Patient Information
-    const renderStep1 = () => (
-        <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Step 1: Basic Patient Information</h3>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Full Name *</label>
-                    <Input
-                        value={patientData.fullName}
-                        onChange={(e) => updatePatientData("fullName", e.target.value)}
-                        placeholder="Enter patient's full name"
-                        className={validationErrors.fullName ? "border-red-500" : ""}
-                    />
-                    {validationErrors.fullName && (
-                        <p className="text-xs text-red-500">{validationErrors.fullName}</p>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Mobile Number *</label>
-                    <Input
-                        value={patientData.mobileNumber}
-                        onChange={(e) => updatePatientData("mobileNumber", formatMobileNumber(e.target.value))}
-                        placeholder="Enter mobile number"
-                        className={validationErrors.mobileNumber ? "border-red-500" : ""}
-                    />
-                    {validationErrors.mobileNumber && (
-                        <p className="text-xs text-red-500">{validationErrors.mobileNumber}</p>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Alternate Mobile Number</label>
-                    <Input
-                        value={patientData.alternateMobileNumber || ""}
-                        onChange={(e) => updatePatientData("alternateMobileNumber", formatMobileNumber(e.target.value))}
-                        placeholder="Enter alternate mobile number (optional)"
-                    />
-                    <p className="text-xs text-gray-500">Optional: For backup contact</p>
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Email ID *</label>
-                    <Input
-                        type="email"
-                        value={patientData.emailId}
-                        onChange={(e) => updatePatientData("emailId", e.target.value)}
-                        placeholder="Enter email address"
-                        className={validationErrors.emailId ? "border-red-500" : ""}
-                    />
-                    {validationErrors.emailId && (
-                        <p className="text-xs text-red-500">{validationErrors.emailId}</p>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Age *</label>
-                    <Input
-                        type="number"
-                        value={patientData.age}
-                        onChange={(e) => updatePatientData("age", e.target.value)}
-                        placeholder="Enter age"
-                        min="1"
-                        max="120"
-                        className={validationErrors.age ? "border-red-500" : ""}
-                    />
-                    {validationErrors.age && (
-                        <p className="text-xs text-red-500">{validationErrors.age}</p>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Sex *</label>
-                    <Select
-                        value={patientData.sex}
-                        onValueChange={(value) => updatePatientData("sex", value)}
-                    >
-                        <SelectTrigger className={validationErrors.sex ? "border-red-500" : ""}>
-                            <SelectValue placeholder="Select sex" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Male">Male</SelectItem>
-                            <SelectItem value="Female">Female</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    {validationErrors.sex && (
-                        <p className="text-xs text-red-500">{validationErrors.sex}</p>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Registration Date</label>
-                    <Input
-                        value={patientData.registrationDate}
-                        disabled
-                        className="bg-gray-100"
-                    />
-                </div>
-            </div>
-        </Card>
-    )
-    // Step 2: Updated Structured Diagnosis & Medical History
-    const renderStep2 = () => (
-        <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Step 2: Structured Diagnosis & Medical History</h3>
-
-            <div className="space-y-6">
-                {/* Structured Diagnosis Section */}
-                <div className="p-4 bg-blue-50 rounded-lg space-y-4">
-                    <h4 className="font-medium text-blue-800">Primary Diagnosis (Structured)</h4>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Primary Diagnosis Category *</label>
-                            <Select
-                                value={patientData.diagnosis.primaryCategory}
-                                onValueChange={(value) => updateDiagnosis("primaryCategory", value)}
-                            >
-                                <SelectTrigger className={validationErrors.primaryCategory ? "border-red-500" : ""}>
-                                    <SelectValue placeholder="Select primary category" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {PRIMARY_DIAGNOSIS_CATEGORIES.map(category => (
-                                        <SelectItem key={category} value={category}>{category}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {validationErrors.primaryCategory && (
-                                <p className="text-xs text-red-500">{validationErrors.primaryCategory}</p>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Diagnosis Subtype *</label>
-                            <Select
-                                value={patientData.diagnosis.subtype}
-                                onValueChange={(value) => updateDiagnosis("subtype", value)}
-                                disabled={!patientData.diagnosis.primaryCategory}
-                            >
-                                <SelectTrigger className={validationErrors.subtype ? "border-red-500" : ""}>
-                                    <SelectValue placeholder={
-                                        patientData.diagnosis.primaryCategory
-                                            ? "Select subtype"
-                                            : "Select primary category first"
-                                    } />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {getSubtypeOptions().map(subtype => (
-                                        <SelectItem key={subtype} value={subtype}>{subtype}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {validationErrors.subtype && (
-                                <p className="text-xs text-red-500">{validationErrors.subtype}</p>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Conditional CTD Type */}
-                    {patientData.diagnosis.subtype === "CTD-ILD" && (
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">CTD Type *</label>
-                            <Select
-                                value={patientData.diagnosis.ctdType || ""}
-                                onValueChange={(value) => updateDiagnosis("ctdType", value)}
-                            >
-                                <SelectTrigger className={validationErrors.ctdType ? "border-red-500" : ""}>
-                                    <SelectValue placeholder="Select CTD type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {CTD_TYPES.map(type => (
-                                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {validationErrors.ctdType && (
-                                <p className="text-xs text-red-500">{validationErrors.ctdType}</p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Conditional Sarcoidosis Stage */}
-                    {patientData.diagnosis.subtype === "Sarcoidosis" && (
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Sarcoidosis Stage *</label>
-                            <Select
-                                value={patientData.diagnosis.sarcoidosisStage || ""}
-                                onValueChange={(value) => updateDiagnosis("sarcoidosisStage", value)}
-                            >
-                                <SelectTrigger className={validationErrors.sarcoidosisStage ? "border-red-500" : ""}>
-                                    <SelectValue placeholder="Select sarcoidosis stage" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {SARCOIDOSIS_STAGES.map(stage => (
-                                        <SelectItem key={stage} value={stage}>{stage}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            {validationErrors.sarcoidosisStage && (
-                                <p className="text-xs text-red-500">{validationErrors.sarcoidosisStage}</p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Conditional ILD Fibrotic Field */}
-                    {patientData.diagnosis.primaryCategory === "Interstitial Lung Disease (ILD)" && (
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Fibrotic ILD *</label>
-                            <Select
-                                value={patientData.diagnosis.fibroticiLD || ""}
-                                onValueChange={(value) => updateDiagnosis("fibroticiLD", value)}
-                            >
-                                <SelectTrigger className={validationErrors.fibroticiLD ? "border-red-500" : ""}>
-                                    <SelectValue placeholder="Select fibrotic status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Yes">Yes</SelectItem>
-                                    <SelectItem value="No">No</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            {validationErrors.fibroticiLD && (
-                                <p className="text-xs text-red-500">{validationErrors.fibroticiLD}</p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Custom Subtype Input - Only show when "Others" is selected */}
-                    {patientData.diagnosis.subtype === "Others" && (
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Specify Other Subtype *</label>
-                            <Input
-                                value={patientData.diagnosis.customSubtype || ""}
-                                onChange={(e) => updateDiagnosis("customSubtype", e.target.value)}
-                                placeholder="Enter custom subtype"
-                                className={validationErrors.customSubtype ? "border-red-500" : ""}
-                            />
-                            {validationErrors.customSubtype && (
-                                <p className="text-xs text-red-500">{validationErrors.customSubtype}</p>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Diagnosis Preview */}
-                    {patientData.diagnosis.primaryCategory && patientData.diagnosis.subtype && (
-                        <div className="p-3 bg-white border rounded-lg">
-                            <p className="text-sm font-medium text-gray-700">Diagnosis Preview:</p>
-                            <p className="text-lg font-semibold text-blue-700">{formatDiagnosisDisplay()}</p>
-                        </div>
-                    )}
-                </div>
-
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Medical History</label>
-                    <textarea
-                        className="w-full p-2 border rounded-md resize-none"
-                        rows={3}
-                        value={patientData.medicalHistory}
-                        onChange={(e) => updatePatientData("medicalHistory", e.target.value)}
-                        placeholder="Enter medical history details..."
-                    />
-                </div>
-
-                <div className="space-y-3">
-                    <label className="text-sm font-medium">Co-morbidities (Select all that apply)</label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {CO_MORBIDITIES_LIST.map((comorbidity) => (
-                            <div key={comorbidity} className="flex items-center space-x-2">
-                                <Checkbox
-                                    id={comorbidity}
-                                    checked={patientData.comorbidities.includes(comorbidity)}
-                                    onCheckedChange={(checked) => handleComorbidityChange(comorbidity, checked as boolean)}
-                                />
-                                <label htmlFor={comorbidity} className="text-sm">{comorbidity}</label>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Custom Comorbidity Input - Only show when "Others" is selected */}
-                    {patientData.comorbidities.includes("Others") && (
-                        <div className="space-y-2 mt-3">
-                            <label className="text-sm font-medium">Specify Other Comorbidity</label>
-                            <Input
-                                value={patientData.customComorbidity}
-                                onChange={(e) => updatePatientData("customComorbidity", e.target.value)}
-                                placeholder="Enter custom comorbidity"
-                            />
-                        </div>
-                    )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Occupational Exposure</label>
-                        <textarea
-                            className="w-full p-2 border rounded-md resize-none"
-                            rows={2}
-                            value={patientData.occupationalExposure}
-                            onChange={(e) => updatePatientData("occupationalExposure", e.target.value)}
-                            placeholder="Describe any occupational exposures..."
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-                    <h4 className="font-medium">Smoking History</h4>
-
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Smoking Status</label>
-                        <Select
-                            value={patientData.smokingStatus}
-                            onValueChange={(value) => updatePatientData("smokingStatus", value)}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select smoking status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Never Smoked">Never Smoked</SelectItem>
-                                <SelectItem value="Former Smoker">Former Smoker</SelectItem>
-                                <SelectItem value="Current Smoker">Current Smoker</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {patientData.smokingStatus !== "Never Smoked" && patientData.smokingStatus !== "" && (
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Pack Years</label>
-                            <Input
-                                type="number"
-                                step="0.1"
-                                value={patientData.packYears}
-                                onChange={(e) => updatePatientData("packYears", e.target.value)}
-                                placeholder="Enter pack years"
-                                className={validationErrors.packYears ? "border-red-500" : ""}
-                            />
-                            {validationErrors.packYears && (
-                                <p className="text-xs text-red-500">{validationErrors.packYears}</p>
-                            )}
-                            <p className="text-xs text-gray-500">
-                                Pack years = (Cigarettes per day ÷ 20) × Years smoked
-                            </p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </Card>
-    )
-    // Step 3: Medication History & Prescription (unchanged)
-    const renderStep3 = () => (
-        <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Step 5: Medication History & Prescription</h3>
-
-            <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                    <div className="flex space-x-4">
-                        <p className="text-sm text-gray-600">
-                            Total Medications: {patientData.medications.length}
-                        </p>
-                        <p className="text-sm text-green-600">
-                            Active: {getActiveMedicationsCount()}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                            Past: {getPastMedicationsCount()}
-                        </p>
-                    </div>
-                    <Button onClick={addMedication} variant="outline">Add Medication</Button>
-                </div>
-
-                {/* Legend */}
-                <div className="flex space-x-4 text-xs">
-                    <div className="flex items-center space-x-1">
-                        <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
-                        <span>Active Medication</span>
-                    </div>
-                    <div className="flex items-center space-x-1">
-                        <div className="w-3 h-3 bg-gray-100 border border-gray-300 rounded"></div>
-                        <span>Past Medication</span>
-                    </div>
-                </div>
-
-                {/* Validation Errors */}
-                {Object.keys(validationErrors).some(key => key.startsWith('medication-')) && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <h4 className="text-sm font-medium text-red-800 mb-2">Medication Validation Errors:</h4>
-                        <ul className="text-sm text-red-700 space-y-1">
-                            {Object.entries(validationErrors)
-                                .filter(([key]) => key.startsWith('medication-'))
-                                .map(([key, message]) => (
-                                    <li key={key}>• {message}</li>
-                                ))}
-                        </ul>
-                    </div>
-                )}
-
-                {patientData.medications.map((medication, index) => (
-                    <div
-                        key={medication.id}
-                        className={`p-4 border rounded-lg space-y-4 ${medication.isActive ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'
-                            }`}
-                    >
-                        <div className="flex justify-between items-center">
-                            <h4 className="font-medium flex items-center space-x-2">
-                                <span>Medication #{index + 1}</span>
-                                <Badge variant={medication.isActive ? "default" : "secondary"}>
-                                    {medication.isActive ? "Active" : "Past"}
-                                </Badge>
-                            </h4>
-                            <Button
-                                onClick={() => removeMedication(medication.id)}
-                                variant="destructive"
-                                size="sm"
-                            >
-                                Remove
-                            </Button>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Route *</label>
-                                <Select
-                                    value={medication.route}
-                                    onValueChange={(value) => updateMedication(medication.id, "route", value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select route" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {ROUTE_OPTIONS.map(route => (
-                                            <SelectItem key={route} value={route}>{route}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Drug Name *</label>
-                                <Select
-                                    value={medication.drugName}
-                                    onValueChange={(value) => updateMedication(medication.id, "drugName", value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select drug name" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {DRUG_NAME_OPTIONS.map(drug => (
-                                            <SelectItem key={drug} value={drug}>{drug}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Custom Drug Name Input - Only show when "Other" is selected */}
-                            {medication.drugName === "Other" && (
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">Custom Drug Name *</label>
-                                    <Input
-                                        value={medication.customDrugName || ""}
-                                        onChange={(e) => updateMedication(medication.id, "customDrugName", e.target.value)}
-                                        placeholder="Enter custom drug name"
-                                        className="uppercase"
-                                    />
-                                </div>
-                            )}
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Dose *</label>
-                                <Input
-                                    value={medication.dose}
-                                    onChange={(e) => updateMedication(medication.id, "dose", e.target.value)}
-                                    placeholder="e.g., 100 mg"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Frequency *</label>
-                                <Select
-                                    value={medication.frequency}
-                                    onValueChange={(value) => updateMedication(medication.id, "frequency", value)}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select frequency" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {FREQUENCY_LIST.map(freq => (
-                                            <SelectItem key={freq} value={freq}>{freq}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">Start Date *</label>
-                                <Input
-                                    type="date"
-                                    value={medication.startDate}
-                                    onChange={(e) => updateMedication(medication.id, "startDate", e.target.value)}
-                                    max={new Date().toISOString().split('T')[0]}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium">End Date (Optional)</label>
-                                <Input
-                                    type="date"
-                                    value={medication.endDate}
-                                    onChange={(e) => updateMedication(medication.id, "endDate", e.target.value)}
-                                    placeholder="Leave blank if ongoing"
-                                />
-                                <p className="text-xs text-gray-500">Leave blank for ongoing medication</p>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-
-                {patientData.medications.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                        <p>No medications added yet. Click "Add Medication" to add one.</p>
-                    </div>
-                )}
-            </div>
-        </Card>
-    )
-    // Step 4: Pulmonary Function Tests (moved from step 4)
-    const renderStep4 = () => (
-        <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Step 3: Pulmonary Function Tests (PFT) - Clinical Grade</h3>
-
-            <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                    <p className="text-sm text-gray-600">PFT Records: {patientData.pftRecords.length}</p>
-                    <Button onClick={addPFTRecord} variant="outline">Add PFT Record</Button>
-                </div>
-
-                {/* Validation Errors */}
-                {Object.keys(validationErrors).some(key => key.startsWith('pft-')) && (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                        <h4 className="text-sm font-medium text-red-800 mb-2">PFT Validation Errors:</h4>
-                        <ul className="text-sm text-red-700 space-y-1">
-                            {Object.entries(validationErrors)
-                                .filter(([key]) => key.startsWith('pft-'))
-                                .map(([key, message]) => (
-                                    <li key={key}>• {message}</li>
-                                ))}
-                        </ul>
-                    </div>
-                )}
-
-                {patientData.pftRecords.map((record, index) => (
-                    <div key={record.id} className="p-4 border rounded-lg space-y-4">
-                        <div className="flex justify-between items-center">
-                            <h4 className="font-medium">PFT Record #{index + 1}</h4>
-                            <div className="flex space-x-2">
-                                <Input
-                                    type="date"
-                                    value={record.testDate}
-                                    onChange={(e) => updatePFTRecord(record.id, "testDate", e.target.value)}
-                                    className="w-40"
-                                />
-                                <Button
-                                    onClick={() => removePFTRecord(record.id)}
-                                    variant="destructive"
-                                    size="sm"
-                                >
-                                    Remove
-                                </Button>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {/* Spirometry */}
-                            <div className="space-y-3">
-                                <h5 className="font-medium text-blue-600">Spirometry</h5>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium flex items-center space-x-1">
-                                        <span>FVC (% predicted)</span>
-                                        {record.fvc && isValueAbnormal('FVC', record.fvc) && (
-                                            <span className="text-red-500 text-xs">⚠️ Abnormal</span>
-                                        )}
-                                    </label>
-                                    <Input
-                                        type="number"
-                                        step="0.1"
-                                        value={record.fvc}
-                                        onChange={(e) => updatePFTRecord(record.id, "fvc", e.target.value)}
-                                        placeholder="80-120"
-                                        className={record.fvc && isValueAbnormal('FVC', record.fvc) ? "border-red-300" : ""}
-                                    />
-                                    <p className="text-xs text-gray-500">Normal: 80-120%</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">FVC (in litres)</label>
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        value={record.fvcLitres}
-                                        onChange={(e) => updatePFTRecord(record.id, "fvcLitres", e.target.value)}
-                                        placeholder="e.g., 3.50"
-                                    />
-                                    <p className="text-xs text-gray-500">Numeric input in litres</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium flex items-center space-x-1">
-                                        <span>FEV1 (% predicted)</span>
-                                        {record.fev1 && isValueAbnormal('FEV1', record.fev1) && (
-                                            <span className="text-red-500 text-xs">⚠️ Abnormal</span>
-                                        )}
-                                    </label>
-                                    <Input
-                                        type="number"
-                                        step="0.1"
-                                        value={record.fev1}
-                                        onChange={(e) => updatePFTRecord(record.id, "fev1", e.target.value)}
-                                        placeholder="80-120"
-                                        className={record.fev1 && isValueAbnormal('FEV1', record.fev1) ? "border-red-300" : ""}
-                                    />
-                                    <p className="text-xs text-gray-500">Normal: 80-120%</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">FEV1 (in litres)</label>
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        value={record.fev1Litres}
-                                        onChange={(e) => updatePFTRecord(record.id, "fev1Litres", e.target.value)}
-                                        placeholder="e.g., 2.80"
-                                    />
-                                    <p className="text-xs text-gray-500">Numeric input in litres</p>
-                                </div>
-                            </div>
-
-                            {/* Diffusion */}
-                            <div className="space-y-3">
-                                <h5 className="font-medium text-green-600">Diffusion</h5>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium flex items-center space-x-1">
-                                        <span>DLCO (% predicted)</span>
-                                        {record.dlco && isValueAbnormal('DLCO', record.dlco) && (
-                                            <span className="text-red-500 text-xs">⚠️ Abnormal</span>
-                                        )}
-                                    </label>
-                                    <Input
-                                        type="number"
-                                        step="0.1"
-                                        value={record.dlco}
-                                        onChange={(e) => updatePFTRecord(record.id, "dlco", e.target.value)}
-                                        placeholder="80-120"
-                                        className={record.dlco && isValueAbnormal('DLCO', record.dlco) ? "border-red-300" : ""}
-                                    />
-                                    <p className="text-xs text-gray-500">Normal: 80-120%</p>
-                                </div>
-                            </div>
-
-                            {/* Exercise */}
-                            <div className="space-y-3">
-                                <h5 className="font-medium text-purple-600">Exercise</h5>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium flex items-center space-x-1">
-                                        <span>6MWD (meters)</span>
-                                        {record.sixMWD && isValueAbnormal('6MWD', record.sixMWD) && (
-                                            <span className="text-red-500 text-xs">⚠️ Abnormal</span>
-                                        )}
-                                    </label>
-                                    <Input
-                                        type="number"
-                                        value={record.sixMWD}
-                                        onChange={(e) => updatePFTRecord(record.id, "sixMWD", e.target.value)}
-                                        placeholder="400-700"
-                                        className={record.sixMWD && isValueAbnormal('6MWD', record.sixMWD) ? "border-red-300" : ""}
-                                    />
-                                    <p className="text-xs text-gray-500">Normal: 400-700m</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium flex items-center space-x-1">
-                                        <span>Min SpO₂ (%)</span>
-                                        {record.minSpO2 && isValueAbnormal('Min SpO2', record.minSpO2) && (
-                                            <span className="text-red-500 text-xs">⚠️ Abnormal</span>
-                                        )}
-                                    </label>
-                                    <Input
-                                        type="number"
-                                        value={record.minSpO2}
-                                        onChange={(e) => updatePFTRecord(record.id, "minSpO2", e.target.value)}
-                                        placeholder="88-100"
-                                        min="0"
-                                        max="100"
-                                        className={record.minSpO2 && isValueAbnormal('Min SpO2', record.minSpO2) ? "border-red-300" : ""}
-                                    />
-                                    <p className="text-xs text-gray-500">Normal: ≥88%</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium flex items-center space-x-1">
-                                        <span>Max SpO₂ (%)</span>
-                                        {record.maxSpO2 && isValueAbnormal('Max SpO2', record.maxSpO2) && (
-                                            <span className="text-red-500 text-xs">⚠️ Abnormal</span>
-                                        )}
-                                    </label>
-                                    <Input
-                                        type="number"
-                                        value={record.maxSpO2}
-                                        onChange={(e) => updatePFTRecord(record.id, "maxSpO2", e.target.value)}
-                                        placeholder="95-100"
-                                        min="0"
-                                        max="100"
-                                        className={record.maxSpO2 && isValueAbnormal('Max SpO2', record.maxSpO2) ? "border-red-300" : ""}
-                                    />
-                                    <p className="text-xs text-gray-500">Normal: ≥95%</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-
-                {patientData.pftRecords.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                        <p>No PFT records added yet. Click "Add PFT Record" to add one.</p>
-                    </div>
-                )}
-            </div>
-        </Card>
-    )
-    // Step 5: Respiratory Support & Oxygen Status (moved from step 5)
-    const renderStep5 = () => (
-        <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Step 4: Respiratory Support & Oxygen Status</h3>
-
-            <div className="space-y-6">
-                <div className="space-y-2">
-                    <label className="text-sm font-medium">Does the patient require respiratory support / oxygen?</label>
-                    <Select
-                        value={patientData.requiresRespiratorySupport}
-                        onValueChange={(value) => updatePatientData("requiresRespiratorySupport", value)}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select option" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Yes">Yes</SelectItem>
-                            <SelectItem value="No">No</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                {patientData.requiresRespiratorySupport === "Yes" && (
-                    <Tabs defaultValue="ltot" className="space-y-4">
-                        <TabsList className="grid w-full grid-cols-4">
-                            <TabsTrigger value="ltot">LTOT</TabsTrigger>
-                            <TabsTrigger value="bipap">BiPAP/NIV</TabsTrigger>
-                            <TabsTrigger value="invasive">Invasive Vent</TabsTrigger>
-                            <TabsTrigger value="tracheostomy">Tracheostomy</TabsTrigger>
-                        </TabsList>
-
-                        {/* LTOT Configuration */}
-                        <TabsContent value="ltot" className="space-y-4">
-                            <div className="p-4 border rounded-lg">
-                                <div className="flex items-center space-x-2 mb-4">
-                                    <Checkbox
-                                        id="ltot-enabled"
-                                        checked={patientData.ltot.enabled}
-                                        onCheckedChange={(checked) => updateRespiratoryConfig("ltot", "enabled", checked)}
-                                    />
-                                    <label htmlFor="ltot-enabled" className="font-medium">Enable LTOT (Long Term Oxygen Therapy)</label>
-                                </div>
-
-                                {patientData.ltot.enabled && (
-                                    <div className="space-y-2">
-                                        <label className="text-sm font-medium">Oxygen Litres</label>
-                                        <Input
-                                            type="number"
-                                            step="0.5"
-                                            value={patientData.ltot.oxygenLitres}
-                                            onChange={(e) => updateRespiratoryConfig("ltot", "oxygenLitres", e.target.value)}
-                                            placeholder="e.g., 2.0"
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        </TabsContent>
-
-                        {/* BiPAP/NIV Configuration */}
-                        <TabsContent value="bipap" className="space-y-4">
-                            <div className="p-4 border rounded-lg">
-                                <div className="flex items-center space-x-2 mb-4">
-                                    <Checkbox
-                                        id="bipap-enabled"
-                                        checked={patientData.bipap.enabled}
-                                        onCheckedChange={(checked) => updateRespiratoryConfig("bipap", "enabled", checked)}
-                                    />
-                                    <label htmlFor="bipap-enabled" className="font-medium">Enable BiPAP / NIV</label>
-                                </div>
-
-                                {patientData.bipap.enabled && (
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="flex items-center space-x-2">
-                                                <Checkbox
-                                                    id="overnight-use"
-                                                    checked={patientData.bipap.overnightUse}
-                                                    onCheckedChange={(checked) => updateRespiratoryConfig("bipap", "overnightUse", checked)}
-                                                />
-                                                <label htmlFor="overnight-use" className="text-sm">Overnight use</label>
-                                            </div>
-
-                                            <div className="flex items-center space-x-2">
-                                                <Checkbox
-                                                    id="alltime-use"
-                                                    checked={patientData.bipap.allTimeUse}
-                                                    onCheckedChange={(checked) => updateRespiratoryConfig("bipap", "allTimeUse", checked)}
-                                                />
-                                                <label htmlFor="alltime-use" className="text-sm">All-time use</label>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id="requires-oxygen-bipap"
-                                                checked={patientData.bipap.requiresOxygen}
-                                                onCheckedChange={(checked) => updateRespiratoryConfig("bipap", "requiresOxygen", checked)}
-                                            />
-                                            <label htmlFor="requires-oxygen-bipap" className="text-sm">Requires oxygen with BiPAP</label>
-                                        </div>
-
-                                        {patientData.bipap.requiresOxygen && (
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium">Oxygen Litres</label>
-                                                <Input
-                                                    type="number"
-                                                    step="0.5"
-                                                    value={patientData.bipap.oxygenLitres}
-                                                    onChange={(e) => updateRespiratoryConfig("bipap", "oxygenLitres", e.target.value)}
-                                                    placeholder="e.g., 2.0"
-                                                />
-                                            </div>
-                                        )}
-
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium">IPAP</label>
-                                                <Input
-                                                    type="number"
-                                                    value={patientData.bipap.ipap}
-                                                    onChange={(e) => updateRespiratoryConfig("bipap", "ipap", e.target.value)}
-                                                    placeholder="cmH2O"
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium">EPAP</label>
-                                                <Input
-                                                    type="number"
-                                                    value={patientData.bipap.epap}
-                                                    onChange={(e) => updateRespiratoryConfig("bipap", "epap", e.target.value)}
-                                                    placeholder="cmH2O"
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium">Pressure Support</label>
-                                                <Input
-                                                    type="number"
-                                                    value={patientData.bipap.pressureSupport}
-                                                    onChange={(e) => updateRespiratoryConfig("bipap", "pressureSupport", e.target.value)}
-                                                    placeholder="cmH2O"
-                                                />
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <label className="text-sm font-medium">Respiratory Rate</label>
-                                                <Input
-                                                    type="number"
-                                                    value={patientData.bipap.respiratoryRate}
-                                                    onChange={(e) => updateRespiratoryConfig("bipap", "respiratoryRate", e.target.value)}
-                                                    placeholder="breaths/min"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </TabsContent>
-
-                        {/* Invasive Ventilation Configuration */}
-                        <TabsContent value="invasive" className="space-y-4">
-                            <div className="p-4 border rounded-lg">
-                                <div className="flex items-center space-x-2 mb-4">
-                                    <Checkbox
-                                        id="invasive-enabled"
-                                        checked={patientData.invasiveVentilation.enabled}
-                                        onCheckedChange={(checked) => updateRespiratoryConfig("invasiveVentilation", "enabled", checked)}
-                                    />
-                                    <label htmlFor="invasive-enabled" className="font-medium">Enable Invasive Ventilation</label>
-                                </div>
-
-                                {patientData.invasiveVentilation.enabled && (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">IPAP</label>
-                                            <Input
-                                                type="number"
-                                                value={patientData.invasiveVentilation.ipap}
-                                                onChange={(e) => updateRespiratoryConfig("invasiveVentilation", "ipap", e.target.value)}
-                                                placeholder="cmH2O"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">EPAP</label>
-                                            <Input
-                                                type="number"
-                                                value={patientData.invasiveVentilation.epap}
-                                                onChange={(e) => updateRespiratoryConfig("invasiveVentilation", "epap", e.target.value)}
-                                                placeholder="cmH2O"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">Pressure Support</label>
-                                            <Input
-                                                type="number"
-                                                value={patientData.invasiveVentilation.pressureSupport}
-                                                onChange={(e) => updateRespiratoryConfig("invasiveVentilation", "pressureSupport", e.target.value)}
-                                                placeholder="cmH2O"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">Respiratory Rate</label>
-                                            <Input
-                                                type="number"
-                                                value={patientData.invasiveVentilation.respiratoryRate}
-                                                onChange={(e) => updateRespiratoryConfig("invasiveVentilation", "respiratoryRate", e.target.value)}
-                                                placeholder="breaths/min"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <label className="text-sm font-medium">FiO₂ (%)</label>
-                                            <Input
-                                                type="number"
-                                                min="21"
-                                                max="100"
-                                                value={patientData.invasiveVentilation.fiO2}
-                                                onChange={(e) => updateRespiratoryConfig("invasiveVentilation", "fiO2", e.target.value)}
-                                                placeholder="21-100"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </TabsContent>
-
-                        {/* Tracheostomy Configuration */}
-                        <TabsContent value="tracheostomy" className="space-y-4">
-                            <div className="p-4 border rounded-lg">
-                                <div className="flex items-center space-x-2 mb-4">
-                                    <Checkbox
-                                        id="trach-enabled"
-                                        checked={patientData.tracheostomy.enabled}
-                                        onCheckedChange={(checked) => updateRespiratoryConfig("tracheostomy", "enabled", checked)}
-                                    />
-                                    <label htmlFor="trach-enabled" className="font-medium">Enable Tracheostomy</label>
-                                </div>
-
-                                {patientData.tracheostomy.enabled && (
-                                    <div className="space-y-4">
-                                        <div className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id="airway-patency"
-                                                checked={patientData.tracheostomy.airwayPatencyRequired}
-                                                onCheckedChange={(checked) => updateRespiratoryConfig("tracheostomy", "airwayPatencyRequired", checked)}
-                                            />
-                                            <label htmlFor="airway-patency" className="text-sm">Airway patency required</label>
-                                        </div>
-
-                                        {!patientData.tracheostomy.airwayPatencyRequired && (
-                                            <div className="space-y-4 p-3 bg-gray-50 rounded">
-                                                <div className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id="oxygen-via-trach"
-                                                        checked={patientData.tracheostomy.oxygenViaTrach}
-                                                        onCheckedChange={(checked) => updateRespiratoryConfig("tracheostomy", "oxygenViaTrach", checked)}
-                                                    />
-                                                    <label htmlFor="oxygen-via-trach" className="text-sm">Oxygen via tracheostomy</label>
-                                                </div>
-
-                                                {patientData.tracheostomy.oxygenViaTrach && (
-                                                    <div className="space-y-2">
-                                                        <label className="text-sm font-medium">Oxygen Litres</label>
-                                                        <Input
-                                                            type="number"
-                                                            step="0.5"
-                                                            value={patientData.tracheostomy.oxygenLitres}
-                                                            onChange={(e) => updateRespiratoryConfig("tracheostomy", "oxygenLitres", e.target.value)}
-                                                            placeholder="e.g., 2.0"
-                                                        />
-                                                    </div>
-                                                )}
-
-                                                <div className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id="requires-ventilator"
-                                                        checked={patientData.tracheostomy.requiresVentilator}
-                                                        onCheckedChange={(checked) => updateRespiratoryConfig("tracheostomy", "requiresVentilator", checked)}
-                                                    />
-                                                    <label htmlFor="requires-ventilator" className="text-sm">Requires ventilator</label>
-                                                </div>
-
-                                                {patientData.tracheostomy.requiresVentilator && (
-                                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                                        <div className="space-y-2">
-                                                            <label className="text-sm font-medium">IPAP</label>
-                                                            <Input
-                                                                type="number"
-                                                                value={patientData.tracheostomy.ipap}
-                                                                onChange={(e) => updateRespiratoryConfig("tracheostomy", "ipap", e.target.value)}
-                                                                placeholder="cmH2O"
-                                                            />
-                                                        </div>
-
-                                                        <div className="space-y-2">
-                                                            <label className="text-sm font-medium">EPAP</label>
-                                                            <Input
-                                                                type="number"
-                                                                value={patientData.tracheostomy.epap}
-                                                                onChange={(e) => updateRespiratoryConfig("tracheostomy", "epap", e.target.value)}
-                                                                placeholder="cmH2O"
-                                                            />
-                                                        </div>
-
-                                                        <div className="space-y-2">
-                                                            <label className="text-sm font-medium">Pressure Support</label>
-                                                            <Input
-                                                                type="number"
-                                                                value={patientData.tracheostomy.pressureSupport}
-                                                                onChange={(e) => updateRespiratoryConfig("tracheostomy", "pressureSupport", e.target.value)}
-                                                                placeholder="cmH2O"
-                                                            />
-                                                        </div>
-
-                                                        <div className="space-y-2">
-                                                            <label className="text-sm font-medium">Respiratory Rate</label>
-                                                            <Input
-                                                                type="number"
-                                                                value={patientData.tracheostomy.respiratoryRate}
-                                                                onChange={(e) => updateRespiratoryConfig("tracheostomy", "respiratoryRate", e.target.value)}
-                                                                placeholder="breaths/min"
-                                                            />
-                                                        </div>
-
-                                                        <div className="space-y-2">
-                                                            <label className="text-sm font-medium">Tidal Volume</label>
-                                                            <Input
-                                                                type="number"
-                                                                value={patientData.tracheostomy.tidalVolume}
-                                                                onChange={(e) => updateRespiratoryConfig("tracheostomy", "tidalVolume", e.target.value)}
-                                                                placeholder="mL"
-                                                            />
-                                                        </div>
-
-                                                        <div className="space-y-2">
-                                                            <label className="text-sm font-medium">FiO₂ (%)</label>
-                                                            <Input
-                                                                type="number"
-                                                                min="21"
-                                                                max="100"
-                                                                value={patientData.tracheostomy.fiO2}
-                                                                onChange={(e) => updateRespiratoryConfig("tracheostomy", "fiO2", e.target.value)}
-                                                                placeholder="21-100"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </TabsContent>
-                    </Tabs>
-                )}
-            </div>
-        </Card>
-    )
-    // Step 6: Updated Review & Create Patient
-    const renderStep6 = () => (
-        <Card className="p-6">
-            <div className="mb-6">
-                <h3 className="text-lg font-semibold mb-2">Step 6: Doctor Review & Final Preview</h3>
-                <p className="text-sm text-gray-600">
-                    Please review all patient information below. This is a read-only preview of the data you've entered.
-                    Click "Create Patient" when you're ready to save this patient record.
-                </p>
-            </div>
-
-            <div className="space-y-6">
-                {/* Updated Basic Details - Removed occupation, address, emergency contacts */}
-                <div>
-                    <h4 className="font-medium mb-2 text-blue-600">Basic Details</h4>
-                    <div className="bg-gray-50 p-4 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                        <p><span className="font-medium">Name:</span> {patientData.fullName}</p>
-                        <p><span className="font-medium">Age:</span> {patientData.age}</p>
-                        <p><span className="font-medium">Sex:</span> {patientData.sex}</p>
-                        <p><span className="font-medium">Mobile:</span> {patientData.mobileNumber}</p>
-                        <p><span className="font-medium">Email ID:</span> {patientData.emailId}</p>
-                        <p><span className="font-medium">Registration Date:</span> {patientData.registrationDate}</p>
-                    </div>
-                </div>
-
-                {/* Updated Structured Diagnosis */}
-                <div>
-                    <h4 className="font-medium mb-2 text-green-600">Structured Diagnosis</h4>
-                    <div className="bg-gray-50 p-4 rounded-lg space-y-2">
-                        <div className="flex items-center space-x-2">
-                            <Badge variant="default" className="text-lg px-3 py-1">
-                                {formatDiagnosisDisplay()}
-                            </Badge>
-                        </div>
-
-                        {patientData.comorbidities.length > 0 && (
-                            <div>
-                                <span className="font-medium text-sm">Co-morbidities:</span>
-                                <div className="flex flex-wrap gap-1 mt-1">
-                                    {patientData.comorbidities.map(c => (
-                                        <Badge key={c} variant="secondary" className="text-xs">{c}</Badge>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {patientData.smokingStatus && (
-                            <p className="text-sm">
-                                <span className="font-medium">Smoking:</span> {patientData.smokingStatus}
-                                {patientData.packYears && ` (${patientData.packYears} pack years)`}
-                            </p>
-                        )}
-
-                        {patientData.medicalHistory && (
-                            <div>
-                                <span className="font-medium text-sm">Medical History:</span>
-                                <p className="text-sm text-gray-700 mt-1">{patientData.medicalHistory}</p>
-                            </div>
-                        )}
-
-                        {patientData.occupationalExposure && (
-                            <div>
-                                <span className="font-medium text-sm">Occupational Exposure:</span>
-                                <p className="text-sm text-gray-700 mt-1">{patientData.occupationalExposure}</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* PFT Records */}
-                {patientData.pftRecords.length > 0 && (
-                    <div>
-                        <h4 className="font-medium mb-2 text-purple-600">PFT Records ({patientData.pftRecords.length})</h4>
-                        <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                            {patientData.pftRecords.map((record, index) => (
-                                <div key={record.id} className="border-l-4 border-purple-500 pl-3">
-                                    <p className="font-medium text-sm">Record #{index + 1} - {record.testDate}</p>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs mt-1">
-                                        {record.fvc && <p>FVC: {record.fvc}% {isValueAbnormal('FVC', record.fvc) && <span className="text-red-500">⚠️</span>}</p>}
-                                        {record.fev1 && <p>FEV1: {record.fev1}% {isValueAbnormal('FEV1', record.fev1) && <span className="text-red-500">⚠️</span>}</p>}
-                                        {record.dlco && <p>DLCO: {record.dlco}% {isValueAbnormal('DLCO', record.dlco) && <span className="text-red-500">⚠️</span>}</p>}
-                                        {record.sixMWD && <p>6MWD: {record.sixMWD}m {isValueAbnormal('6MWD', record.sixMWD) && <span className="text-red-500">⚠️</span>}</p>}
-                                        {record.minSpO2 && <p>Min SpO₂: {record.minSpO2}% {isValueAbnormal('Min SpO2', record.minSpO2) && <span className="text-red-500">⚠️</span>}</p>}
-                                        {record.maxSpO2 && <p>Max SpO₂: {record.maxSpO2}% {isValueAbnormal('Max SpO2', record.maxSpO2) && <span className="text-red-500">⚠️</span>}</p>}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                {/* Medications */}
-                {patientData.medications.length > 0 && (
-                    <div>
-                        <h4 className="font-medium mb-2 text-orange-600">
-                            Medications ({patientData.medications.length}) -
-                            <span className="text-green-600 ml-2">Active: {getActiveMedicationsCount()}</span>
-                            <span className="text-gray-500 ml-2">Past: {getPastMedicationsCount()}</span>
-                        </h4>
-                        <div className="bg-gray-50 p-4 rounded-lg">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="border-b">
-                                            <th className="text-left py-2">Route</th>
-                                            <th className="text-left py-2">Drug Name</th>
-                                            <th className="text-left py-2">Dose</th>
-                                            <th className="text-left py-2">Frequency</th>
-                                            <th className="text-left py-2">Start Date</th>
-                                            <th className="text-left py-2">End Date</th>
-                                            <th className="text-left py-2">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {patientData.medications.map((med) => (
-                                            <tr key={med.id} className="border-b">
-                                                <td className="py-2">{med.route}</td>
-                                                <td className="py-2 font-medium">
-                                                    {med.drugName === "Other" ? med.customDrugName : med.drugName}
-                                                </td>
-                                                <td className="py-2">{med.dose}</td>
-                                                <td className="py-2">{med.frequency}</td>
-                                                <td className="py-2">{med.startDate}</td>
-                                                <td className="py-2">{med.endDate || "Ongoing"}</td>
-                                                <td className="py-2">
-                                                    <Badge variant={med.isActive ? "default" : "secondary"} className="text-xs">
-                                                        {med.isActive ? "Active" : "Past"}
-                                                    </Badge>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Respiratory Support */}
-                {patientData.requiresRespiratorySupport === "Yes" && (
-                    <div>
-                        <h4 className="font-medium mb-2 text-red-600">Respiratory Support</h4>
-                        <div className="bg-gray-50 p-4 rounded-lg space-y-2 text-sm">
-                            {patientData.ltot.enabled && (
-                                <p><span className="font-medium">LTOT:</span> {patientData.ltot.oxygenLitres} L/min</p>
-                            )}
-
-                            {patientData.bipap.enabled && (
-                                <div>
-                                    <p className="font-medium">BiPAP/NIV:</p>
-                                    <div className="ml-4 space-y-1">
-                                        {patientData.bipap.overnightUse && <p>• Overnight use</p>}
-                                        {patientData.bipap.allTimeUse && <p>• All-time use</p>}
-                                        {patientData.bipap.requiresOxygen && <p>• Oxygen: {patientData.bipap.oxygenLitres} L/min</p>}
-                                        {patientData.bipap.ipap && <p>• IPAP: {patientData.bipap.ipap} cmH2O</p>}
-                                        {patientData.bipap.epap && <p>• EPAP: {patientData.bipap.epap} cmH2O</p>}
-                                    </div>
-                                </div>
-                            )}
-
-                            {patientData.invasiveVentilation.enabled && (
-                                <div>
-                                    <p className="font-medium">Invasive Ventilation:</p>
-                                    <div className="ml-4 space-y-1">
-                                        {patientData.invasiveVentilation.ipap && <p>• IPAP: {patientData.invasiveVentilation.ipap} cmH2O</p>}
-                                        {patientData.invasiveVentilation.epap && <p>• EPAP: {patientData.invasiveVentilation.epap} cmH2O</p>}
-                                        {patientData.invasiveVentilation.fiO2 && <p>• FiO₂: {patientData.invasiveVentilation.fiO2}%</p>}
-                                    </div>
-                                </div>
-                            )}
-
-                            {patientData.tracheostomy.enabled && (
-                                <div>
-                                    <p className="font-medium">Tracheostomy:</p>
-                                    <div className="ml-4 space-y-1">
-                                        <p>• Airway patency: {patientData.tracheostomy.airwayPatencyRequired ? "Required" : "Not required"}</p>
-                                        {patientData.tracheostomy.oxygenViaTrach && <p>• Oxygen via trach: {patientData.tracheostomy.oxygenLitres} L/min</p>}
-                                        {patientData.tracheostomy.requiresVentilator && <p>• Requires ventilator</p>}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </Card>
-    )
-
-    const renderCurrentStep = () => {
-        switch (currentStep) {
-            case 1: return renderStep1()       // Basic
-            case 2: return renderStep2()       // Diagnosis
-            case 3: return renderStep4()       // PFT
-            case 4: return renderStep5()       // Respiratory Support
-            case 5: return renderStep3()       // Medications
-            case 6: return renderStep6()       // Final Preview
-            default: return renderStep1()
-        }
-    }
-
+    const steps = [
+        { id: 1, name: "Profile", icon: User },
+        { id: 2, name: "Diagnosis", icon: Stethoscope },
+        { id: 3, name: "Vitals", icon: Activity },
+        { id: 4, name: "Support", icon: Wind },
+        { id: 5, name: "Medication", icon: Pill },
+        { id: 6, name: "Review", icon: CheckCircle2 }
+    ]
 
     return (
-        <>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Create New Patient - Updated Multi-Step Form</h1>
-                <div className="flex space-x-2">
-                    {[1, 2, 3, 4, 5, 6].map((step) => (
-                        <div
-                            key={step}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${step === currentStep
-                                ? "bg-blue-600 text-white"
-                                : step < currentStep
-                                    ? "bg-green-600 text-white"
-                                    : "bg-gray-200 text-gray-600"
-                                }`}
-                        >
-                            {step}
+        <div className="max-w-5xl mx-auto space-y-10 font-['Matter_Regular',sans-serif] pb-24">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-6">
+                    <button onClick={() => router.back()} className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all">
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Registration</p>
+                        <h1 className="text-3xl font-bold text-slate-900 tracking-tighter">Register New Patient</h1>
+                    </div>
+                </div>
+            </div>
+
+            {/* Stepper */}
+            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-sm overflow-x-auto">
+                <div className="flex items-center justify-between min-w-[700px] px-4">
+                    {steps.map((step, idx) => (
+                        <div key={step.id} className="flex items-center">
+                            <div className="flex flex-col items-center gap-2 group cursor-pointer" onClick={() => step.id < currentStep && setCurrentStep(step.id)}>
+                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                                    currentStep === step.id 
+                                        ? 'bg-slate-950 text-white shadow-xl shadow-slate-200 scale-110' 
+                                        : currentStep > step.id 
+                                            ? 'bg-emerald-50 text-emerald-600' 
+                                            : 'bg-slate-50 text-slate-300'
+                                }`}>
+                                    <step.icon className="w-5 h-5" />
+                                </div>
+                                <span className={`text-[9px] font-bold uppercase tracking-widest ${
+                                    currentStep === step.id ? 'text-slate-950' : 'text-slate-400'
+                                }`}>{step.name}</span>
+                            </div>
+                            {idx < steps.length - 1 && (
+                                <div className="mx-6 w-12 h-[2px] bg-slate-50 rounded-full">
+                                    <div className={`h-full bg-slate-950 transition-all duration-700 ${currentStep > step.id ? 'w-full' : 'w-0'}`} />
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
             </div>
 
-            {renderCurrentStep()}
+            {/* Content Area */}
+            <div className="transition-all duration-500 animate-in fade-in slide-in-from-bottom-4">
+                {currentStep === 1 && <ProfileStep data={patientData} update={updatePatientData} errors={validationErrors} />}
+                {currentStep === 2 && <DiagnosisStep data={patientData} update={updateDiagnosis} errors={validationErrors} options={getSubtypeOptions()} />}
+                {currentStep === 3 && <PFTStep data={patientData} set={setPatientData} errors={validationErrors} />}
+                {currentStep === 4 && <SupportStep data={patientData} updateConfig={(t: keyof PatientData, f: string, v: any) => setPatientData(prev => ({...prev, [t]: {...(prev[t as keyof PatientData] as any), [f]: v}}))} />}
+                {currentStep === 5 && <MedicationStep data={patientData} set={setPatientData} errors={validationErrors} />}
+                {currentStep === 6 && <ReviewStep data={patientData} />}
+            </div>
 
             {/* Navigation Buttons */}
-            <div className="flex justify-between mt-6">
-                <Button
-                    variant="outline"
-                    onClick={handleBack}
+            <div className="flex items-center justify-between pt-8 border-t border-slate-100">
+                <Button 
+                    variant="ghost" 
+                    onClick={handleBack} 
                     disabled={currentStep === 1 || isSubmitting}
+                    className="h-14 px-8 rounded-2xl font-bold text-xs uppercase tracking-[0.2em] text-slate-400 hover:text-slate-950"
                 >
-                    Back
+                    <ArrowLeft className="w-4 h-4 mr-2" />
+                    Previous
                 </Button>
+                
+                {currentStep < 6 ? (
+                    <Button 
+                        onClick={handleNext}
+                        className="h-14 px-10 rounded-[1.5rem] bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-[0.2em] shadow-2xl shadow-slate-200 transition-all active:scale-[0.98]"
+                    >
+                        Next Step
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                ) : (
+                    <Button 
+                        onClick={handleCreatePatient}
+                        disabled={isSubmitting}
+                        className="h-14 px-10 rounded-[1.5rem] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-[0.2em] shadow-2xl shadow-emerald-100 transition-all active:scale-[0.98]"
+                    >
+                        {isSubmitting ? "Creating Patient Profile..." : "Confirm Registration"}
+                        <CheckCircle2 className="w-4 h-4 ml-2" />
+                    </Button>
+                )}
+            </div>
+        </div>
+    )
+}
 
-                <div className="space-x-2">
-                    {currentStep < 6 ? (
-                        <Button
-                            onClick={handleNext}
-                            disabled={isSubmitting}
-                        >
-                            Next
-                        </Button>
-                    ) : (
-                        <Button
-                            onClick={handleCreatePatient}
-                            className="bg-green-600 hover:bg-green-700"
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? "Creating Patient..." : "Create Patient"}
-                        </Button>
+/* Sub-components for clean structure */
+
+function ProfileStep({ data, update, errors }: any) {
+    return (
+        <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50">
+            <div className="flex items-center gap-4 mb-10">
+                <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center">
+                    <User className="w-6 h-6" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">Personal Details</h3>
+                    <p className="text-xs font-medium text-slate-400">Basic information for the patient profile.</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <InputGroup label="Full Name" error={errors.fullName}>
+                    <Input 
+                        value={data.fullName}
+                        onChange={(e) => update("fullName", e.target.value)}
+                        placeholder="e.g. Johnathan Smith"
+                        className="h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-slate-900"
+                    />
+                </InputGroup>
+                <InputGroup label="Email Address" error={errors.emailId}>
+                    <Input 
+                        type="email"
+                        value={data.emailId}
+                        onChange={(e) => update("emailId", e.target.value)}
+                        placeholder="john@example.com"
+                        className="h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-slate-900"
+                    />
+                </InputGroup>
+                <InputGroup label="Age" error={errors.age}>
+                    <Input 
+                        type="number"
+                        value={data.age}
+                        onChange={(e) => update("age", e.target.value)}
+                        placeholder="45"
+                        className="h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-slate-900"
+                    />
+                </InputGroup>
+                <InputGroup label="Gender" error={errors.sex}>
+                    <Select value={data.sex} onValueChange={(v) => update("sex", v)}>
+                        <SelectTrigger className="h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-slate-900">
+                            <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-2xl font-bold">
+                            <SelectItem value="Male">Male</SelectItem>
+                            <SelectItem value="Female">Female</SelectItem>
+                            <SelectItem value="Other">Non-binary</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </InputGroup>
+            </div>
+        </Card>
+    )
+}
+
+function DiagnosisStep({ data, update, errors, options }: any) {
+    return (
+        <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50">
+            <div className="flex items-center gap-4 mb-10">
+                <div className="w-12 h-12 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center">
+                    <Stethoscope className="w-6 h-6" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">Diagnosis</h3>
+                    <p className="text-xs font-medium text-slate-400">Defining the primary respiratory condition.</p>
+                </div>
+            </div>
+
+            <div className="space-y-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <InputGroup label="Condition Category" error={errors.primaryCategory}>
+                        <Select value={data.diagnosis.primaryCategory} onValueChange={(v) => update("primaryCategory", v)}>
+                            <SelectTrigger className="h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-slate-900">
+                                <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl font-bold">
+                                {PRIMARY_DIAGNOSIS_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </InputGroup>
+                    <InputGroup label="Specific Subtype" error={errors.subtype}>
+                        <Select value={data.diagnosis.subtype} onValueChange={(v) => update("subtype", v)} disabled={!data.diagnosis.primaryCategory}>
+                            <SelectTrigger className="h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-slate-900">
+                                <SelectValue placeholder="Select subtype" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-2xl font-bold">
+                                {options.map((o: string) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </InputGroup>
+                </div>
+
+                <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
+                   <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-6">Medical History Summary</h4>
+                   <textarea 
+                     className="w-full h-32 bg-white border-none rounded-2xl p-6 font-bold text-slate-900 resize-none shadow-sm focus:ring-2 ring-slate-100"
+                     value={data.medicalHistory}
+                     onChange={(e) => update("medicalHistory", e.target.value)}
+                     placeholder="Document significant medical history here..."
+                   />
+                </div>
+            </div>
+        </Card>
+    )
+}
+
+function PFTStep({ data, set, errors }: any) {
+    const add = () => set((prev: any) => ({ ...prev, pftRecords: [...prev.pftRecords, { id: Date.now().toString(), testDate: new Date().toISOString().split('T')[0] }] }))
+    const remove = (id: string) => set((prev: any) => ({ ...prev, pftRecords: prev.pftRecords.filter((r: any) => r.id !== id) }))
+    const update = (id: string, f: string, v: string) => set((prev: any) => ({ ...prev, pftRecords: prev.pftRecords.map((r: any) => r.id === id ? { ...r, [f]: v } : r) }))
+
+    return (
+        <div className="space-y-8">
+            <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center">
+                        <Activity className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-900 tracking-tight">Vitals & Tests</h3>
+                        <p className="text-xs font-medium text-slate-400">Pulmonary Function Test (PFT) records.</p>
+                    </div>
+                </div>
+                <Button onClick={add} variant="outline" className="rounded-2xl border-slate-200 h-14 px-8 font-bold text-xs uppercase tracking-widest text-slate-600 hover:bg-slate-950 hover:text-white transition-all">
+                    <Plus className="w-4 h-4 mr-2" /> Add Record
+                </Button>
+            </div>
+
+            {data.pftRecords.length === 0 ? (
+                <Card className="p-24 text-center bg-white rounded-[3rem] border-none shadow-sm">
+                    <Activity className="w-16 h-16 text-slate-100 mx-auto mb-6" />
+                    <h3 className="text-xl font-bold text-slate-900">No baseline records</h3>
+                    <p className="text-slate-400 mt-2 max-w-xs mx-auto">Add a PFT record to establish the patient's baseline measurements.</p>
+                </Card>
+            ) : (
+                <div className="space-y-6">
+                    {data.pftRecords.map((record: any) => (
+                        <Card key={record.id} className="p-8 border-none bg-white rounded-[2.5rem] shadow-sm relative group overflow-hidden border border-slate-50">
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+                                <InputGroup label="Date">
+                                    <Input type="date" value={record.testDate} onChange={(e) => update(record.id, "testDate", e.target.value)} className="bg-slate-50 border-none rounded-xl font-bold" />
+                                </InputGroup>
+                                <InputGroup label="FVC (%)">
+                                    <Input type="number" value={record.fvc} onChange={(e) => update(record.id, "fvc", e.target.value)} className="bg-slate-50 border-none rounded-xl font-bold" />
+                                </InputGroup>
+                                <InputGroup label="FEV1 (%)">
+                                    <Input type="number" value={record.fev1} onChange={(e) => update(record.id, "fev1", e.target.value)} className="bg-slate-50 border-none rounded-xl font-bold" />
+                                </InputGroup>
+                                <InputGroup label="DLCO (%)">
+                                    <Input type="number" value={record.dlco} onChange={(e) => update(record.id, "dlco", e.target.value)} className="bg-slate-50 border-none rounded-xl font-bold" />
+                                </InputGroup>
+                                <div className="flex items-end justify-end">
+                                    <Button onClick={() => remove(record.id)} variant="ghost" className="h-12 w-12 rounded-xl text-rose-200 hover:text-rose-600 hover:bg-rose-50">
+                                        <Trash2 className="w-5 h-5" />
+                                    </Button>
+                                </div>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
+
+function SupportStep({ data, updateConfig }: any) {
+    return (
+        <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50">
+            <div className="flex items-center gap-4 mb-10">
+                <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center">
+                    <Wind className="w-6 h-6" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">Breathing Support</h3>
+                    <p className="text-xs font-medium text-slate-400">Ongoing support and supplemental oxygen requirements.</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-6">
+                    <SupportToggle 
+                        label="LTOT (Oxygen Therapy)" 
+                        checked={data.ltot.enabled} 
+                        onChange={(v: boolean) => updateConfig("ltot", "enabled", v)} 
+                    />
+                    {data.ltot.enabled && (
+                        <div className="pl-6 border-l-2 border-slate-100 space-y-4">
+                    <InputGroup label="Flow Rate (L/min)">
+                                <Input type="number" step="0.5" value={data.ltot.oxygenLitres} onChange={(e) => updateConfig("ltot", "oxygenLitres", e.target.value)} className="h-12 bg-slate-50 border-none rounded-xl font-bold text-slate-900" />
+                            </InputGroup>
+                        </div>
+                    )}
+                </div>
+                
+                <div className="space-y-6">
+                    <SupportToggle 
+                        label="BiPAP / NILV Support" 
+                        checked={data.bipap.enabled} 
+                        onChange={(v: boolean) => updateConfig("bipap", "enabled", v)} 
+                    />
+                    {data.bipap.enabled && (
+                        <div className="pl-6 border-l-2 border-slate-100 grid grid-cols-2 gap-4">
+                            <InputGroup label="IPAP">
+                                <Input type="number" value={data.bipap.ipap} onChange={(e) => updateConfig("bipap", "ipap", e.target.value)} className="h-10 bg-slate-50 border-none rounded-xl font-bold text-slate-900" />
+                            </InputGroup>
+                            <InputGroup label="EPAP">
+                                <Input type="number" value={data.bipap.epap} onChange={(e) => updateConfig("bipap", "epap", e.target.value)} className="h-10 bg-slate-50 border-none rounded-xl font-bold text-slate-900" />
+                            </InputGroup>
+                        </div>
                     )}
                 </div>
             </div>
-        </>
+        </Card>
+    )
+}
+
+function MedicationStep({ data, set, errors }: any) {
+    const add = () => set((prev: any) => ({ ...prev, medications: [...prev.medications, { id: Date.now().toString(), isActive: true }] }))
+    const remove = (id: string) => set((prev: any) => ({ ...prev, medications: prev.medications.filter((m: any) => m.id !== id) }))
+    const update = (id: string, f: string, v: string) => set((prev: any) => ({ ...prev, medications: prev.medications.map((m: any) => m.id === id ? { ...m, [f]: v } : m) }))
+
+    return (
+        <div className="space-y-8">
+            <div className="flex items-center justify-between px-2">
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center">
+                        <Pill className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-900 tracking-tight">Medications</h3>
+                        <p className="text-xs font-medium text-slate-400">Current active medications and dosing schedule.</p>
+                    </div>
+                </div>
+                <Button onClick={add} variant="outline" className="rounded-2xl border-slate-200 h-14 px-8 font-bold text-xs uppercase tracking-widest text-slate-600 hover:bg-slate-950 hover:text-white transition-all">
+                    <Plus className="w-4 h-4 mr-2" /> Add Medication
+                </Button>
+            </div>
+
+            {data.medications.length === 0 ? (
+                <Card className="p-24 text-center bg-white rounded-[3rem] border-none shadow-sm">
+                    <Pill className="w-16 h-16 text-slate-100 mx-auto mb-6" />
+                    <h3 className="text-xl font-bold text-slate-900">No active medications</h3>
+                    <p className="text-slate-400 mt-2 max-w-xs mx-auto">Define the initial medication list for this patient to track adherence.</p>
+                </Card>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {data.medications.map((med: any) => (
+                        <Card key={med.id} className="p-8 border-none bg-white rounded-[2.5rem] shadow-sm border border-slate-50 group">
+                            <div className="flex justify-between items-start mb-6">
+                                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-slate-950 group-hover:text-white transition-all">
+                                    <Pill className="w-5 h-5" />
+                                </div>
+                                <button onClick={() => remove(med.id)} className="text-slate-200 hover:text-rose-500 transition-colors">
+                                    <Trash2 className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="space-y-6">
+                                <InputGroup label="Medication Name">
+                                    <Input value={med.drugName} onChange={(e) => update(med.id, "drugName", e.target.value)} placeholder="e.g. Mycophenolate" className="h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-slate-900" />
+                                </InputGroup>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <InputGroup label="Dose">
+                                        <Input value={med.dose} onChange={(e) => update(med.id, "dose", e.target.value)} placeholder="500mg" className="h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-slate-900" />
+                                    </InputGroup>
+                                    <InputGroup label="Frequency">
+                                        <Input value={med.frequency} onChange={(e) => update(med.id, "frequency", e.target.value)} placeholder="Twice a day" className="h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-slate-900" />
+                                    </InputGroup>
+                                </div>
+                                <InputGroup label="Method">
+                                    <Select value={med.route} onValueChange={(v) => update(med.id, "route", v)}>
+                                        <SelectTrigger className="h-12 bg-slate-50 border-none rounded-xl px-4 font-bold text-slate-900">
+                                            <SelectValue placeholder="Select method" />
+                                        </SelectTrigger>
+                                        <SelectContent className="rounded-xl font-bold">
+                                            {ROUTE_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </InputGroup>
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
+
+function ReviewStep({ data }: any) {
+    return (
+        <Card className="p-10 border-none bg-white rounded-[3rem] shadow-2xl shadow-slate-200 border border-slate-50">
+            <div className="flex items-center gap-4 mb-10 pb-6 border-b border-slate-50">
+                <div className="w-12 h-12 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <div>
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">Review Summary</h3>
+                    <p className="text-xs font-medium text-slate-400">Verify all entries before finalizing registration.</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+                <div className="space-y-8">
+                    <ReviewSection title="Patient Profile">
+                        <ReviewRow label="Full Name" value={data.fullName} />
+                        <ReviewRow label="Email" value={data.emailId} />
+                        <ReviewRow label="Age / Sex" value={`${data.age} Y • ${data.sex}`} />
+                    </ReviewSection>
+                    
+                    <ReviewSection title="Medical Diagnosis">
+                        <ReviewRow label="Category" value={data.diagnosis.primaryCategory} />
+                        <ReviewRow label="Subtype" value={data.diagnosis.subtype || 'Unspecified'} />
+                    </ReviewSection>
+                </div>
+
+                <div className="space-y-8">
+                    <ReviewSection title="Baseline Metrics">
+                        <ReviewRow label="Vitals Records" value={`${data.pftRecords.length} recorded`} />
+                        <ReviewRow label="Resp. Support" value={data.requiresRespiratorySupport || 'None'} />
+                    </ReviewSection>
+
+                    <ReviewSection title="Treatment Plan">
+                        <ReviewRow label="Active Meds" value={`${data.medications.length} active`} />
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            {data.medications.map((m: any, i: number) => (
+                                <Badge key={i} className="bg-slate-50 text-slate-500 border-none font-bold text-[9px] uppercase tracking-widest px-3 py-1">
+                                    {m.drugName}
+                                </Badge>
+                            ))}
+                        </div>
+                    </ReviewSection>
+                </div>
+            </div>
+
+            <div className="mt-12 p-6 bg-slate-950 rounded-[2rem] flex items-center justify-between text-white">
+                <div className="flex items-center gap-4">
+                    <Shield className="w-6 h-6 text-emerald-400" />
+                    <div>
+                        <p className="font-bold text-sm tracking-tight text-white">Ready for Registration</p>
+                        <p className="text-[10px] font-medium text-slate-400">Patient will be added to your dashboard.</p>
+                    </div>
+                </div>
+                <div className="hidden md:block">
+                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Security: Encrypted AES-256</p>
+                </div>
+            </div>
+        </Card>
+    )
+}
+
+/* UI Components for steps */
+
+function InputGroup({ label, error, children }: any) {
+    return (
+        <div className="space-y-3">
+            <div className="flex justify-between items-center ml-1">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">{label}</label>
+                {error && <span className="text-[10px] font-bold text-rose-500">{error}</span>}
+            </div>
+            {children}
+        </div>
+    )
+}
+
+function ReviewSection({ title, children }: any) {
+    return (
+        <div className="space-y-4">
+            <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-300 border-b border-slate-50 pb-2 mb-4">{title}</h4>
+            <div className="space-y-3">
+                {children}
+            </div>
+        </div>
+    )
+}
+
+function ReviewRow({ label, value }: any) {
+    return (
+        <div className="flex justify-between items-center py-1">
+            <span className="text-xs font-bold text-slate-400">{label}</span>
+            <span className="text-xs font-bold text-slate-900">{value || '--'}</span>
+        </div>
+    )
+}
+
+function SupportToggle({ label, checked, onChange }: any) {
+    return (
+        <div className={`p-6 rounded-3xl border transition-all ${checked ? 'bg-slate-950 border-slate-950 shadow-xl shadow-slate-200' : 'bg-white border-slate-100'}`} onClick={() => onChange(!checked)}>
+            <div className="flex items-center justify-between cursor-pointer">
+                <span className={`text-xs font-bold uppercase tracking-widest ${checked ? 'text-white' : 'text-slate-900'}`}>{label}</span>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 ${checked ? 'bg-white border-white text-slate-950' : 'border-slate-100'}`}>
+                    {checked && <CheckCircle2 className="w-4 h-4" />}
+                </div>
+            </div>
+        </div>
     )
 }

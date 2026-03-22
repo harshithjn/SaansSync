@@ -8,22 +8,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { useDoctorAuth } from '@/lib/auth-guard'
-import { getDoctorPatients, getDoctorAlerts, getDoctorPatientFolders } from "@/lib/database-service"
-import { getDoctorAlertCounts, searchPatients } from "@/lib/doctor-patient-mapping"
-import { getDoctorAlertsSaansSync } from "@/lib/alert-engines"
+import { getDoctorPatientFolders, getDoctorAlerts } from "@/lib/database-service"
 import { PatientFolder, FolderColor } from "@/lib/monitoring-types"
-import { Users, AlertTriangle, TrendingUp, Clock, Search, Plus, Bell, Edit, UserPlus } from "lucide-react"
-import ImportPatientModal from "@/components/doctor/ImportPatientModal"
-
+import { formatDate } from "@/lib/utils"
+import { Users, AlertTriangle, TrendingUp, Search, Plus, Bell, Edit, UserPlus, ArrowRight, Activity, Calendar, Clock } from "lucide-react"
 
 export default function DoctorDashboard({
   params,
 }: {
   params: Promise<{ doctorId: string }>
 }) {
-  const authState = useDoctorAuth() // Use the new auth system
+  const authState = useDoctorAuth()
   const [doctorId, setDoctorId] = useState<string>("")
-
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedDisease, setSelectedDisease] = useState("all")
   const [selectedRisk, setSelectedRisk] = useState("all")
@@ -34,31 +30,15 @@ export default function DoctorDashboard({
     total: 0
   })
   const [filteredPatients, setFilteredPatients] = useState<PatientFolder[]>([])
-  const [showImportModal, setShowImportModal] = useState(false)
 
   useEffect(() => {
     const initializeDashboard = async () => {
       const resolvedParams = await params
       setDoctorId(resolvedParams.doctorId)
 
-      // Auth verification is handled by useDoctorAuth hook
-      console.log('✅ Dashboard initialized for doctor:', resolvedParams.doctorId)
-
-      // 2. Initialize production system (no demo patients needed)
-      console.log('Production mode - using database patients only')
-
-      // 3. Load Data
       try {
-        console.log('Loading patient folders for doctor:', resolvedParams.doctorId)
-
-        // Fetch optimized patient folders (contains sync'd scores and colors)
         const updatedFolders = await getDoctorPatientFolders(resolvedParams.doctorId)
-        console.log('Synced Folders:', updatedFolders)
-
-        // Get alerts for count summary
         const dbAlerts = await getDoctorAlerts(resolvedParams.doctorId)
-
-        // Update alert counts (RED/ORANGE/YELLOW for summary cards)
         const activeAlerts = dbAlerts.filter(a => !a.acknowledged)
 
         setAlertCounts({
@@ -69,36 +49,15 @@ export default function DoctorDashboard({
 
         setPatientFolders(updatedFolders)
         setFilteredPatients(updatedFolders)
-
-        console.log('✅ Loaded', updatedFolders.length, 'patients from synced folders')
-
       } catch (error) {
-        console.error('Database loading failed, falling back to localStorage:', error)
-
-        // Fallback to localStorage
-        const folders = await getDoctorPatientFolders(resolvedParams.doctorId)
-        setPatientFolders(folders)
-        setFilteredPatients(folders)
-
-        // Load alert counts (RED/YELLOW/ORANGE from SaansSync; fallback to folder-based)
-        const saansSyncAlerts = getDoctorAlertsSaansSync(resolvedParams.doctorId)
-        const activeAlerts = saansSyncAlerts.filter(a => !a.acknowledged && (a.level === 'RED' || a.level === 'YELLOW' || a.level === 'ORANGE'))
-        setAlertCounts({
-          critical: saansSyncAlerts.filter(a => !a.acknowledged && a.level === 'RED').length,
-          highRisk: saansSyncAlerts.filter(a => !a.acknowledged && (a.level === 'YELLOW' || a.level === 'ORANGE')).length,
-          total: activeAlerts.length
-        })
+        console.error('Loading failed:', error)
       }
     }
-
     initializeDashboard()
   }, [params])
 
-  // Filter patients based on search and filters
   useEffect(() => {
     let filtered: PatientFolder[] = patientFolders
-
-    // Search filter
     if (searchTerm.trim()) {
       const term = searchTerm.toLowerCase()
       filtered = filtered.filter(patient =>
@@ -106,15 +65,15 @@ export default function DoctorDashboard({
         patient.patientId.toLowerCase().includes(term)
       )
     }
-
-    // Disease filter
     if (selectedDisease !== "all") {
-      filtered = filtered.filter(patient =>
-        patient.diseaseType.toLowerCase() === selectedDisease.toLowerCase()
-      )
+      filtered = filtered.filter(patient => {
+        const pType = patient.diseaseType.toLowerCase()
+        if (selectedDisease === 'copd') return pType.includes('copd') || pType.includes('obstructive')
+        if (selectedDisease === 'ild') return pType.includes('ild') || pType.includes('interstitial')
+        if (selectedDisease === 'asthma') return pType.includes('asthma')
+        return pType === selectedDisease.toLowerCase()
+      })
     }
-
-    // Risk filter
     if (selectedRisk !== "all") {
       filtered = filtered.filter(patient => {
         if (selectedRisk === "critical") return patient.redFlagScore >= 9
@@ -124,297 +83,219 @@ export default function DoctorDashboard({
         return true
       })
     }
-
     setFilteredPatients(filtered as PatientFolder[])
-  }, [searchTerm, selectedDisease, selectedRisk, patientFolders, doctorId])
+  }, [searchTerm, selectedDisease, selectedRisk, patientFolders])
 
-  const getFolderGlowClass = (color: FolderColor) => {
-    switch (color) {
-      case 'green':
-        return 'border-green-200 bg-green-50/30 shadow-green-100 hover:shadow-green-200'
-      case 'yellow':
-        return 'border-yellow-200 bg-yellow-50/30 shadow-yellow-100 hover:shadow-yellow-200'
-      case 'orange':
-        return 'border-orange-200 bg-orange-50/30 shadow-orange-100 hover:shadow-orange-200'
-      case 'red':
-        return 'border-red-200 bg-red-50/30 shadow-red-100 hover:shadow-red-200 animate-pulse'
-      default:
-        return 'border-gray-200 bg-gray-50/30'
-    }
-  }
-
-  const getRiskBadgeClass = (score: number) => {
-    if (score >= 9) return "bg-red-600 text-white"
-    if (score >= 7) return "bg-red-500 text-white"
-    if (score >= 4) return "bg-yellow-500 text-white"
-    return "bg-green-500 text-white"
+  const getRiskColor = (score: number) => {
+    if (score >= 9) return "text-rose-600 bg-rose-50"
+    if (score >= 7) return "text-orange-600 bg-orange-50"
+    if (score >= 4) return "text-amber-600 bg-amber-50"
+    return "text-emerald-600 bg-emerald-50"
   }
 
   const getRiskLabel = (score: number) => {
     if (score >= 9) return "Critical"
     if (score >= 7) return "High Risk"
     if (score >= 4) return "Moderate"
-    return "Low Risk"
+    return "Stable"
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-12 font-['Matter_Regular',sans-serif]">
       {/* Welcome Header */}
-      {authState.user && (
-        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900 mb-1">
-                Welcome back, Dr. {authState.profile?.full_name?.split(' ')[0] || 'Doctor'}!
-              </h1>
-              <p className="text-gray-600">
-                Remote Respiratory Monitoring Dashboard - Manage your patients and monitor their health status
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Notification Bell */}
-              <div className="relative">
-                <Link href={`/doctor/dashboard/${doctorId}/alerts`}>
-                  <Button variant="outline" size="sm" className="relative">
-                    <Bell className="w-4 h-4" />
-                    {alertCounts.total > 0 && (
-                      <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-red-500 text-white text-xs">
-                        {alertCounts.total > 99 ? '99+' : alertCounts.total}
-                      </Badge>
-                    )}
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-2">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Overview</p>
+            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tighter">
+                Welcome, Dr. {authState.profile?.full_name?.split(' ')[0] || 'Doctor'}
+            </h1>
         </div>
-      )}
+        <div className="flex items-center gap-3">
+            <Link href={`/doctor/dashboard/${doctorId}/create-patient`}>
+                <Button className="bg-slate-950 hover:bg-slate-800 text-white rounded-[1.5rem] h-14 px-8 font-bold text-sm uppercase tracking-widest shadow-2xl shadow-slate-200 transition-all active:scale-[0.98]">
+                    <Plus className="w-5 h-5 mr-2" />
+                    Add Patient
+                </Button>
+            </Link>
+        </div>
+      </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="p-4 border-0 shadow-sm bg-blue-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Users className="w-5 h-5 text-blue-600" />
+      {/* Stats Cards - Sleek Rows */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="p-8 border-none bg-white shadow-[0_12px_24px_-8px_rgba(0,0,0,0.04)] rounded-[2.5rem] relative overflow-hidden group hover:shadow-xl transition-all border border-slate-50">
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div className="flex justify-between items-start">
+                <div className="w-12 h-12 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-slate-950 group-hover:text-white transition-all duration-500">
+                    <Users className="w-6 h-6" />
+                </div>
+                <ArrowRight className="w-5 h-5 text-slate-200 group-hover:text-slate-900 transition-colors" />
             </div>
-            <div>
-              <p className="text-2xl font-semibold text-gray-900">{patientFolders.length}</p>
-              <p className="text-sm text-gray-600">Total Patients</p>
+            <div className="mt-8">
+                <p className="text-4xl font-bold text-slate-900 tracking-tighter">{patientFolders.length}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Total Patients</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-4 border-0 shadow-sm bg-red-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
+        <Card className="p-8 border-none bg-white shadow-[0_12px_24px_-8px_rgba(0,0,0,0.04)] rounded-[2.5rem] relative overflow-hidden group hover:shadow-xl transition-all border border-slate-50">
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div className="flex justify-between items-start">
+                <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center">
+                    <AlertTriangle className="w-6 h-6" />
+                </div>
+                {alertCounts.critical > 0 && <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />}
             </div>
-            <div>
-              <p className="text-2xl font-semibold text-gray-900">{alertCounts.critical}</p>
-              <p className="text-sm text-gray-600">Critical Alerts</p>
+            <div className="mt-8">
+                <p className="text-4xl font-bold text-slate-900 tracking-tighter">{alertCounts.critical}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Critical Alerts</p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-4 border-0 shadow-sm bg-amber-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-100 rounded-lg">
-              <TrendingUp className="w-5 h-5 text-amber-600" />
+        <Card className="p-8 border-none bg-white shadow-[0_12px_24px_-8px_rgba(0,0,0,0.04)] rounded-[2.5rem] relative overflow-hidden group hover:shadow-xl transition-all border border-slate-50">
+          <div className="relative z-10 flex flex-col justify-between h-full">
+            <div className="flex justify-between items-start">
+                <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center">
+                    <TrendingUp className="w-6 h-6" />
+                </div>
             </div>
-            <div>
-              <p className="text-2xl font-semibold text-gray-900">{alertCounts.highRisk}</p>
-              <p className="text-sm text-gray-600">High Risk Alerts</p>
+            <div className="mt-8">
+                <p className="text-4xl font-bold text-slate-900 tracking-tighter">{alertCounts.highRisk}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">High Risk Cases</p>
             </div>
           </div>
         </Card>
       </div>
 
-      {/* Search and Filter Controls */}
-      <Card className="p-4 border-0 shadow-sm">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="relative flex-1 min-w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+      {/* Control Bar */}
+      <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-slate-300 w-5 h-5 group-focus-within:text-slate-900 transition-colors" />
             <Input
               placeholder="Search patients by name or ID..."
-              className="pl-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+              className="h-14 pl-14 bg-slate-50 border-none rounded-2xl focus-visible:ring-slate-100 transition-all text-sm font-bold placeholder:font-medium"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
           <Select value={selectedDisease} onValueChange={setSelectedDisease}>
-            <SelectTrigger className="w-48 border-gray-200">
-              <SelectValue placeholder="Filter by Disease" />
+            <SelectTrigger className="w-full md:w-56 h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-xs uppercase tracking-widest text-slate-500 focus:ring-slate-100">
+              <SelectValue placeholder="Disease Type" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Diseases</SelectItem>
-              <SelectItem value="asthma">Asthma</SelectItem>
-              <SelectItem value="copd">COPD</SelectItem>
-              <SelectItem value="ild">ILD</SelectItem>
-              <SelectItem value="bronchiectasis">Bronchiectasis</SelectItem>
-              <SelectItem value="post-infection">Post-Infection</SelectItem>
+            <SelectContent className="rounded-2xl border-none shadow-2xl p-2 font-['Matter_Regular',sans-serif]">
+              <SelectItem value="all" className="rounded-xl text-xs font-bold uppercase tracking-widest">All Patients</SelectItem>
+              <SelectItem value="asthma" className="rounded-xl text-xs font-bold uppercase tracking-widest">Asthma</SelectItem>
+              <SelectItem value="copd" className="rounded-xl text-xs font-bold uppercase tracking-widest">COPD</SelectItem>
+              <SelectItem value="ild" className="rounded-xl text-xs font-bold uppercase tracking-widest">ILD</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={selectedRisk} onValueChange={setSelectedRisk}>
-            <SelectTrigger className="w-48 border-gray-200">
-              <SelectValue placeholder="Filter by Risk" />
+            <SelectTrigger className="w-full md:w-56 h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-xs uppercase tracking-widest text-slate-500 focus:ring-slate-100">
+              <SelectValue placeholder="Risk Level" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Risk Levels</SelectItem>
-              <SelectItem value="critical">Critical (9-10)</SelectItem>
-              <SelectItem value="high">High Risk (7-8)</SelectItem>
-              <SelectItem value="moderate">Moderate (4-6)</SelectItem>
-              <SelectItem value="low">Low Risk (1-3)</SelectItem>
+            <SelectContent className="rounded-2xl border-none shadow-2xl p-2 font-['Matter_Regular',sans-serif]">
+              <SelectItem value="all" className="rounded-xl text-xs font-bold uppercase tracking-widest">All Risks</SelectItem>
+              <SelectItem value="critical" className="rounded-xl text-xs font-bold uppercase tracking-widest text-rose-600">Critical</SelectItem>
+              <SelectItem value="high" className="rounded-xl text-xs font-bold uppercase tracking-widest text-orange-600">High Risk</SelectItem>
+              <SelectItem value="low" className="rounded-xl text-xs font-bold uppercase tracking-widest text-emerald-600">Stable</SelectItem>
             </SelectContent>
           </Select>
+      </div>
 
-          <Link href={`/doctor/dashboard/${doctorId}/create-patient`}>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Patient
-            </Button>
-          </Link>
-
-          <Button
-            variant="outline"
-            onClick={() => setShowImportModal(true)}
-            className="border-green-600 text-green-600 hover:bg-green-50"
-          >
-            <UserPlus className="w-4 h-4 mr-2" />
-            Import Patient
-          </Button>
-        </div>
-      </Card>
-
-      {/* Patient Folder View */}
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Patient Folders ({filteredPatients.length})
+      {/* Patient Grid */}
+      <div className="space-y-8">
+        <div className="flex items-center justify-between px-2">
+          <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+            Patient List <span className="text-slate-300 ml-2 font-bold">{filteredPatients.length}</span>
           </h3>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span>Stable</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-              <span>Warning</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <span>Critical</span>
-            </div>
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filteredPatients.map((patient) => (
-            <div key={patient.patientId} className="relative group">
-              <Card
-                className={`cursor-pointer transition-all duration-300 hover:shadow-lg ${getFolderGlowClass(patient.folderColor)}`}
-              >
-                <Link href={`/doctor/dashboard/${doctorId}/patient/${patient.patientId}`}>
-                  <div className="p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-4 h-4 rounded-full ${patient.folderColor === 'green' ? 'bg-green-500' :
-                          patient.folderColor === 'yellow' ? 'bg-yellow-500' : 'bg-red-500'
-                          }`} />
-                        <h4 className="font-semibold text-gray-900">{patient.fullName}</h4>
-                      </div>
-                      <Badge className={`text-xs ${getRiskBadgeClass(patient.redFlagScore)}`}>
-                        {patient.redFlagScore}/10
-                      </Badge>
+            <Link key={patient.patientId} href={`/doctor/dashboard/${doctorId}/patient/${patient.patientId}`} className="group block">
+              <Card className="p-8 border-none bg-white rounded-[3rem] shadow-[0_12px_24px_-8px_rgba(0,0,0,0.02)] border border-slate-50 group-hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.06)] group-hover:-translate-y-1 transition-all duration-500">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 bg-slate-50 rounded-[1.25rem] flex items-center justify-center text-slate-400 group-hover:bg-slate-950 group-hover:text-white transition-all duration-500">
+                        <Activity className="w-7 h-7" />
                     </div>
-
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Age:</span>
-                        <span className="font-medium">{patient.age} years</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Disease:</span>
-                        <span className="font-medium">{patient.diseaseType}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Risk Level:</span>
-                        <span className={`font-medium ${patient.redFlagScore >= 9 ? 'text-red-600' :
-                          patient.redFlagScore >= 7 ? 'text-red-500' :
-                            patient.redFlagScore >= 4 ? 'text-yellow-600' : 'text-green-600'
-                          }`}>
-                          {getRiskLabel(patient.redFlagScore)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Last Log:</span>
-                        <span className="font-medium">
-                          {new Date(patient.lastLogDate).toLocaleDateString()}
-                        </span>
-                      </div>
-                      {patient.alertCount > 0 && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Alerts:</span>
-                          <Badge variant="destructive" className="text-xs">
-                            {patient.alertCount} active
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-4 pt-3 border-t border-gray-200">
-                      <span className="text-xs text-gray-500">Click to view details</span>
+                    <div>
+                        <h4 className="font-bold text-slate-900 text-lg leading-tight tracking-tight">{patient.fullName}</h4>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">ID: {patient.patientId.slice(0, 8)}</p>
                     </div>
                   </div>
-                </Link>
-              </Card>
+                  <div className={`px-3 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest ${getRiskColor(patient.redFlagScore)}`}>
+                    {getRiskLabel(patient.redFlagScore)}
+                  </div>
+                </div>
 
-              {/* Action Buttons */}
-              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Link href={`/doctor/dashboard/${doctorId}/patient/${patient.patientId}/edit`}>
-                  <Button size="sm" variant="outline" className="h-8 w-8 p-0 bg-white/90 hover:bg-white">
-                    <Edit className="w-3 h-3" />
-                  </Button>
-                </Link>
-              </div>
-            </div>
+                <div className="space-y-4 mb-8">
+                    <div className="flex justify-between items-center text-xs border-b border-slate-50 pb-3">
+                        <span className="text-slate-400 font-bold uppercase tracking-widest">Condition</span>
+                        <span className="text-slate-900 font-bold">{patient.diseaseType.split('(')[0]}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs border-b border-slate-50 pb-3">
+                        <span className="text-slate-400 font-bold uppercase tracking-widest">Status</span>
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-1 rounded-full bg-slate-100 overflow-hidden">
+                                <div className={`h-full ${patient.redFlagScore >= 7 ? 'bg-rose-500' : 'bg-emerald-500'}`} style={{ width: `${patient.redFlagScore * 10}%` }} />
+                            </div>
+                            <span className="text-slate-900 font-bold">{patient.redFlagScore}/10</span>
+                        </div>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                        <span className="text-slate-400 font-bold uppercase tracking-widest">Last Update</span>
+                        <div className="flex items-center gap-2">
+                            <Clock className="w-3 h-3 text-slate-300" />
+                            <span className="text-slate-900 font-bold">{formatDate(patient.lastLogDate)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs pt-2">
+                    <div className="flex -space-x-2">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="w-6 h-6 rounded-full bg-slate-50 border-2 border-white" />
+                        ))}
+                    </div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-slate-300 group-hover:text-slate-950 transition-colors flex items-center gap-2">
+                        View Profile
+                        <ArrowUpRight className="w-3 h-3" />
+                    </div>
+                </div>
+              </Card>
+            </Link>
           ))}
         </div>
 
         {filteredPatients.length === 0 && (
-          <Card className="p-8 text-center border-0 shadow-sm">
-            <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No patients found</h3>
-            <p className="text-gray-600 mb-4">
-              {searchTerm || selectedDisease !== "all" || selectedRisk !== "all"
-                ? "Try adjusting your search or filters"
-                : "Get started by adding your first patient"}
-            </p>
-            {!searchTerm && selectedDisease === "all" && selectedRisk === "all" && (
-              <Link href={`/doctor/dashboard/${doctorId}/create-patient`}>
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Patient
-                </Button>
-              </Link>
-            )}
-          </Card>
+          <div className="py-24 text-center">
+            <div className="w-20 h-20 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-6 border border-slate-100">
+                <Users className="w-10 h-10 text-slate-200" />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">No patients found</h3>
+            <p className="text-slate-400 text-sm font-medium max-w-xs mx-auto">Try adjusting your filters or search criteria.</p>
+          </div>
         )}
       </div>
-
-      {/* Import Patient Modal */}
-      <ImportPatientModal
-        doctorId={doctorId}
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onSuccess={async () => {
-          // Refresh patient folders after successful import
-          const folders = await getDoctorPatientFolders(doctorId)
-          setPatientFolders(folders)
-          setFilteredPatients(folders)
-        }}
-      />
     </div>
+  )
+}
+
+function ArrowUpRight({ className }: { className?: string }) {
+  return (
+    <svg 
+      className={className} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <path d="M7 17L17 7M17 7H7M17 7V17" />
+    </svg>
   )
 }

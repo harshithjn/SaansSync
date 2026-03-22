@@ -13,6 +13,7 @@ export declare function verifyPatientOtp(req: Request, res: Response): Promise<R
 export declare function patientLogin(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
 export declare function adminLogin(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
 export declare function doctorSignup(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
+export declare function patientSignup(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
 export declare function testEmail(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
 export declare function exchangeCallback(req: Request, res: Response): Promise<Response<any, Record<string, any>>>;
 export declare function authMe(req: AuthedRequest, res: Response): Promise<Response<any, Record<string, any>>>;

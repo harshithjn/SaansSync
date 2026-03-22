@@ -221,8 +221,7 @@ export interface PrescribedMedication {
 export interface DoctorProfile {
     id: string
     full_name: string
-    email?: string
-    phone?: string
+    email: string
     specialization?: string
     hospital_affiliation?: string
     license_number?: string
@@ -233,8 +232,7 @@ export interface DoctorProfile {
 export interface PatientProfile {
     id: string
     full_name: string
-    email?: string
-    phone?: string
+    email: string
     patient_data?: {
         age?: number
         diagnosis?: {

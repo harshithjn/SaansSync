@@ -1,4 +1,6 @@
 // Export Data Service
+import api from './api'
+import { formatDate } from './utils'
 import { ExportOptions, PatientFolder, CommonPatientData, AsthmaData, COPDData, BronchiectasisData, ILDData, PostInfectionData } from './monitoring-types'
 import { getDoctorPatientFolders } from './doctor-patient-mapping'
 import { getPatientAlerts } from './alert-system'
@@ -149,7 +151,7 @@ function generateCSV(exportData: any[], options: ExportOptions): string {
             item.summary.riskLevel,
             item.summary.alertCount.toString(),
             item.summary.criticalAlerts.toString(),
-            new Date(item.summary.lastActivity).toLocaleDateString(),
+            formatDate(item.summary.lastActivity),
             item.summary.currentSpO2.toString(),
             item.summary.conditionStatus,
             item.summary.mMRCScale.toString(),
@@ -297,7 +299,7 @@ function generatePDFData(exportData: any[], options: ExportOptions): string {
         report += `   Disease: ${item.patient.diseaseType}\n`
         report += `   Risk Score: ${item.patient.redFlagScore}/10 (${item.summary.riskLevel})\n`
         report += `   Alerts: ${item.summary.alertCount} (${item.summary.criticalAlerts} critical)\n`
-        report += `   Last Activity: ${new Date(item.summary.lastActivity).toLocaleDateString()}\n`
+        report += `   Last Activity: ${formatDate(item.summary.lastActivity)}\n`
         report += `   SpO2: ${item.summary.currentSpO2}%\n`
         report += `   Condition: ${item.summary.conditionStatus}\n\n`
     })

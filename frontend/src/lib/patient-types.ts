@@ -176,8 +176,6 @@ export interface StructuredDiagnosis {
 export interface PatientData {
     // Step 1: Basic Information (Updated)
     fullName: string
-    mobileNumber: string
-    alternateMobileNumber?: string
     emailId: string
     age: string
     sex: string
@@ -322,6 +320,7 @@ export interface PrescriptionMedication {
     drugName: string
     dose: string
     frequency: string
+    route?: string
     duration?: string
     instructions?: string
 }

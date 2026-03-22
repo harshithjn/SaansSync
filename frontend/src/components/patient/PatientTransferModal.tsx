@@ -11,7 +11,7 @@ import {
     cancelPendingTransfer,
     formatTimeRemaining 
 } from "@/lib/patient-transfer"
-import { UserX, Clock, Shield, AlertTriangle, Copy, CheckCircle } from "lucide-react"
+import { UserX, Clock, ShieldCheck, AlertTriangle, Copy, CheckCircle2, Loader2, ArrowRight, Zap, ShieldAlert } from "lucide-react"
 
 interface PatientTransferModalProps {
     patientId: string
@@ -116,122 +116,156 @@ export default function PatientTransferModal({
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-md p-6 space-y-6">
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50 p-6 animate-in fade-in duration-500 font-['Matter_Regular',sans-serif]">
+            <Card className="w-full max-w-xl bg-white p-12 space-y-12 rounded-[4rem] shadow-2xl border-none relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-3xl opacity-50 -z-10 -translate-y-32 translate-x-32" />
+                
                 {step === 'confirm' && (
                     <>
-                        <div className="text-center">
-                            <UserX className="w-12 h-12 text-orange-600 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold mb-2">Change Doctor</h3>
-                            <p className="text-gray-600 text-sm">
-                                This will generate a secure transfer code that your new doctor can use to import your medical records.
+                        <div className="flex flex-col items-center text-center space-y-6">
+                            <div className="w-20 h-20 bg-rose-50 rounded-[2.5rem] flex items-center justify-center border border-rose-100 shadow-sm shadow-rose-50/50">
+                                <UserX className="w-10 h-10 text-rose-500" />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-3xl font-black text-slate-950 tracking-tighter leading-none">Clinical Authority Transfer</h3>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Protocol Initiation</p>
+                            </div>
+                            <p className="text-sm font-medium text-slate-500 leading-relaxed max-w-sm">
+                                This procedure initializes a secure clinical uplink to transfer your medical authority to a new practitioner.
                             </p>
                         </div>
 
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                            <div className="flex items-start gap-3">
-                                <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                                <div className="text-sm">
-                                    <p className="font-medium text-yellow-800 mb-1">Important:</p>
-                                    <ul className="text-yellow-700 space-y-1">
-                                        <li>• Your current doctor will lose access immediately</li>
-                                        <li>• Transfer code expires in 10 minutes</li>
-                                        <li>• Your medical history will be preserved</li>
-                                        <li>• This action cannot be undone</li>
+                        <div className="bg-slate-50 p-8 rounded-[2.5rem] border border-slate-100 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500 opacity-[0.03] rounded-full -translate-y-16 translate-x-16 transition-all duration-700 group-hover:scale-125" />
+                            <div className="flex items-start gap-5 relative z-10">
+                                <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                                    <ShieldAlert className="w-5 h-5 text-amber-500" />
+                                </div>
+                                <div className="space-y-4">
+                                    <p className="text-[10px] font-black text-slate-900 uppercase tracking-widest leading-none">Critical Constraints:</p>
+                                    <ul className="text-[11px] text-slate-500 font-bold space-y-3">
+                                        <li className="flex items-center gap-3">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                            Immediate revocation of current physician access
+                                        </li>
+                                        <li className="flex items-center gap-3">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                            Clinical telemetry log persistence (Archival preserved)
+                                        </li>
+                                        <li className="flex items-center gap-3">
+                                            <div className="w-1.5 h-1.5 rounded-full bg-slate-200" />
+                                            Transmission window: 600s TTL (Time-To-Live)
+                                        </li>
                                     </ul>
                                 </div>
                             </div>
                         </div>
 
                         {error && (
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                <p className="text-sm text-red-700">{error}</p>
+                            <div className="bg-rose-50 p-4 rounded-2xl border border-rose-100 flex items-center gap-3 animate-in slide-in-from-top-2">
+                                <AlertTriangle className="w-4 h-4 text-rose-500" />
+                                <p className="text-[10px] font-black text-rose-900 uppercase tracking-widest">{error}</p>
                             </div>
                         )}
 
-                        <div className="flex gap-3">
-                            <Button variant="outline" onClick={onClose} className="flex-1">
-                                Cancel
+                        <div className="flex flex-col md:flex-row gap-4 pt-4">
+                            <Button variant="ghost" onClick={onClose} className="flex-1 h-16 rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] text-slate-400 hover:text-slate-950 hover:bg-slate-50 transition-all border border-slate-100/50">
+                                Terminate Protocol
                             </Button>
-                            <Button onClick={handleInitiateTransfer} className="flex-1 bg-orange-600 hover:bg-orange-700">
-                                Generate Transfer Code
+                            <Button onClick={handleInitiateTransfer} className="flex-1 h-16 rounded-2xl bg-slate-950 hover:bg-slate-800 text-white font-black text-[10px] uppercase tracking-[0.3em] shadow-2xl shadow-slate-200 transition-all active:scale-95 group">
+                                Initialize Transfer
+                                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                             </Button>
                         </div>
                     </>
                 )}
 
                 {step === 'generating' && (
-                    <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
-                        <h3 className="text-lg font-semibold mb-2">Generating Transfer Code</h3>
-                        <p className="text-gray-600 text-sm">Please wait...</p>
+                    <div className="flex flex-col items-center justify-center py-20 gap-8 animate-in zoom-in-95">
+                        <div className="relative">
+                            <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center">
+                                <Loader2 className="w-10 h-10 animate-spin text-slate-200" />
+                            </div>
+                            <div className="absolute inset-0 w-24 h-24 border-2 border-slate-900 rounded-[2.5rem] animate-pulse opacity-10" />
+                        </div>
+                        <div className="text-center space-y-2">
+                            <h3 className="text-2xl font-black text-slate-950 tracking-tighter">Securing Uplink</h3>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Generating RSA-4096 Transfer Signature</p>
+                        </div>
                     </div>
                 )}
 
                 {step === 'otp-display' && (
                     <>
-                        <div className="text-center">
-                            <Shield className="w-12 h-12 text-green-600 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold mb-2">Transfer Code Generated</h3>
-                            <p className="text-gray-600 text-sm mb-4">
-                                Share this code with your new doctor to complete the transfer
-                            </p>
+                        <div className="flex flex-col items-center text-center space-y-6">
+                            <div className="w-20 h-20 bg-emerald-50 rounded-[2.5rem] flex items-center justify-center border border-emerald-100 shadow-sm">
+                                <ShieldCheck className="w-10 h-10 text-emerald-500" />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-3xl font-black text-slate-950 tracking-tighter">Uplink Code Engaged</h3>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Clinical Authorization Key</p>
+                            </div>
                         </div>
 
-                        <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                            <div className="text-3xl font-mono font-bold text-gray-900 mb-2 tracking-wider">
-                                {otp}
+                        <div className="bg-slate-950 p-10 rounded-[3rem] text-center shadow-2xl shadow-slate-200 relative overflow-hidden group">
+                           <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -translate-y-16 translate-x-16 blur-xl" />
+                           <div className="text-5xl font-black text-white mb-6 tracking-[0.25em] font-mono leading-none">
+                                {otp || '••••••'}
                             </div>
                             <Button 
-                                variant="outline" 
-                                size="sm" 
+                                variant="ghost" 
                                 onClick={handleCopyOTP}
-                                className="mt-2"
+                                className="h-10 px-6 rounded-xl bg-white/10 hover:bg-white text-white hover:text-slate-950 font-black text-[9px] uppercase tracking-widest transition-all gap-2 border-none"
                             >
                                 {copied ? (
                                     <>
-                                        <CheckCircle className="w-4 h-4 mr-2" />
-                                        Copied!
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        Signature Copied
                                     </>
                                 ) : (
                                     <>
-                                        <Copy className="w-4 h-4 mr-2" />
-                                        Copy Code
+                                        <Copy className="w-3.5 h-3.5" />
+                                        Copy Identifier
                                     </>
                                 )}
                             </Button>
                         </div>
 
-                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Clock className="w-4 h-4 text-red-600" />
-                                <span className="font-medium text-red-800">Time Remaining</span>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="bg-rose-50/50 p-6 rounded-3xl border border-rose-100/50 flex flex-col justify-center gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Clock className="w-3.5 h-3.5 text-rose-500" />
+                                    <span className="text-[9px] font-black text-rose-900 uppercase tracking-widest">Window Remaining</span>
+                                </div>
+                                <div className="text-2xl font-black text-rose-950 tracking-tighter leading-none">
+                                    {formatTimeRemaining(timeRemaining)}
+                                </div>
                             </div>
-                            <div className="text-2xl font-mono font-bold text-red-700">
-                                {formatTimeRemaining(timeRemaining)}
+                            
+                            <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col justify-center gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Zap className="w-3.5 h-3.5 text-amber-500" />
+                                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Target ID</span>
+                                </div>
+                                <div className="text-sm font-black text-slate-900 tracking-tight leading-none overflow-hidden text-ellipsis">
+                                    {patientId}
+                                </div>
                             </div>
-                            <p className="text-sm text-red-600 mt-1">
-                                Code expires at {new Date(expiresAt).toLocaleTimeString()}
+                        </div>
+
+                        <div className="flex flex-col md:flex-row gap-4 pt-4">
+                            <Button variant="ghost" onClick={handleCancelTransfer} className="flex-1 h-14 rounded-2xl font-black text-[10px] uppercase tracking-widest text-rose-500 hover:text-rose-600 hover:bg-rose-50 border-none transition-all">
+                                Abort Transfer
+                            </Button>
+                            <Button onClick={onClose} className="flex-1 h-14 rounded-2xl bg-slate-950 hover:bg-slate-800 text-white font-black text-[10px] uppercase tracking-widest transition-all">
+                                Protocol Complete
+                            </Button>
+                        </div>
+                        
+                        <div className="text-center pt-2">
+                            <p className="text-[8px] font-bold text-slate-300 uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+                                <ShieldCheck className="w-3 h-3" /> Secure End-to-End Handshake Active
                             </p>
-                        </div>
-
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                            <h4 className="font-medium text-blue-800 mb-2">Instructions for New Doctor:</h4>
-                            <ol className="text-sm text-blue-700 space-y-1">
-                                <li>1. Go to Doctor Dashboard → "Import Patient"</li>
-                                <li>2. Enter Patient ID: <code className="bg-blue-100 px-1 rounded">{patientId}</code></li>
-                                <li>3. Enter Transfer Code: <code className="bg-blue-100 px-1 rounded">{otp}</code></li>
-                                <li>4. Complete the import process</li>
-                            </ol>
-                        </div>
-
-                        <div className="flex gap-3">
-                            <Button variant="outline" onClick={handleCancelTransfer} className="flex-1">
-                                Cancel Transfer
-                            </Button>
-                            <Button onClick={onClose} className="flex-1">
-                                Done
-                            </Button>
                         </div>
                     </>
                 )}

@@ -1,44 +1,63 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.insertPrescription = insertPrescription;
 exports.getPrescriptions = getPrescriptions;
-const supabaseClient_1 = require("../config/supabaseClient");
+const db_1 = __importDefault(require("../config/db"));
 async function insertPrescription(payload) {
-    const db = (0, supabaseClient_1.requireAdminClient)();
     const notes = payload.notes || JSON.stringify({
         patientName: payload.patient_name,
         doctorName: payload.doctor_name,
         personalizedAlerts: payload.personalized_alerts || []
     });
-    const { data, error } = await db.from('prescriptions').insert({
-        patient_id: payload.patient_id,
-        doctor_id: payload.doctor_id,
-        prescription_date: payload.prescription_date || new Date().toISOString().split('T')[0],
-        medications: payload.medications || [],
-        diagnosis: payload.diagnosis || null,
-        instructions: payload.instructions || null,
-        notes
-    }).select().single();
-    if (error)
-        throw error;
+    const data = await db_1.default.prescription.create({
+        data: {
+            patientId: payload.patient_id,
+            doctorId: payload.doctor_id,
+            date: payload.prescription_date ? new Date(payload.prescription_date) : new Date(),
+            medications: payload.medications || [],
+            instructions: payload.instructions || null,
+            // diagnosis is not in the Prisma schema because it was not in saanssync_final_schema.sql explicitly for prescriptions
+        }
+    });
+    try {
+        const patient = await db_1.default.patient.findUnique({
+            where: { id: payload.patient_id },
+            select: { diseaseType: true, fullName: true }
+        });
+        await db_1.default.alert.create({
+            data: {
+                patientId: payload.patient_id,
+                doctorId: payload.doctor_id,
+                level: 'GREEN',
+                score: 1,
+                reasonText: `New Prescription & Instructions received from Dr. ${payload.doctor_name || 'your doctor'}.`,
+                diseaseType: patient?.diseaseType || 'General',
+                alertData: { prescription_id: data.id }
+            }
+        });
+    }
+    catch (alertErr) {
+        console.error('Failed to trigger patient alert for prescription:', alertErr);
+    }
     return data;
 }
 async function getPrescriptions(query) {
-    const db = supabaseClient_1.supabase;
-    if (!db)
-        throw new Error('Supabase anon client not configured');
-    let q = db.from('prescriptions').select('*').order('prescription_date', { ascending: false });
+    const where = {};
     if (query.patientId)
-        q = q.eq('patient_id', query.patientId);
+        where.patientId = query.patientId;
     if (query.doctorId)
-        q = q.eq('doctor_id', query.doctorId);
+        where.doctorId = query.doctorId;
     if (query.startDate)
-        q = q.gte('prescription_date', query.startDate);
+        where.date = { gte: new Date(query.startDate) };
     if (query.endDate)
-        q = q.lte('prescription_date', query.endDate);
-    const { data, error } = await q;
-    if (error)
-        throw error;
+        where.date = { ...where.date, lte: new Date(query.endDate) };
+    const data = await db_1.default.prescription.findMany({
+        where,
+        orderBy: { date: 'desc' }
+    });
     return data || [];
 }
 exports.default = { insertPrescription, getPrescriptions };

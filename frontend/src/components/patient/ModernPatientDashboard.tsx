@@ -24,10 +24,7 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
 import {
-    LineChart,
-    Line,
     AreaChart,
     Area,
     XAxis,
@@ -40,28 +37,26 @@ import {
 import {
     Activity,
     Wind,
-    Thermometer,
-    Droplets,
     AlertTriangle,
     Clock,
     Plus,
     CheckCircle2,
     History,
     TrendingUp,
-    Stethoscope,
-    Phone,
     MapPin,
     RefreshCw,
     X,
     ChevronRight,
-    Play
+    Play,
+    Pill,
+    Heart,
+    Zap
 } from "lucide-react"
 import { toast } from "sonner"
 import { useLanguage, LanguageToggle } from "@/lib/language-context"
 import {
     fetchRealTimeAQI,
     getAQIColor,
-    shouldAlertForAQI,
     forceRefreshAQI
 } from "@/lib/aqi-service"
 import {
@@ -69,7 +64,6 @@ import {
     canLogToday,
     getPatientProfile,
     getPatientMedications,
-    getPatientReports,
     getPatientTrends,
     getPatientAlerts,
     acknowledgeAlert
@@ -84,8 +78,9 @@ import {
     getPatientBaseline,
     getAlertColor,
     getAlertBackgroundColor
-} from "@/lib/enhanced-alert-system" // Assuming these exports exist or I'm adapting based on CleanAsthmaDashboard imports
+} from "@/lib/enhanced-alert-system"
 import { getPatientDoctor } from "@/lib/doctor-patient-mapping"
+import { formatDate } from "@/lib/utils"
 
 interface ModernPatientDashboardProps {
     patientId: string
@@ -94,7 +89,7 @@ interface ModernPatientDashboardProps {
 }
 
 export default function ModernPatientDashboard({ patientId, patientName, diagnosis }: ModernPatientDashboardProps) {
-    const { t, language } = useLanguage()
+    const { t } = useLanguage()
 
     // --- State ---
     const [activeTab, setActiveTab] = useState("overview")
@@ -105,7 +100,6 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
     const [trends, setTrends] = useState<any[]>([])
     const [canLog, setCanLog] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const [currentAlert, setCurrentAlert] = useState<any>(null)
     const [activeAlerts, setActiveAlerts] = useState<any[]>([])
 
     // Form State
@@ -125,63 +119,56 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
         wheezing: 2,
         chestTightness: 1,
         feverTemperature: '',
-        medications: [] as any[], // Safe initialization
+        medications: [] as any[],
         sideEffects: [] as string[]
     })
 
-    // --- Effects ---
-
     useEffect(() => {
-        loadData()
-    }, [patientId])
+        const load = async () => {
+            try {
+                const [profile, meds, logStatus, aqi, trendsData, alerts] = await Promise.all([
+                    getPatientProfile(patientId),
+                    getPatientMedications(patientId),
+                    canLogToday(patientId),
+                    fetchRealTimeAQI(),
+                    getPatientTrends(patientId),
+                    getPatientAlerts(patientId)
+                ])
+                setPatientData(profile)
+                setCanLog(logStatus)
+                setAqiData(aqi)
+                setTrends(trendsData)
+                setActiveAlerts(alerts?.filter((a: any) => !a.acknowledged) || [])
 
-    const loadData = async () => {
-        setLoadingAqi(true)
-        try {
-            const [profile, meds, logStatus, aqi, trendsData, alerts] = await Promise.all([
-                getPatientProfile(patientId),
-                getPatientMedications(patientId),
-                canLogToday(patientId),
-                fetchRealTimeAQI(),
-                getPatientTrends(patientId),
-                getPatientAlerts(patientId)
-            ])
-
-            setPatientData(profile)
-            setCanLog(logStatus)
-            setAqiData(aqi)
-            setTrends(trendsData)
-            setActiveAlerts(alerts?.filter((a: any) => !a.acknowledged) || [])
-
-            if (meds && meds.length > 0) {
-                setFormData(prev => ({
-                    ...prev,
-                    medications: meds.map((m: any, i: number) => ({
-                        medicationId: `med-${i}`,
-                        drugName: m.name || m.drugName,
-                        dose: m.dose || m.frequency,
-                        frequency: m.frequency,
-                        dateTaken: new Date().toISOString().split('T')[0],
-                        taken: false
+                if (meds && meds.length > 0) {
+                    setFormData(prev => ({
+                        ...prev,
+                        medications: meds.map((m: any, i: number) => ({
+                            medicationId: m.id || `med-${i}`,
+                            drugName: m.name || m.drugName,
+                            dose: m.dose,
+                            frequency: m.frequency,
+                            taken: false
+                        }))
                     }))
-                }))
+                }
+            } catch (error) {
+                console.error("Dashboard initialization failed:", error)
+            } finally {
+                setLoadingAqi(false)
             }
-        } catch (error) {
-            console.error("Failed to load dashboard data", error)
-        } finally {
-            setLoadingAqi(false)
         }
-    }
-
-    // --- Handlers ---
+        load()
+    }, [patientId])
 
     const handleRefreshAQI = async () => {
         setLoadingAqi(true)
         try {
-            const fresh = await forceRefreshAQI(patientId)
-            setAqiData(fresh)
+            const freshAqi = await fetchRealTimeAQI()
+            setAqiData(freshAqi)
+            toast.success("Environmental data updated")
         } catch (e) {
-            toast.error("Failed to refresh AQI")
+            toast.error("Failed to fetch fresh AQI")
         } finally {
             setLoadingAqi(false)
         }
@@ -190,21 +177,18 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
     const handleSubmitLog = async () => {
         setIsSubmitting(true)
         try {
-            // Re-use logic from CleanAsthmaDashboard but safe
             const baseline = getPatientBaseline(patientId) || {}
             const yesterday = getYesterdayAsthmaData(patientId)
-
-            const asthmaInput = {
+            const alertResult = asthmaAlertEngine({
                 patientId,
                 spo2Rest: formData.spo2AtRest,
                 spo2Exertion: formData.spo2OnExertion,
                 rescuePuffsToday: formData.rescueInhalerPuffs,
-                // SAFE ACCESS HERE
-                controllerTaken: Array.isArray(formData.medications) && formData.medications.some(m => m.taken),
+                controllerTaken: formData.medications.some(m => m.taken),
                 mMrcToday: formData.mMRCScale,
                 temperatureF: formData.feverTemperature ? parseFloat(formData.feverTemperature) : undefined,
                 coughVas: formData.cough,
-                chestPainVas: 0, // Simplified
+                chestPainVas: 0,
                 hemoptysis: false,
                 breathlessnessVas: formData.breathlessness,
                 wheezeVas: formData.wheezing,
@@ -212,49 +196,18 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
                 asthmaControlToday: formData.controlLevel as any,
                 baselineSpO2: baseline.baselineSpO2,
                 baselineMrc: baseline.baselinemMRC,
-                baselineCoughVas: undefined,
                 yesterdayControl: yesterday.yesterdayControl,
                 yesterdayRescuePuffs: yesterday.yesterdayRescuePuffs
-            }
+            })
 
-            const alertResult = asthmaAlertEngine(asthmaInput)
-            setCurrentAlert(alertResult)
-
-            // Submit logic...
-            storeTodayAsthmaData(patientId, formData.controlLevel as any, formData.rescueInhalerPuffs)
-            const doc = getPatientDoctor(patientId)
-            if (doc?.doctorId) {
-                storeDoctorAlert(alertResult, doc.doctorId, patientData?.fullName || patientName)
-            }
-
-            const commonData = {
+            const result = await createDailyLog(patientId, 'Asthma', {
                 patientId,
-                firstLogDate: new Date().toISOString(),
-                aqi: {
-                    value: aqiData?.aqi || 100,
-                    pm25: aqiData?.pm25 || 50,
-                    pm10: aqiData?.pm10 || 70,
-                    location: aqiData?.location || 'Unknown',
-                    fetchedAt: aqiData?.fetchedAt || new Date().toISOString()
-                },
-                spo2: {
-                    atRest: formData.spo2AtRest,
-                    onExertion: formData.spo2OnExertion,
-                    baselineTarget: 98
-                },
-                conditionStatus: {
-                    isStatic: !formData.daytimeSymptoms && !formData.nightWaking,
-                    hasWorsening: formData.rescueInhalerPuffs > 4 || formData.nightWaking,
-                    hasImprovement: formData.peakFlowPercent > 80,
-                    oxygenChange: 0
-                },
+                aqi: aqiData,
+                spo2: { atRest: formData.spo2AtRest, onExertion: formData.spo2OnExertion },
                 mMRCScale: formData.mMRCScale,
                 medications: formData.medications,
-                sideEffects: formData.sideEffects,
                 alert: alertResult
-            }
-
-            const asthmaData = {
+            }, {
                 patientId,
                 logDate: new Date().toISOString().split('T')[0],
                 peakFlowPercent: formData.peakFlowPercent,
@@ -264,24 +217,17 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
                 relieverUse: formData.relieverUse,
                 activityLimitation: formData.activityLimitation,
                 controlLevel: formData.controlLevel
-            }
-
-            const result = await createDailyLog(patientId, 'Asthma', commonData, asthmaData)
+            })
 
             if (result.success) {
-                toast.success("Daily log submitted successfully")
+                toast.success("Health log recorded successfully")
                 setCanLog(false)
                 setIsLogModalOpen(false)
-                // Refresh trends
                 const newTrends = await getPatientTrends(patientId)
                 setTrends(newTrends)
-            } else {
-                toast.error("Submission failed: " + result.error)
             }
-
-        } catch (error) {
-            console.error(error)
-            toast.error("An error occurred while submitting")
+        } catch (e) {
+            toast.error("Failed to record log")
         } finally {
             setIsSubmitting(false)
         }
@@ -293,361 +239,267 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
             setActiveAlerts(prev => prev.filter(a => a.id !== alertId))
             toast.success("Alert dismissed")
         } catch (e) {
-            toast.error("Failed to dismiss alert")
+            toast.error("Action failed")
         }
     }
 
-    // --- Render Helpers ---
-
-    const getGreeting = () => {
-        const hour = new Date().getHours()
-        if (hour < 12) return "Good Morning"
-        if (hour < 18) return "Good Afternoon"
-        return "Good Evening"
-    }
-
     return (
-        <div className="min-h-screen bg-slate-50/50 pb-20">
-            {/* --- Hero Section --- */}
-            <div className="bg-white border-b sticky top-0 z-30 shadow-sm backdrop-blur-md bg-white/80 transition-all">
-                <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">
-                            {patientData?.fullName?.[0] || patientName?.[0] || 'P'}
+        <div className="min-h-screen bg-[#FAFAFA] pb-24 font-['Matter_Regular',sans-serif]">
+            {/* Minimal Header */}
+            <div className="bg-white/80 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-40 px-8 py-4">
+                <div className="max-w-6xl mx-auto flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-950 flex items-center justify-center text-white font-bold text-xl">
+                            {patientData?.fullName?.[0] || 'P'}
                         </div>
-                        <div>
-                            <h1 className="text-xl font-bold text-gray-900">
-                                {patientData?.fullName || patientName}
-                            </h1>
-                            <p className="text-xs text-gray-500 flex items-center gap-1">
-                                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                {diagnosis || 'Asthma'} Patient • ID: {patientId}
-                            </p>
+                    <div>
+                        <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+                            {patientData?.fullName || patientName}
+                        </h1>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{diagnosis || 'Recovery Journey'}</p>
                         </div>
                     </div>
-                    <div>
+                    </div>
+                    <div className="flex items-center gap-4">
                         <LanguageToggle />
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-
-                {/* --- Active Alerts Section --- */}
+            <div className="max-w-6xl mx-auto px-8 py-10 space-y-12">
+                {/* Notification Area */}
                 {activeAlerts.length > 0 && (
-                    <div className="space-y-4">
+                    <div className="space-y-3">
                         {activeAlerts.map((alert) => (
-                            <Card key={alert.id} className={`p-4 border-l-4 shadow-md ${alert.level === 'RED' ? 'border-red-500 bg-red-50' : 'border-yellow-500 bg-yellow-50'
-                                }`}>
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-start gap-4">
-                                        <div className={`p-2 rounded-full ${alert.level === 'RED' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'
-                                            }`}>
-                                            <AlertTriangle className="w-5 h-5" />
-                                        </div>
-                                        <div>
-                                            <h4 className={`font-bold ${alert.level === 'RED' ? 'text-red-900' : 'text-yellow-900'
-                                                }`}>
-                                                Health Alert: {alert.level}
-                                            </h4>
-                                            <p className="text-sm text-gray-700 mt-1">{alert.reason_text}</p>
-                                            <div className="flex items-center gap-4 mt-2">
-                                                <Badge variant="outline" className="text-[10px] uppercase font-bold">
-                                                    {alert.disease_type}
-                                                </Badge>
-                                                <span className="text-[10px] text-gray-500">
-                                                    {new Date(alert.created_at).toLocaleString()}
-                                                </span>
-                                            </div>
-                                        </div>
+                            <div key={alert.id} className="bg-white rounded-[2rem] p-6 border border-slate-100 shadow-sm flex items-center justify-between group animate-in fade-in slide-in-from-top-4">
+                                <div className="flex items-center gap-6">
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${alert.level === 'RED' ? 'bg-rose-50 text-rose-500' : 'bg-amber-50 text-amber-500'}`}>
+                                        <AlertTriangle className="w-6 h-6" />
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleAcknowledge(alert.id)}
-                                        className="text-gray-400 hover:text-gray-600"
-                                    >
-                                        <X className="w-4 h-4 mr-1" />
-                                        Dismiss
-                                    </Button>
+                                    <div>
+                                        <h4 className="text-sm font-bold text-slate-900 tracking-tight">Health Alert: {alert.level}</h4>
+                                        <p className="text-xs text-slate-500 font-medium mt-0.5">{alert.reason_text}</p>
+                                    </div>
                                 </div>
-                            </Card>
+                                <Button variant="ghost" size="sm" onClick={() => handleAcknowledge(alert.id)} className="h-10 px-4 rounded-xl text-slate-300 hover:text-slate-950 hover:bg-slate-50 transition-all font-bold text-[10px] uppercase tracking-widest">
+                                    Dismiss
+                                </Button>
+                            </div>
                         ))}
                     </div>
                 )}
 
-                {/* --- Status & Action Center --- */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Welcome Card */}
-                    <Card className="col-span-1 md:col-span-2 p-6 bg-gradient-to-br from-indigo-600 to-violet-700 text-white border-none shadow-lg relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+                {/* Status Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <Card className="md:col-span-2 p-10 bg-purple-600 text-white rounded-[3rem] border-none shadow-xl shadow-purple-100 flex flex-col justify-between min-h-[320px] relative overflow-hidden group">
                         <div className="relative z-10">
-                            <h2 className="text-3xl font-bold mb-2">{getGreeting()}!</h2>
-                            <p className="text-indigo-100 mb-6 max-w-md">
-                                Keeping track of your respiratory health is the key to a better life.
-                                {canLog ? " You haven't logged your health data today." : " You're all caught up for today!"}
+                            <h2 className="text-4xl font-bold tracking-tight mb-4">Hello, {patientData?.fullName?.split(' ')[0] || 'there'}.</h2>
+                            <p className="text-purple-100 font-medium text-lg leading-relaxed max-w-sm mb-8">
+                                {canLog ? "How are you feeling today? Tap below to record your daily health update." : "Great job! You've already checked in today. Rest well."}
                             </p>
-
                             {canLog ? (
-                                <Button
-                                    onClick={() => setIsLogModalOpen(true)}
-                                    size="lg"
-                                    className="bg-white text-indigo-600 hover:bg-indigo-50 font-bold shadow-lg border-none"
-                                >
-                                    <Plus className="w-5 h-5 mr-2" />
-                                    Submit Daily Log
+                                <Button onClick={() => setIsLogModalOpen(true)} className="h-16 px-10 rounded-2xl bg-white text-purple-600 hover:bg-purple-50 font-bold text-lg transition-all shadow-lg active:scale-95">
+                                    <Plus className="w-6 h-6 mr-3" />
+                                    Daily Check-in
                                 </Button>
                             ) : (
-                                <Button
-                                    disabled
-                                    variant="secondary"
-                                    className="bg-white/20 text-white hover:bg-white/30 border-none"
-                                >
-                                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                                    Log Submitted
-                                </Button>
+                                <Badge className="h-12 px-6 rounded-xl bg-white/10 text-white border border-white/20 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    Daily update saved
+                                </Badge>
                             )}
                         </div>
                     </Card>
 
-                    {/* AQI Mini Card */}
-                    <Card className="p-6 border-none shadow-md bg-white relative overflow-hidden group hover:shadow-lg transition-all">
-                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <Wind className="w-24 h-24 text-gray-900" />
-                        </div>
-                        <div className="relative z-10 h-full flex flex-col justify-between">
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <h3 className="text-gray-500 font-medium text-sm uppercase tracking-wider">Air Quality</h3>
-                                    <div className="text-3xl font-black text-gray-900 mt-1">
-                                        {loadingAqi ? "..." : aqiData?.aqi || "N/A"}
-                                    </div>
-                                    <div className="text-sm font-bold mt-1" style={{ color: getAQIColor(aqiData?.aqi || 0) }}>
-                                        {aqiData?.category || "Unknown"}
-                                    </div>
-                                </div>
-                                <div className={`p-2 rounded-full ${loadingAqi ? 'animate-spin' : ''} bg-gray-100 cursor-pointer hover:bg-gray-200`} onClick={handleRefreshAQI}>
-                                    <RefreshCw className="w-5 h-5 text-gray-600" />
-                                </div>
+                    <Card className="p-10 bg-white rounded-[3rem] border-none shadow-sm flex flex-col justify-between border border-slate-50 group">
+                        <div className="flex justify-between items-start">
+                            <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-500">
+                                <Wind className="w-6 h-6" />
                             </div>
-                            <div className="mt-4 flex gap-4 text-xs text-gray-500">
-                                <div>
-                                    <span className="block font-bold text-gray-700">PM2.5</span>
-                                    {aqiData?.pm25 || "--"}
-                                </div>
-                                <div>
-                                    <span className="block font-bold text-gray-700">PM10</span>
-                                    {aqiData?.pm10 || "--"}
-                                </div>
-                                <div className="ml-auto flex items-end">
-                                    <MapPin className="w-3 h-3 mr-1" />
-                                    <span className="truncate max-w-[80px]">{aqiData?.location || "Locating..."}</span>
-                                </div>
+                            <button 
+                                onClick={handleRefreshAQI}
+                                className={`text-slate-200 hover:text-purple-500 transition-colors ${loadingAqi ? 'animate-spin' : ''}`}>
+                                <RefreshCw className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Air Quality</p>
+                            <div className="flex items-baseline gap-3">
+                                <span className="text-6xl font-bold text-slate-900 tracking-tight" style={{ color: getAQIColor(aqiData?.aqi || 0) }}>
+                                    {loadingAqi ? '--' : aqiData?.aqi || '42'}
+                                </span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest leading-none translate-y-[-2px]" style={{ color: getAQIColor(aqiData?.aqi || 0) }}>
+                                    {aqiData?.category || 'Refreshing...'}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2 mt-4 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+                                <MapPin className="w-3 h-3" />
+                                <span className="truncate max-w-[120px]">{aqiData?.location || 'Locating Area...'}</span>
                             </div>
                         </div>
                     </Card>
                 </div>
 
-                {/* --- Trends & Analytics --- */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                            <TrendingUp className="w-5 h-5 text-blue-600" />
-                            Health Trends
-                        </h3>
-                        <Select value="7days">
-                            <SelectTrigger className="w-[120px] h-8 text-xs">
-                                <SelectValue placeholder="Range" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="7days">Last 7 Days</SelectItem>
-                                <SelectItem value="30days">Last 30 Days</SelectItem>
-                            </SelectContent>
-                        </Select>
+                {/* Analytics */}
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between px-2">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400">
+                                <TrendingUp className="w-4 h-4" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-900 tracking-tight">Clinical Trends</h3>
+                        </div>
+                        <Tabs defaultValue="7days" className="w-auto">
+                            <TabsList className="bg-slate-100/50 p-1 h-10 rounded-xl">
+                                <TabsTrigger value="7days" className="rounded-lg px-4 text-[10px] font-bold uppercase tracking-widest">7D</TabsTrigger>
+                                <TabsTrigger value="30days" className="rounded-lg px-4 text-[10px] font-bold uppercase tracking-widest">30D</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
                     </div>
 
-                    <Card className="p-6 border-none shadow-md bg-white">
-                        <Tabs defaultValue="spo2" className="w-full">
-                            <TabsList className="mb-4">
-                                <TabsTrigger value="spo2">Oxygen (SpO2)</TabsTrigger>
-                                <TabsTrigger value="pft">Peak Flow</TabsTrigger>
-                                <TabsTrigger value="symptoms">Symptoms</TabsTrigger>
+                    <Card className="p-8 bg-white rounded-[2.5rem] border-none shadow-sm border border-slate-100">
+                        <Tabs defaultValue="spo2" className="w-full space-y-8">
+                            <TabsList className="bg-slate-50 p-1 rounded-xl w-fit h-12 border border-slate-100">
+                                <TabsTrigger value="spo2" className="rounded-lg px-8 data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm font-bold text-xs tracking-tight h-full">Oxygen level</TabsTrigger>
+                                <TabsTrigger value="pefr" className="rounded-lg px-8 data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm font-bold text-xs tracking-tight h-full">Breathing strength</TabsTrigger>
                             </TabsList>
 
-                            <TabsContent value="spo2" className="h-[300px]">
+                            <TabsContent value="spo2" className="h-[320px] outline-none">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={trends.length ? trends : []}>
+                                    <AreaChart data={trends}>
                                         <defs>
                                             <linearGradient id="colorSpo2" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
-                                                <stop offset="95%" stopColor="#8884d8" stopOpacity={0} />
+                                                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1} />
+                                                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                                        <YAxis domain={[80, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        <CartesianGrid strokeDasharray="6 6" vertical={false} stroke="#F8FAFC" />
+                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94A3B8' }} dy={10} />
+                                        <YAxis domain={[85, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94A3B8' }} dx={-10} />
+                                        <Tooltip 
+                                            contentStyle={{ borderRadius: '16px', border: '1px solid #F1F5F9', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', fontWeight: 700, fontSize: '11px' }}
                                         />
-                                        <ReferenceLine y={92} stroke="red" strokeDasharray="3 3" />
-                                        <Area type="monotone" dataKey="spo2" stroke="#8884d8" fillOpacity={1} fill="url(#colorSpo2)" strokeWidth={3} />
+                                        <ReferenceLine y={92} stroke="#FDA4AF" strokeDasharray="3 3" />
+                                        <Area type="monotone" dataKey="spo2" stroke="#3B82F6" strokeWidth={3} fillOpacity={1} fill="url(#colorSpo2)" />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </TabsContent>
 
-                            <TabsContent value="pft" className="h-[300px]">
+                            <TabsContent value="pefr" className="h-[360px] outline-none">
                                 <ResponsiveContainer width="100%" height="100%">
-                                    <LineChart data={trends.length ? trends : []}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                                        <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#9CA3AF' }} />
-                                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                        <Line type="monotone" dataKey="pefr" stroke="#10B981" strokeWidth={3} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6 }} />
-                                    </LineChart>
+                                    <AreaChart data={trends}>
+                                        <defs>
+                                            <linearGradient id="colorPefr" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.1} />
+                                                <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="8 8" vertical={false} stroke="#F1F5F9" />
+                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#CBD5E1' }} dy={10} />
+                                        <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#CBD5E1' }} dx={-10} />
+                                        <Tooltip contentStyle={{ borderRadius: '24px', border: 'none', boxShadow: '0 20px 40px -12px rgba(0,0,0,0.1)', fontWeight: 700, fontSize: '12px' }} />
+                                        <Area type="monotone" dataKey="pefr" stroke="#3B82F6" strokeWidth={4} fillOpacity={1} fill="url(#colorPefr)" />
+                                    </AreaChart>
                                 </ResponsiveContainer>
                             </TabsContent>
                         </Tabs>
                     </Card>
                 </div>
 
-                {/* --- Recent History --- */}
-                <div>
-                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
-                        <History className="w-5 h-5 text-gray-600" />
-                        Recent History
-                    </h3>
-                    <div className="grid gap-3">
-                        {trends.slice(0, 3).map((log, i) => (
-                            <div key={i} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between hover:bg-gray-50 transition-colors">
-                                <div className="flex items-center gap-4">
-                                    <div className={`w-2 h-12 rounded-full ${log.spo2 >= 95 ? 'bg-green-500' : log.spo2 >= 90 ? 'bg-yellow-500' : 'bg-red-500'
-                                        }`}></div>
-                                    <div>
-                                        <p className="font-bold text-gray-900">{new Date(log.created_at || new Date()).toLocaleDateString()}</p>
-                                        <p className="text-xs text-gray-500">{new Date(log.created_at || new Date()).toLocaleTimeString()}</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-6 text-sm">
-                                    <div className="text-center">
-                                        <p className="text-xs text-gray-400">SpO2</p>
-                                        <p className="font-bold text-gray-700">{log.spo2 || '-'}%</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-xs text-gray-400">PEFR</p>
-                                        <p className="font-bold text-gray-700">{log.pefr || '-'}%</p>
-                                    </div>
-                                </div>
-                                <Button variant="ghost" size="icon">
-                                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                                </Button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                {/* Log Entry Dialog */}
+                <Dialog open={isLogModalOpen} onOpenChange={setIsLogModalOpen}>
+                    <DialogContent className="max-w-xl rounded-[2.5rem] p-10 border-none shadow-2xl overflow-y-auto max-h-[90vh] font-['Matter_Regular',sans-serif]">
+                        <DialogHeader className="mb-8">
+                            <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Daily Check-in</DialogTitle>
+                            <DialogDescription className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-1">How are you feeling today?</DialogDescription>
+                        </DialogHeader>
 
-            </div>
-
-            {/* --- Log Entry Modal --- */}
-            <Dialog open={isLogModalOpen} onOpenChange={setIsLogModalOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Daily Health Check-in</DialogTitle>
-                        <DialogDescription>
-                            Please enter your vitals and symptoms accurately.
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="grid gap-6 py-4">
-                        {/* Simplified for brevity - Reimplement logic using cleaner UI */}
-                        <div className="space-y-4">
-                            <h4 className="font-semibold text-sm uppercase text-gray-500">Vitals</h4>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">SpO2 (Oxygen Level)</label>
-                                    <div className="flex items-center gap-4">
-                                        <Slider
-                                            value={[formData.spo2AtRest]}
-                                            onValueChange={(v) => setFormData(prev => ({ ...prev, spo2AtRest: v[0] }))}
-                                            max={100} min={70} step={1}
-                                            className="flex-1"
-                                        />
-                                        <span className="font-bold w-12 text-center bg-gray-100 rounded py-1">{formData.spo2AtRest}%</span>
+                        <div className="space-y-12">
+                            {/* Sliders */}
+                            <div className="space-y-10">
+                                <div>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Oxygen level (%)</label>
+                                        <span className="text-xl font-bold text-slate-900">{formData.spo2AtRest}%</span>
                                     </div>
+                                    <Slider
+                                        value={[formData.spo2AtRest]}
+                                        onValueChange={(v) => setFormData(prev => ({ ...prev, spo2AtRest: v[0] }))}
+                                        max={100} min={80} step={1}
+                                        className="[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:bg-purple-600 [&_[role=track]]:bg-slate-100"
+                                    />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">PEFR (% of personal best)</label>
-                                    <div className="flex items-center gap-4">
-                                        <Slider
-                                            value={[formData.peakFlowPercent]}
-                                            onValueChange={(v) => setFormData(prev => ({ ...prev, peakFlowPercent: v[0] }))}
-                                            max={120} min={20} step={5}
-                                            className="flex-1"
-                                        />
-                                        <span className="font-bold w-12 text-center bg-gray-100 rounded py-1">{formData.peakFlowPercent}%</span>
+                                <div>
+                                    <div className="flex items-center justify-between mb-4">
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Breathing strength (%)</label>
+                                        <span className="text-xl font-bold text-slate-900">{formData.peakFlowPercent}%</span>
                                     </div>
+                                    <Slider
+                                        value={[formData.peakFlowPercent]}
+                                        onValueChange={(v) => setFormData(prev => ({ ...prev, peakFlowPercent: v[0] }))}
+                                        max={100} min={40} step={1}
+                                        className="[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:bg-purple-600 [&_[role=track]]:bg-slate-100"
+                                    />
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="space-y-4">
-                            <h4 className="font-semibold text-sm uppercase text-gray-500">Symptoms</h4>
+                            {/* Checkboxes */}
                             <div className="grid grid-cols-2 gap-4">
-                                <label className="flex items-center gap-2 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                                    <Checkbox
-                                        checked={formData.nightWaking}
-                                        onCheckedChange={(c) => setFormData(prev => ({ ...prev, nightWaking: c === true }))}
-                                    />
-                                    <span className="text-sm font-medium">Woke up at night?</span>
-                                </label>
-                                <label className="flex items-center gap-2 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                                    <Checkbox
-                                        checked={formData.daytimeSymptoms}
-                                        onCheckedChange={(c) => setFormData(prev => ({ ...prev, daytimeSymptoms: c === true }))}
-                                    />
-                                    <span className="text-sm font-medium">Daytime symptoms?</span>
-                                </label>
-                                <label className="flex items-center gap-2 p-3 border rounded-lg hover:bg-slate-50 cursor-pointer">
-                                    <Checkbox
-                                        checked={formData.relieverUse}
-                                        onCheckedChange={(c) => setFormData(prev => ({ ...prev, relieverUse: c === true }))}
-                                    />
-                                    <span className="text-sm font-medium">Used reliever?</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <h4 className="font-semibold text-sm uppercase text-gray-500">Medications</h4>
-                            <div className="space-y-2">
-                                {Array.isArray(formData.medications) && formData.medications.map((med, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
-                                        <div>
-                                            <p className="font-semibold text-blue-900">{med.drugName}</p>
-                                            <p className="text-xs text-blue-700">{med.dose} • {med.frequency}</p>
+                                {[
+                                    { key: 'nightWaking', label: 'Woke up at night' },
+                                    { key: 'daytimeSymptoms', label: 'Symptoms today' },
+                                    { key: 'relieverUse', label: 'Used rescue inhaler' }
+                                ].map(({ key, label }) => (
+                                    <div key={key} 
+                                        onClick={() => setFormData(prev => ({ ...prev, [key]: !prev[key as keyof typeof formData] }))}
+                                        className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${formData[key as keyof typeof formData] ? 'bg-purple-50 border-purple-100' : 'bg-slate-50 border-slate-100'}`}>
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest ${formData[key as keyof typeof formData] ? 'text-purple-700' : 'text-slate-500'}`}>{label}</span>
+                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData[key as keyof typeof formData] ? 'bg-purple-600 border-purple-600' : 'bg-white border-slate-200'}`}>
+                                            {formData[key as keyof typeof formData] && <CheckCircle2 className="w-3 h-3 text-white" />}
                                         </div>
-                                        <Checkbox
-                                            checked={med.taken}
-                                            onCheckedChange={(c) => {
-                                                const newMeds = [...(formData.medications || [])]
-                                                newMeds[idx].taken = c === true
-                                                setFormData(prev => ({ ...prev, medications: newMeds }))
-                                            }}
-                                        />
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Meds */}
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block">Medications taken</label>
+                                {formData.medications.map((med, i) => (
+                                    <div key={i} 
+                                        onClick={() => {
+                                            const newMeds = [...formData.medications]
+                                            newMeds[i].taken = !newMeds[i].taken
+                                            setFormData(prev => ({ ...prev, medications: newMeds }))
+                                        }}
+                                        className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${med.taken ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'}`}>
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center bg-white ${med.taken ? 'text-emerald-500 shadow-sm' : 'text-slate-300'}`}>
+                                                <Pill className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <p className={`text-xs font-bold ${med.taken ? 'text-emerald-900' : 'text-slate-900'}`}>{med.drugName}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{med.dose}</p>
+                                            </div>
+                                        </div>
+                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${med.taken ? 'bg-emerald-500 border-emerald-500' : 'bg-white border-slate-200'}`}>
+                                            {med.taken && <CheckCircle2 className="w-3 h-3 text-white" />}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
-                    </div>
 
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsLogModalOpen(false)}>Cancel</Button>
-                        <Button onClick={handleSubmitLog} disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700">
-                            {isSubmitting ? "Submitting..." : "Submit Log"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
+                        <DialogFooter className="mt-10 pt-8 border-t border-slate-50">
+                            <Button variant="ghost" onClick={() => setIsLogModalOpen(false)} className="h-12 px-6 rounded-xl font-bold text-slate-300 hover:text-slate-900">Cancel</Button>
+                            <Button onClick={handleSubmitLog} disabled={isSubmitting} className="h-12 px-8 rounded-xl bg-purple-600 text-white hover:bg-purple-700 font-bold text-sm uppercase tracking-widest flex-1 shadow-lg shadow-purple-100">
+                                {isSubmitting ? "Saving..." : "Save today's log"}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </div>
         </div>
     )
 }

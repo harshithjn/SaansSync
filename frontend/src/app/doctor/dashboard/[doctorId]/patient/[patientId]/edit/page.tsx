@@ -11,7 +11,7 @@ import { PatientFolder } from "@/lib/monitoring-types"
 import { getDoctorPatientFolders } from "@/lib/doctor-patient-mapping"
 import { getPatientProfile } from "@/lib/database-service"
 import { PatientData } from "@/lib/patient-types"
-import { ArrowLeft, Save, User, Phone, Mail, MapPin, Calendar, Stethoscope } from "lucide-react"
+import { ArrowLeft, Save, User, Mail, MapPin, Calendar, Stethoscope } from "lucide-react"
 import Link from "next/link"
 import { toast } from "@/lib/toast"
 import api from '@/lib/api'
@@ -119,7 +119,7 @@ export default function EditPatientPage({
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading patient data...</p>
         </div>
       </div>
@@ -178,7 +178,7 @@ export default function EditPatientPage({
       {/* Basic Information */}
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-4">
-          <User className="w-5 h-5 text-blue-600" />
+          <User className="w-5 h-5 text-purple-600" />
           <h3 className="text-lg font-semibold">Basic Information</h3>
         </div>
 
@@ -233,19 +233,11 @@ export default function EditPatientPage({
       {/* Contact Information */}
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Phone className="w-5 h-5 text-green-600" />
+          <Mail className="w-5 h-5 text-green-600" />
           <h3 className="text-lg font-semibold">Contact Information</h3>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">Mobile Number</label>
-            <Input
-              value={editedData.mobileNumber || ''}
-              onChange={(e) => handleInputChange('mobileNumber', e.target.value)}
-              placeholder="Enter mobile number"
-            />
-          </div>
 
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-700">Email Address</label>

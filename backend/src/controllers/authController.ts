@@ -3,18 +3,18 @@ import * as authService from '../services/authService'
 import { AuthedRequest } from '../middleware/jwtMiddleware'
 
 export async function startDoctorRegistration(req: Request, res: Response) {
-  const { phone } = req.body
-  if (!phone) return res.status(400).json({ success: false, error: 'phone required' })
-  const result = await authService.startDoctorRegistration(phone)
+  const { email } = req.body
+  if (!email) return res.status(400).json({ success: false, error: 'email required' })
+  const result = await authService.startDoctorRegistration(email)
   return res.status(result.success ? 200 : 400).json(result)
 }
 
 export async function completeDoctorRegistration(req: Request, res: Response) {
-  const { phone, token, email, fullName, password, altPhone } = req.body
-  if (!phone || !token || !email || !fullName || !password) {
-    return res.status(400).json({ success: false, error: 'phone, token, email, fullName, password required' })
+  const { token, email, fullName, password } = req.body
+  if (!token || !email || !fullName || !password) {
+    return res.status(400).json({ success: false, error: 'token, email, fullName, password required' })
   }
-  const result = await authService.completeDoctorRegistration({ phone, token, email, fullName, password, altPhone })
+  const result = await authService.completeDoctorRegistration({ token, email, fullName, password })
   return res.status(result.success ? 200 : 400).json(result)
 }
 
@@ -40,37 +40,37 @@ export async function verifyDoctorOtp(req: Request, res: Response) {
 }
 
 export async function setupDoctorPassword(req: Request, res: Response) {
-  const { phone, token, newPassword } = req.body
-  if (!phone || !token || !newPassword) return res.status(400).json({ success: false, error: 'phone, token, newPassword required' })
-  const result = await authService.setupDoctorPassword(phone, token, newPassword)
+  const { email, token, newPassword } = req.body
+  if (!email || !token || !newPassword) return res.status(400).json({ success: false, error: 'email, token, newPassword required' })
+  const result = await authService.setupDoctorPassword(email, token, newPassword)
   return res.status(result.success ? 200 : 400).json(result)
 }
 
 export async function startPasswordReset(req: Request, res: Response) {
-  const { phone } = req.body
-  if (!phone) return res.status(400).json({ success: false, error: 'phone required' })
-  const result = await authService.startPasswordReset(phone)
+  const { email } = req.body
+  if (!email) return res.status(400).json({ success: false, error: 'email required' })
+  const result = await authService.startPasswordReset(email)
   return res.status(result.success ? 200 : 400).json(result)
 }
 
 export async function completePasswordReset(req: Request, res: Response) {
-  const { phone, token, newPassword } = req.body
-  if (!phone || !token || !newPassword) return res.status(400).json({ success: false, error: 'phone, token, newPassword required' })
-  const result = await authService.setupDoctorPassword(phone, token, newPassword)
+  const { email, token, newPassword } = req.body
+  if (!email || !token || !newPassword) return res.status(400).json({ success: false, error: 'email, token, newPassword required' })
+  const result = await authService.setupDoctorPassword(email, token, newPassword)
   return res.status(result.success ? 200 : 400).json(result)
 }
 
 export async function patientLoginOtp(req: Request, res: Response) {
-  const { phone } = req.body
-  if (!phone) return res.status(400).json({ success: false, error: 'phone required' })
-  const result = await authService.patientLoginWithOtp(phone)
+  const { email } = req.body
+  if (!email) return res.status(400).json({ success: false, error: 'email required' })
+  const result = await authService.patientLoginWithOtp(email)
   return res.status(result.success ? 200 : 400).json(result)
 }
 
 export async function verifyPatientOtp(req: Request, res: Response) {
-  const { phone, token } = req.body
-  if (!phone || !token) return res.status(400).json({ success: false, error: 'phone and token required' })
-  const result = await authService.verifyPatientOtp(phone, token)
+  const { email, token } = req.body
+  if (!email || !token) return res.status(400).json({ success: false, error: 'email and token required' })
+  const result = await authService.verifyPatientOtp(email, token)
   return res.status(result.success ? 200 : 401).json(result)
 }
 
@@ -89,9 +89,16 @@ export async function adminLogin(req: Request, res: Response) {
 }
 
 export async function doctorSignup(req: Request, res: Response) {
-  const { email, fullName, phone } = req.body
+  const { email, fullName, password } = req.body
   if (!email || !fullName) return res.status(400).json({ success: false, error: 'email and fullName required' })
-  const result = await authService.doctorSignup(email, fullName, phone)
+  const result = await authService.doctorSignup(email, fullName, password)
+  return res.status(result.success ? 200 : 400).json(result)
+}
+
+export async function patientSignup(req: Request, res: Response) {
+  const { email, fullName, password } = req.body
+  if (!email || !fullName) return res.status(400).json({ success: false, error: 'email and fullName required' })
+  const result = await authService.patientSignup(email, fullName, password)
   return res.status(result.success ? 200 : 400).json(result)
 }
 
@@ -111,7 +118,11 @@ export async function exchangeCallback(req: Request, res: Response) {
 
 export async function authMe(req: AuthedRequest, res: Response) {
   if (!req.user?.id) return res.status(401).json({ user: null })
-  const data = await authService.getAuthProfile({ id: req.user.id, email: req.user.email })
+  const data = await authService.getAuthProfile({ 
+    id: req.user.id, 
+    email: req.user.email,
+    role: req.user.role 
+  })
   return res.json(data)
 }
 

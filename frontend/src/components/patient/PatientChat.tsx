@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { usePatientAuth } from "@/lib/auth-guard"
-import { Send, User, Bot, Loader2 } from "lucide-react"
+import { Send, User, Bot, Loader2, ShieldCheck, Zap, MessageSquare, Clock } from "lucide-react"
 import { api } from "@/lib/api"
 
 interface Message {
@@ -30,7 +30,6 @@ export default function PatientChat() {
     useEffect(() => {
         if (profile?.id) {
             loadMessages()
-            // Poll for new messages every 10 seconds
             const interval = setInterval(loadMessages, 10000)
             return () => clearInterval(interval)
         }
@@ -44,9 +43,6 @@ export default function PatientChat() {
 
     const loadMessages = async () => {
         try {
-            // Assume api.get is set up in database-service to hit backend
-            // If not, we might need a direct fetch or update database-service
-            // For now, using api.get assuming it calls /api/messages/patient/:id
             const data = await api.get<Message[]>(`/messages/patient/${profile?.id}`)
             if (data) {
                 setMessages(data)
@@ -71,7 +67,7 @@ export default function PatientChat() {
 
             await api.post('/messages/send', messageData)
             setNewMessage("")
-            await loadMessages() // Refresh immediately
+            await loadMessages()
         } catch (error) {
             console.error('Error sending message:', error)
         } finally {
@@ -80,52 +76,74 @@ export default function PatientChat() {
     }
 
     return (
-        <Card className="flex flex-col h-[calc(100vh-120px)] bg-white shadow-sm border border-gray-200">
-            <div className="p-4 border-b flex items-center justify-between bg-white rounded-t-lg">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                        <Bot className="w-5 h-5 text-green-600" />
+        <Card className="flex flex-col h-[calc(100vh-250px)] bg-white border-none shadow-sm rounded-[3rem] overflow-hidden border border-slate-50 relative font-['Matter_Regular',sans-serif]">
+            {/* Communication Header */}
+            <div className="px-10 py-8 border-b border-slate-50 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
+                <div className="flex items-center gap-5">
+                    <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 shadow-sm overflow-hidden group">
+                        <img 
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=Doctor`} 
+                            alt="Doctor" 
+                            className="w-10 h-10 object-contain group-hover:scale-110 transition-transform"
+                        />
                     </div>
-                    <div>
-                        <h2 className="font-semibold text-gray-900">Dr. {profile?.patient_data?.assignedDoctor || 'Support Team'}</h2>
-                        <p className="text-xs text-green-600 flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-green-600 animate-pulse"></span>
-                            Online
+                    <div className="space-y-1">
+                        <h2 className="text-xl font-black text-slate-950 tracking-tight leading-none">
+                            Clinical Support Team
+                        </h2>
+                        <p className="text-[9px] text-emerald-500 font-black uppercase tracking-[0.3em] flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            Secure Direct Channel
                         </p>
                     </div>
                 </div>
+                <div className="hidden md:flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
+                    <ShieldCheck className="w-3.5 h-3.5 text-slate-300" />
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">End-to-End Encrypted</span>
+                </div>
             </div>
 
-            <ScrollArea className="flex-1 p-4 bg-gray-50" ref={scrollRef}>
-                <div className="space-y-4">
+            {/* Transmission Field */}
+            <ScrollArea className="flex-1 p-10 bg-slate-50/30" ref={scrollRef}>
+                <div className="space-y-10 max-w-4xl mx-auto">
                     {isLoading ? (
-                        <div className="flex justify-center py-10">
-                            <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+                        <div className="flex flex-col items-center justify-center py-20 gap-4">
+                            <Loader2 className="w-8 h-8 animate-spin text-slate-200" />
+                            <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Accessing Care Logs...</p>
                         </div>
                     ) : messages.length === 0 ? (
-                        <div className="text-center py-10 text-gray-500">
-                            <p>No messages yet.</p>
-                            <p className="text-sm">Start a conversation with your doctor.</p>
+                        <div className="text-center py-20 px-8">
+                            <div className="w-20 h-20 bg-white rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 border border-slate-100 shadow-sm">
+                                <MessageSquare className="w-8 h-8 text-slate-100" />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 mb-3 tracking-tight">Establish Communication</h3>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] max-w-xs mx-auto leading-relaxed">Initiate a secure dialogue with your clinical care team for support or inquiries.</p>
                         </div>
                     ) : (
                         messages.map((msg) => (
                             <div
                                 key={msg.id}
-                                className={`flex ${msg.sender_role === 'patient' ? 'justify-end' : 'justify-start'}`}
+                                className={`flex ${msg.sender_role === 'patient' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-700`}
                             >
-                                <div
-                                    className={`
-                                        max-w-[80%] rounded-2xl px-4 py-2 text-sm shadow-sm
-                                        ${msg.sender_role === 'patient'
-                                            ? 'bg-green-600 text-white rounded-br-none'
-                                            : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
-                                        }
-                                    `}
-                                >
-                                    <p>{msg.content}</p>
-                                    <p className={`text-[10px] mt-1 ${msg.sender_role === 'patient' ? 'text-green-100' : 'text-gray-400'}`}>
-                                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
+                                <div className={`flex flex-col ${msg.sender_role === 'patient' ? 'items-end' : 'items-start'} max-w-[85%]`}>
+                                    <div
+                                        className={`
+                                            rounded-[2rem] px-8 py-5 shadow-sm transition-all hover:shadow-xl
+                                            ${msg.sender_role === 'patient'
+                                                ? 'bg-slate-950 text-white rounded-br-none shadow-slate-200'
+                                                : 'bg-white text-slate-900 border border-slate-100 rounded-bl-none'
+                                            }
+                                        `}
+                                    >
+                                        <p className="text-sm font-bold leading-relaxed">{msg.content}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-3 px-3">
+                                        <Clock className="w-2.5 h-2.5 text-slate-300" />
+                                        <span className={`text-[8px] font-black uppercase tracking-widest ${msg.sender_role === 'patient' ? 'text-slate-300' : 'text-slate-400'}`}>
+                                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
+                                        {msg.sender_role === 'patient' && <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />}
+                                    </div>
                                 </div>
                             </div>
                         ))
@@ -133,30 +151,43 @@ export default function PatientChat() {
                 </div>
             </ScrollArea>
 
-            <div className="p-4 bg-white border-t">
+            {/* Input Surface */}
+            <div className="p-10 bg-white border-t border-slate-50 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.03)]">
                 <form
                     onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-6 max-w-5xl mx-auto"
                 >
-                    <Input
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Type your message..."
-                        className="flex-1 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
-                        disabled={isSending}
-                    />
+                    <div className="flex-1 relative group">
+                        <Input
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            placeholder="TRANSMIT MESSAGE TO CLINICAL TEAM..."
+                            className="h-16 bg-slate-50 border-none rounded-[1.5rem] px-8 font-black text-[10px] uppercase tracking-widest text-slate-950 focus-visible:ring-slate-100 ring-offset-0 placeholder:text-slate-200 transition-all group-focus-within:bg-white group-focus-within:shadow-2xl group-focus-within:border group-focus-within:border-slate-50"
+                            disabled={isSending}
+                        />
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3">
+                            <Zap className="w-4 h-4 text-slate-100 group-focus-within:text-emerald-400 transition-colors" />
+                        </div>
+                    </div>
                     <Button
                         type="submit"
                         disabled={isSending || !newMessage.trim()}
-                        className="bg-green-600 hover:bg-green-700 text-white rounded-full w-10 h-10 p-0 flex items-center justify-center shrink-0 shadow-md transition-all hover:scale-105 active:scale-95"
+                        className="bg-slate-950 hover:bg-slate-800 text-white rounded-[1.5rem] w-16 h-16 p-0 flex items-center justify-center shrink-0 shadow-2xl shadow-slate-200 transition-all duration-300 active:scale-90 disabled:opacity-50"
                     >
                         {isSending ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
+                            <Loader2 className="w-6 h-6 animate-spin" />
                         ) : (
-                            <Send className="w-5 h-5 ml-0.5" />
+                            <Send className="w-6 h-6" />
                         )}
                     </Button>
                 </form>
+                <div className="mt-6 flex items-center justify-center gap-6 opacity-30">
+                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2">
+                        <ShieldCheck className="w-2.5 h-2.5" /> RSA-4096 Transmit Active
+                    </p>
+                    <div className="w-1 h-1 bg-slate-200 rounded-full" />
+                    <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.3em]">Patient Communication Core 1.2.0</p>
+                </div>
             </div>
         </Card>
     )

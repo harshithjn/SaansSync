@@ -111,11 +111,11 @@ export async function deletePatientFolder(req: Request, res: Response) {
 
 export async function createDoctorProfile(req: AuthedRequest, res: Response) {
   try {
-    const { fullName, email, phone } = req.body
+    const { fullName, email } = req.body
     if (!fullName) return res.status(400).json({ success: false, error: 'fullName required' })
     if (!req.user?.id) return res.status(401).json({ success: false, error: 'Unauthorized' })
 
-    const data = await doctorService.createDoctorProfile(req.user.id, { fullName, email, phone })
+    const data = await doctorService.createDoctorProfile(req.user.id, { fullName, email })
     return res.json({ success: true, profile: data })
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err?.message || 'Failed to create doctor profile' })

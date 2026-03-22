@@ -7,9 +7,10 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { getDoctorAlerts, acknowledgeAlert } from "@/lib/database-service"
-import { AlertTriangle, Bell, CheckCircle, Clock, Search } from "lucide-react"
+import { AlertTriangle, Bell, CheckCircle, Clock, Search, Filter, Shield, Activity, ArrowUpRight } from "lucide-react"
+import Link from "next/link"
+import { formatDate } from "@/lib/utils"
 
-// Define the interface locally or use what comes from the API
 interface StoredDoctorAlert {
   id: string
   patientId: string
@@ -33,13 +34,13 @@ export default function AlertsPage({
   const [filteredAlerts, setFilteredAlerts] = useState<StoredDoctorAlert[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
-  const [filterStatus, setFilterStatus] = useState("all")
+  const [filterStatus, setFilterStatus] = useState("active")
   const [loading, setLoading] = useState(true)
   const [statistics, setStatistics] = useState({
     total: 0,
     red: 0,
+    orange: 0,
     yellow: 0,
-    green: 0,
     acknowledged: 0
   })
 
@@ -56,23 +57,10 @@ export default function AlertsPage({
     setLoading(true)
     try {
       const rawAlerts = await getDoctorAlerts(docId)
-
-      // Map backend fields to frontend expected fields
-      const mappedAlerts: StoredDoctorAlert[] = (rawAlerts || []).map((a: {
-        id: string;
-        patient_id: string;
-        patient_name?: string;
-        doctor_id: string;
-        level: string;
-        reason_text: string;
-        alert_data?: { drivers?: string[] };
-        disease_type?: string;
-        created_at: string;
-        acknowledged?: boolean | number;
-      }) => ({
+      const mappedAlerts: StoredDoctorAlert[] = (rawAlerts || []).map((a: any) => ({
         id: a.id,
         patientId: a.patient_id,
-        patientName: a.patient_name || a.patient_id, // Fallback if name not joined
+        patientName: a.patient_name || a.patient_id,
         doctorId: a.doctor_id,
         level: a.level,
         reason_text: a.reason_text,
@@ -82,68 +70,43 @@ export default function AlertsPage({
         acknowledged: !!a.acknowledged
       }))
 
-      // Sort by severity: RED > ORANGE > YELLOW > GREEN
-      const severityMap: { [key: string]: number } = {
-        'RED': 0,
-        'ORANGE': 1,
-        'YELLOW': 2,
-        'GREEN': 3
-      }
-
+      const severityMap: { [key: string]: number } = { 'RED': 0, 'ORANGE': 1, 'YELLOW': 2, 'GREEN': 3 }
       mappedAlerts.sort((a, b) => {
-        // Unacknowledged first
-        if (a.acknowledged !== b.acknowledged) {
-          return a.acknowledged ? 1 : -1
-        }
-        // Then by severity
+        if (a.acknowledged !== b.acknowledged) return a.acknowledged ? 1 : -1
         const sevA = severityMap[a.level] ?? 99
         const sevB = severityMap[b.level] ?? 99
-        if (sevA !== sevB) {
-          return sevA - sevB
-        }
-        // Then by timestamp
+        if (sevA !== sevB) return sevA - sevB
         return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       })
 
       setAlerts(mappedAlerts)
-      setFilteredAlerts(mappedAlerts as StoredDoctorAlert[])
       setStatistics({
         total: mappedAlerts.filter(a => !a.acknowledged).length,
         red: mappedAlerts.filter(a => a.level === 'RED' && !a.acknowledged).length,
-        yellow: mappedAlerts.filter(a => (a.level === 'YELLOW' || a.level === 'ORANGE') && !a.acknowledged).length,
-        green: mappedAlerts.filter(a => a.level === 'GREEN').length,
+        orange: mappedAlerts.filter(a => a.level === 'ORANGE' && !a.acknowledged).length,
+        yellow: mappedAlerts.filter(a => a.level === 'YELLOW' && !a.acknowledged).length,
         acknowledged: mappedAlerts.filter(a => a.acknowledged).length
       })
     } catch (e) {
-      console.error("Failed to load alerts", e)
+      console.error(e)
     } finally {
       setLoading(false)
     }
   }
 
-  // Filter alerts based on search and filters
   useEffect(() => {
     let filtered = [...alerts]
-
     if (searchTerm.trim()) {
-      filtered = filtered.filter(alert =>
-        alert.reason_text.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        alert.patientId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (alert.patientName && alert.patientName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (Array.isArray(alert.triggers) && alert.triggers.some(t => t.toLowerCase().includes(searchTerm.toLowerCase())))
+      const s = searchTerm.toLowerCase()
+      filtered = filtered.filter(a => 
+        a.reason_text.toLowerCase().includes(s) || 
+        a.patientId.toLowerCase().includes(s) || 
+        (a.patientName && a.patientName.toLowerCase().includes(s))
       )
     }
-
-    if (filterType !== "all") {
-      filtered = filtered.filter(alert => alert.level === filterType)
-    }
-
-    if (filterStatus === "active") {
-      filtered = filtered.filter(alert => !alert.acknowledged)
-    } else if (filterStatus === "acknowledged") {
-      filtered = filtered.filter(alert => alert.acknowledged)
-    }
-
+    if (filterType !== "all") filtered = filtered.filter(a => a.level === filterType)
+    if (filterStatus === "active") filtered = filtered.filter(a => !a.acknowledged)
+    else if (filterStatus === "acknowledged") filtered = filtered.filter(a => a.acknowledged)
     setFilteredAlerts(filtered)
   }, [searchTerm, filterType, filterStatus, alerts])
 
@@ -152,251 +115,166 @@ export default function AlertsPage({
     loadAlerts(doctorId)
   }
 
-  const getAlertIcon = (level: string) => {
+  const getAlertConfig = (level: string) => {
     switch (level) {
-      case 'RED':
-        return <AlertTriangle className="w-5 h-5 text-red-600" />
-      case 'ORANGE':
-        return <AlertTriangle className="w-5 h-5 text-orange-600" />
-      case 'YELLOW':
-        return <Bell className="w-5 h-5 text-yellow-600" />
-      case 'GREEN':
-        return <CheckCircle className="w-5 h-5 text-green-600" />
-      default:
-        return <Bell className="w-5 h-5 text-gray-600" />
-    }
-  }
-
-  const getAlertBadgeClass = (level: string) => {
-    switch (level) {
-      case 'RED':
-        return "bg-red-600 text-white"
-      case 'ORANGE':
-        return "bg-orange-600 text-white"
-      case 'YELLOW':
-        return "bg-yellow-600 text-white"
-      case 'GREEN':
-        return "bg-green-600 text-white"
-      default:
-        return "bg-gray-600 text-white"
-    }
-  }
-
-  const getAlertBorderClass = (level: string, acknowledged: boolean) => {
-    if (acknowledged) return "border-gray-200 bg-gray-50"
-    switch (level) {
-      case 'RED':
-        return "border-red-200 bg-red-50"
-      case 'ORANGE':
-        return "border-orange-200 bg-orange-50"
-      case 'YELLOW':
-        return "border-yellow-200 bg-yellow-50"
-      case 'GREEN':
-        return "border-green-200 bg-green-50"
-      default:
-        return "border-gray-200 bg-gray-50"
+      case 'RED': return { icon: AlertTriangle, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', label: 'Critical Action' }
+      case 'ORANGE': return { icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100', label: 'High Priority' }
+      case 'YELLOW': return { icon: Bell, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', label: 'Clinical Review' }
+      default: return { icon: Shield, color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-100', label: 'Monitoring' }
     }
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-12 font-['Matter_Regular',sans-serif]">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Alert Management</h1>
-          <p className="text-gray-600">Monitor and manage patient alerts</p>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-2">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Alerts</p>
+            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 tracking-tighter">System Alerts</h1>
+        </div>
+        <div className="flex items-center gap-3">
+             <Button variant="outline" onClick={() => loadAlerts(doctorId)} className="h-12 px-6 rounded-xl border-slate-200 font-bold text-xs uppercase tracking-widest text-slate-600 hover:bg-slate-50">
+               Refresh Data
+             </Button>
         </div>
       </div>
 
-      {/* Statistics Cards — RED / YELLOW / GREEN (SaansSync) */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card className="p-4 border-0 shadow-sm bg-blue-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Bell className="w-5 h-5 text-blue-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-semibold text-gray-900">{statistics.total}</p>
-              <p className="text-sm text-gray-600">Active Alerts</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-sm bg-red-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <AlertTriangle className="w-5 h-5 text-red-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-semibold text-gray-900">{statistics.red}</p>
-              <p className="text-sm text-gray-600">RED (Action)</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-sm bg-yellow-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <Bell className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-semibold text-gray-900">{statistics.yellow}</p>
-              <p className="text-sm text-gray-600">YELLOW (Review)</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-sm bg-green-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-semibold text-gray-900">{statistics.green}</p>
-              <p className="text-sm text-gray-600">GREEN (Stable)</p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-4 border-0 shadow-sm bg-gray-50/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-gray-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-semibold text-gray-900">{statistics.acknowledged}</p>
-              <p className="text-sm text-gray-600">Acknowledged</p>
-            </div>
-          </div>
-        </Card>
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <StatCard label="Critical" count={statistics.red} color="text-rose-600" bg="bg-rose-50" icon={AlertTriangle} />
+        <StatCard label="High Priority" count={statistics.orange} color="text-orange-600" bg="bg-orange-50" icon={AlertTriangle} />
+        <StatCard label="Clinical Review" count={statistics.yellow} color="text-amber-600" bg="bg-amber-50" icon={Bell} />
+        <StatCard label="Resolved" count={statistics.acknowledged} color="text-emerald-600" bg="bg-emerald-50" icon={CheckCircle} />
       </div>
 
-      {/* Search and Filter Controls */}
-      <Card className="p-4 border-0 shadow-sm">
-        <div className="flex flex-wrap gap-4 items-center">
-          <div className="relative flex-1 min-w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+      {/* Controls */}
+      <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
+          <div className="relative flex-1 group">
+            <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-slate-300 w-5 h-5 group-focus-within:text-slate-900 transition-colors" />
             <Input
-              placeholder="Search alerts by message, patient ID, or factors..."
-              className="pl-10 border-gray-200 focus:border-blue-500 focus:ring-blue-500/20"
+              placeholder="Filter by patient, symptom or triage reason..."
+              className="h-14 pl-14 bg-slate-50 border-none rounded-2xl focus-visible:ring-slate-100 transition-all text-sm font-bold placeholder:font-medium"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
           <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="w-48 border-gray-200">
-              <SelectValue placeholder="Filter by Type" />
+            <SelectTrigger className="w-full md:w-56 h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-xs uppercase tracking-widest text-slate-500 focus:ring-slate-100">
+              <SelectValue placeholder="Severity" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Types</SelectItem>
-              <SelectItem value="RED">RED</SelectItem>
-              <SelectItem value="YELLOW">YELLOW</SelectItem>
-              <SelectItem value="GREEN">GREEN</SelectItem>
+            <SelectContent className="rounded-2xl border-none shadow-2xl p-2 font-['Matter_Regular',sans-serif]">
+              <SelectItem value="all" className="rounded-xl text-xs font-bold uppercase tracking-widest">All Severities</SelectItem>
+              <SelectItem value="RED" className="rounded-xl text-xs font-bold uppercase tracking-widest text-rose-600">Critical (RED)</SelectItem>
+              <SelectItem value="ORANGE" className="rounded-xl text-xs font-bold uppercase tracking-widest text-orange-600">High (ORANGE)</SelectItem>
+              <SelectItem value="YELLOW" className="rounded-xl text-xs font-bold uppercase tracking-widest text-amber-600">Review (YELLOW)</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-48 border-gray-200">
-              <SelectValue placeholder="Filter by Status" />
+            <SelectTrigger className="w-full md:w-56 h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-xs uppercase tracking-widest text-slate-500 focus:ring-slate-100">
+              <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="acknowledged">Acknowledged</SelectItem>
+            <SelectContent className="rounded-2xl border-none shadow-2xl p-2 font-['Matter_Regular',sans-serif]">
+              <SelectItem value="active" className="rounded-xl text-xs font-bold uppercase tracking-widest">Active Triages</SelectItem>
+              <SelectItem value="acknowledged" className="rounded-xl text-xs font-bold uppercase tracking-widest">Historical Logs</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-      </Card>
+      </div>
 
-      {/* Alerts List */}
+      {/* List */}
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Alerts ({filteredAlerts.length})
-          </h3>
-        </div>
-
-        {filteredAlerts.length > 0 ? (
-          <div className="space-y-3">
-            {filteredAlerts.map((alert) => (
-              <Card
-                key={alert.id}
-                className={`p-4 border-l-4 ${getAlertBorderClass(alert.level, alert.acknowledged)}`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-3 flex-1">
-                    {getAlertIcon(alert.level)}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge className={`${getAlertBadgeClass(alert.level)} text-xs`}>
-                          {alert.level}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {alert.diseaseType}
-                        </Badge>
-                        {alert.acknowledged && (
-                          <Badge className="bg-green-100 text-green-800 text-xs">
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Acknowledged
-                          </Badge>
-                        )}
+        {loading ? (
+          <div className="py-24 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">Synchronizing clinical logs...</div>
+        ) : filteredAlerts.length > 0 ? (
+          <div className="grid grid-cols-1 gap-4">
+            {filteredAlerts.map((alert) => {
+              const config = getAlertConfig(alert.level)
+              return (
+                <Card key={alert.id} className={`p-8 border-none bg-white rounded-[2.5rem] shadow-[0_12px_24px_-8px_rgba(0,0,0,0.02)] border border-slate-50 hover:shadow-xl hover:-translate-y-1 transition-all duration-500 overflow-hidden relative group`}>
+                   {/* Background Accent */}
+                   {!alert.acknowledged && <div className={`absolute top-0 right-0 w-32 h-32 opacity-[0.03] -translate-y-16 translate-x-16 rounded-full ${config.bg.replace('50', '500')}`} />}
+                   
+                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
+                      <div className="flex items-start gap-6">
+                         <div className={`w-14 h-14 rounded-[1.25rem] flex items-center justify-center transition-all duration-500 ${alert.acknowledged ? 'bg-slate-50 text-slate-300' : config.bg + ' ' + config.color}`}>
+                            <config.icon className="w-7 h-7" />
+                         </div>
+                         <div>
+                            <div className="flex items-center gap-3 mb-2">
+                               <span className={`text-[9px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${alert.acknowledged ? 'bg-slate-100 text-slate-400' : config.bg + ' ' + config.color}`}>
+                                 {config.label}
+                               </span>
+                               <span className="text-[9px] font-black uppercase tracking-widest text-slate-300">
+                                 {alert.diseaseType}
+                               </span>
+                            </div>
+                            <h4 className="text-lg font-bold text-slate-900 tracking-tight mb-1">
+                               {alert.patientName} <span className="text-slate-300 font-medium ml-2 text-sm italic">ID: {alert.patientId.slice(0, 8)}</span>
+                            </h4>
+                            <p className={`text-sm font-bold leading-relaxed mb-4 ${alert.acknowledged ? 'text-slate-400' : 'text-slate-600'}`}>{alert.reason_text}</p>
+                            
+                            <div className="flex items-center gap-6 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
+                               <div className="flex items-center gap-2">
+                                 <Clock className="w-3.5 h-3.5" />
+                                 {new Date(alert.timestamp).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                               </div>
+                               {alert.triggers.length > 0 && (
+                                 <div className="flex items-center gap-2">
+                                   <Activity className="w-3.5 h-3.5" />
+                                   {alert.triggers.join(' • ')}
+                                 </div>
+                               )}
+                            </div>
+                         </div>
                       </div>
 
-                      <h4 className="font-medium text-gray-900 mb-1">
-                        Patient: {alert.patientName || alert.patientId}
-                      </h4>
-                      <p className="text-sm font-medium text-gray-700 mb-2">{alert.reason_text}</p>
-
-                      {alert.triggers.length > 0 && (
-                        <div className="mb-2">
-                          <p className="text-xs font-medium text-gray-600 mb-1">Triggers:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {alert.triggers.map((trigger, index) => (
-                              <Badge key={index} variant="secondary" className="text-xs">
-                                {trigger}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span>ID: {alert.patientId}</span>
-                        <span>Created: {new Date(alert.timestamp).toLocaleString()}</span>
+                      <div className="flex items-center gap-4 border-t md:border-t-0 pt-6 md:pt-0">
+                         {alert.acknowledged ? (
+                            <Badge className="bg-emerald-50 text-emerald-600 border-none font-bold text-[9px] uppercase tracking-widest px-4 py-2 rounded-full">
+                               Cleared by Physician
+                            </Badge>
+                         ) : (
+                            <Button
+                              onClick={() => handleAcknowledgeAlert(alert.id)}
+                              className="h-12 px-8 rounded-xl bg-slate-950 hover:bg-slate-800 text-white font-bold text-[10px] uppercase tracking-widest shadow-xl shadow-slate-100 transition-all active:scale-95"
+                            >
+                              Archive Alert
+                            </Button>
+                         )}
+                         <Link href={`/doctor/dashboard/${doctorId}/patient/${alert.patientId}`}>
+                            <Button variant="ghost" className="h-12 w-12 rounded-xl text-slate-300 hover:text-slate-900 hover:bg-slate-50 transition-all">
+                               <ArrowUpRight className="w-5 h-5" />
+                            </Button>
+                         </Link>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {!alert.acknowledged && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleAcknowledgeAlert(alert.id)}
-                        className="text-green-600 border-green-200 hover:bg-green-50"
-                      >
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Acknowledge
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            ))}
+                   </div>
+                </Card>
+              )
+            })}
           </div>
         ) : (
-          <Card className="p-8 text-center border-0 shadow-sm">
-            <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No alerts found</h3>
-            <p className="text-gray-600">
-              {searchTerm || filterType !== "all" || filterStatus !== "all"
-                ? "Try adjusting your search or filters"
-                : "All clear! No alerts at the moment."}
-            </p>
-          </Card>
+          <div className="py-24 text-center bg-white rounded-[3rem] border border-slate-50">
+            <Bell className="w-16 h-16 text-slate-100 mx-auto mb-6" />
+            <h3 className="text-xl font-bold text-slate-900 tracking-tight">No Active Alerts</h3>
+            <p className="text-slate-400 mt-2 max-w-xs mx-auto text-sm font-medium">No active triages detected for the current selection.</p>
+          </div>
         )}
       </div>
     </div>
   )
+}
+
+function StatCard({ label, count, color, bg, icon: Icon }: any) {
+    return (
+        <Card className="p-8 border-none bg-white rounded-[2.5rem] shadow-sm border border-slate-50 group transition-all">
+            <div className="flex justify-between items-start mb-6">
+                <div className={`w-12 h-12 ${bg} ${color} rounded-2xl flex items-center justify-center transition-all duration-500`}>
+                    <Icon className="w-6 h-6" />
+                </div>
+            </div>
+            <p className="text-3xl font-bold text-slate-900 tracking-tighter">{count}</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{label}</p>
+        </Card>
+    )
 }

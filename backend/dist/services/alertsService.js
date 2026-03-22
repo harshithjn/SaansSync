@@ -1,45 +1,38 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.insertAlert = insertAlert;
 exports.getAlertsByDoctor = getAlertsByDoctor;
 exports.getAlertsByPatient = getAlertsByPatient;
-const supabaseClient_1 = require("../config/supabaseClient");
+const db_1 = __importDefault(require("../config/db"));
 async function insertAlert(payload, useAdmin = true) {
-    const db = useAdmin ? (0, supabaseClient_1.requireAdminClient)() : supabaseClient_1.supabase;
-    const { data, error } = await db.from('saanssync_alerts').insert({
-        patient_id: payload.patient_id,
-        doctor_id: payload.doctor_id,
-        level: payload.level,
-        reason_text: payload.reason_text,
-        disease_type: payload.disease_type,
-        alert_data: payload.alert_data || {},
-        acknowledged: false
-    }).select().single();
-    if (error)
-        throw error;
+    const data = await db_1.default.alert.create({
+        data: {
+            patientId: payload.patient_id,
+            doctorId: payload.doctor_id,
+            level: payload.level,
+            reasonText: payload.reason_text,
+            diseaseType: payload.disease_type,
+            score: payload.alert_data?.score || 0,
+            alertData: payload.alert_data || {},
+            acknowledged: false
+        }
+    });
     return data;
 }
 async function getAlertsByDoctor(doctorId) {
-    const db = supabaseClient_1.supabase;
-    if (!db)
-        throw new Error('Supabase anon client not configured');
-    const { data, error } = await db.from('saanssync_alerts').select('*').eq('doctor_id', doctorId).order('created_at', { ascending: false });
-    if (error)
-        throw error;
-    return data || [];
+    return await db_1.default.alert.findMany({
+        where: { doctorId },
+        orderBy: { createdAt: 'desc' }
+    });
 }
 async function getAlertsByPatient(patientId) {
-    const db = supabaseClient_1.supabase;
-    if (!db)
-        throw new Error('Supabase anon client not configured');
-    const { data, error } = await db
-        .from('saanssync_alerts')
-        .select('*')
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false });
-    if (error)
-        throw error;
-    return data || [];
+    return await db_1.default.alert.findMany({
+        where: { patientId },
+        orderBy: { createdAt: 'desc' }
+    });
 }
 exports.default = {
     insertAlert,

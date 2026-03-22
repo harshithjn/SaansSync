@@ -2,7 +2,7 @@
 
 export type ApiResponse<T> = T
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
 
 async function parseJsonSafely(response: Response) {
   const text = await response.text()
@@ -15,10 +15,24 @@ async function parseJsonSafely(response: Response) {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  let token = '';
+  try {
+    if (typeof window !== 'undefined') {
+      token = localStorage.getItem('saanssync_token') || '';
+    }
+  } catch(e) {}
+
+  const headers = { ...init?.headers } as any;
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
-    credentials: 'include'
+    headers,
   })
+
+  if (res.status === 401 && typeof window !== 'undefined' && (window as any).Clerk) {
+    // Optional: handle auth failure
+  }
 
   const data = await parseJsonSafely(res)
 

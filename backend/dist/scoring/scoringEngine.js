@@ -3,44 +3,82 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.calculateDailyScore = calculateDailyScore;
 exports.getRiskLevel = getRiskLevel;
 exports.calculateWeightedScore = calculateWeightedScore;
+/**
+ * Robust helper to get a numeric value from a potentially flat or nested structure.
+ * Handles: obj.key, obj.symptoms.key, obj.daily.key
+ */
+function safeGet(obj, key, defaultValue = 0) {
+    if (!obj)
+        return defaultValue;
+    // 1. Direct access (flat structure)
+    if (typeof obj[key] === 'number')
+        return obj[key];
+    if (typeof obj[key] === 'string') {
+        const p = parseFloat(obj[key]);
+        return isNaN(p) ? defaultValue : p;
+    }
+    // 2. Nested symptoms
+    if (obj.symptoms && typeof obj.symptoms[key] === 'number')
+        return obj.symptoms[key];
+    if (obj.symptoms && typeof obj.symptoms[key] === 'string') {
+        const p = parseFloat(obj.symptoms[key]);
+        return isNaN(p) ? defaultValue : p;
+    }
+    // 3. Nested daily
+    if (obj.daily && typeof obj.daily[key] === 'number')
+        return obj.daily[key];
+    if (obj.daily && typeof obj.daily[key] === 'string') {
+        const p = parseFloat(obj.daily[key]);
+        return isNaN(p) ? defaultValue : p;
+    }
+    return defaultValue;
+}
+/**
+ * Robust helper for boolean flags
+ */
+function safeBool(obj, key) {
+    if (!obj)
+        return false;
+    if (typeof obj[key] === 'boolean')
+        return obj[key];
+    if (obj.symptoms && typeof obj.symptoms[key] === 'boolean')
+        return obj.symptoms[key];
+    if (obj.daily && typeof obj.daily[key] === 'boolean')
+        return obj.daily[key];
+    if (obj.control && typeof obj.control[key] === 'boolean')
+        return obj.control[key];
+    if (obj.infectionScreen && typeof obj.infectionScreen[key] === 'boolean')
+        return obj.infectionScreen[key];
+    return false;
+}
 // B) IMMEDIATE CRITICAL TRIGGERS (Auto-Score 9 or 10)
 function checkCriticalTriggers(log, baselineSpO2 = 95) {
     const common = log.common;
     const disease = log.diseaseType;
     // Hemoptysis (Massive or present depending on rules)
     // Bronchiectasis/Post-ICU: Hemoptysis -> 10
-    if ((disease === 'Bronchiectasis' || disease === 'Post ICU Recovery') && log.specific.sputum.color === 'Red/Rusty') {
+    const sputumColor = log.specific?.sputum?.color || log.specific?.sputumColor;
+    if ((disease === 'Bronchiectasis' || disease === 'Post ICU Recovery') && sputumColor === 'Red/Rusty') {
         return { score: 10, level: 'RED', drivers: ['Hemoptysis (Rusty/Red Sputum)'] };
     }
     // Asthma: "Hemoptysis present" (Usually checked in specific logs or common "side effects" / "other")
     // For now, if "Red/Rusty" is selected in available fields, or symptom text contains it.
     // In our types, simple Hemoptysis isn't explicitly top-level common, but often under symptoms.
     // SpO2 < 85%
-    if (common.spo2.atRest < 85) {
+    const spo2AtRest = common?.spo2?.atRest ?? common?.spo2AtRest ?? 95;
+    if (spo2AtRest < 85) {
         return { score: 10, level: 'RED', drivers: ['SpO2 < 85% (Critical Hypoxia)'] };
     }
     // Severe Chest Pain (VAS > 8)
-    const chestPain = common.symptoms.others?.toLowerCase()?.includes('chest pain') || false; // Or explicit field
-    // In our log structure, we have symptoms array. We need to check identifying string or ID.
-    // Assuming symptom name "Chest Pain" or specific field. 
-    // In current patient-types, symptoms is an object with { vasScore, ... }? 
-    // Wait, let's look at `DailyLogCommon` in patient-types.ts again. 
-    // It says: symptoms: { vasScore: number; ... others?: string }
-    // It seems user wants individual symptom scores (Chest Pain, etc.) but the type has one `vasScore`?
-    // Let's re-read patient-types.ts. 
-    // Ah, the file view showed: 
-    // symptoms: { vasScore: number; previousVasScore?: number; hasPedalEdema: boolean; others?: string; }
-    // BUT the user prompt says "Any symptom VAS >7 → +2". 
-    // And "Chest tightness VAS >7".
-    // This implies we might need extended types or map `vasScore` generally.
-    // If the frontend sends multiple symptoms, we need to adapt.
-    // For now, we will use `common.symptoms.vasScore` as "General Symptom Score" if specific ones aren't mapped.
-    if (common.symptoms.vasScore > 8) {
-        // This might cover chest pain if that's the primary symptom reported.
+    const others = common?.symptoms?.others || common?.others || "";
+    const chestPain = others.toLowerCase()?.includes('chest pain') || false;
+    const vasScore = common?.symptoms?.vasScore ?? common?.vasScore ?? 0;
+    if (vasScore > 8) {
         return { score: 9, level: 'RED', drivers: ['Severe Symptom Score (VAS > 8)'] };
     }
     // Massive exertional SpO2 drop (>10%)
-    if (common.spo2.atRest - common.spo2.onExertion > 10) {
+    const spo2OnExertion = common?.spo2?.onExertion ?? common?.spo2OnExertion ?? 95;
+    if (spo2AtRest - spo2OnExertion > 10) {
         return { score: 9, level: 'RED', drivers: ['Massive Exertional SpO2 Drop (>10%)'] };
     }
     // Respiratory Rate is not in DailyLogCommon yet. Assuming not available or derived?
@@ -61,122 +99,122 @@ function calculateDailyScore(log, baselineSpO2 = 95) {
     const disease = log.diseaseType;
     // --- C) COMMON METRIC SCORING ---
     // SpO2 < 90% (<88% for COPD) -> +5
-    const spo2Threshold = disease.includes('COPD') ? 88 : 90;
-    if (common.spo2.atRest < spo2Threshold) {
+    const spo2ThresholdValue = disease.includes('COPD') ? 88 : 90;
+    const currentAtRest = common?.spo2?.atRest ?? common?.spo2AtRest ?? 95;
+    if (currentAtRest < spo2ThresholdValue) {
         points += 5;
-        drivers.push(`SpO2 < ${spo2Threshold}%`);
+        drivers.push(`SpO2 < ${spo2ThresholdValue}%`);
     }
     // mMRC increase by >= 1 -> +2
-    // We need baseline mMRC to know "increase". Assuming `2` (avg) if unknown, or passed in.
-    // Ideally we pass baselineMrc. For now, if mMRC >= 3 we assume it's high/increased.
-    // Or if `mMRCScore` is high. 
-    const mrc = Number(common.mMRCScore);
-    if (mrc >= 3) {
+    const mrcValue = Number(common?.mMRCScore ?? common?.mMRCScale ?? 0);
+    if (mrcValue >= 3) {
         points += 2;
         drivers.push('High mMRC Score (>=3)');
     }
     // AQI > 200 -> +1
-    if (common.aqi && common.aqi.pm25 > 200) {
+    if (common?.aqi && (common.aqi.pm25 > 200 || common.aqi.value > 200)) {
         points += 1;
         drivers.push('AQI > 200');
     }
     // Maintenance meds not taken -> +1
-    const medsNotTaken = common.medicationAdherence.some(m => !m.taken);
-    if (medsNotTaken) {
+    const medAdherenceInput = common?.medicationAdherence || common?.medications || [];
+    const medsMissedStatus = Array.isArray(medAdherenceInput) && medAdherenceInput.some((m) => !m.taken);
+    if (medsMissedStatus) {
         points += 1;
         drivers.push('Maintenance Meds Missed');
     }
     // Any symptom VAS > 7 -> +2
-    if (common.symptoms.vasScore > 7) {
+    const currentVas = common?.symptoms?.vasScore ?? common?.vasScore ?? 0;
+    if (currentVas > 7) {
         points += 2;
         drivers.push('Severe Symptoms (VAS > 7)');
     }
-    // --- D) DISEASE-SPECIFIC SCORING ---
-    switch (disease) {
-        case 'Bronchial Asthma': {
-            const asthma = log.specific;
-            // Night waking -> +3
-            if (asthma.control.nightWaking) {
-                points += 3;
-                drivers.push('Night Waking');
+    try {
+        switch (disease) {
+            case 'Bronchial Asthma': {
+                const asthma = log.specific;
+                // Night waking -> +3
+                if (safeBool(asthma, 'nightWaking')) {
+                    points += 3;
+                    drivers.push('Night Waking');
+                }
+                // Rescue inhaler >4 puffs/day -> +3
+                const rescuePuffs = safeGet(asthma, 'rescuePuffs', asthma?.rescuePuffsToday || 0);
+                if (rescuePuffs > 4) {
+                    points += 3;
+                    drivers.push('Rescue Inhaler > 4 puffs');
+                }
+                // PEFR < 60% -> Auto 9
+                const pefr = safeGet(asthma, 'pefr');
+                if (pefr > 0 && pefr < 60) {
+                    return { score: 9, level: 'RED', drivers: ['PEFR < 60% Personal Best'] };
+                }
+                break;
             }
-            // Rescue inhaler >4 puffs/day -> +3
-            if (asthma.daily.rescuePuffs > 4) {
-                points += 3;
-                drivers.push('Rescue Inhaler > 4 puffs');
+            case 'COPD': {
+                const copd = log.specific;
+                // Sputum purulence -> +4
+                const phlegm = safeGet(copd, 'phlegmProduction');
+                if (phlegm >= 3) {
+                    points += 4;
+                    drivers.push('High Phlegm Production (Purulence proxy)');
+                }
+                // Chest tightness VAS > 7 -> +2
+                const chestTightness = safeGet(copd, 'chestTightnessVas', copd?.chestHeaviness || 0);
+                if (chestTightness > 7) {
+                    points += 2;
+                    drivers.push('Chest Tightness > 7');
+                }
+                break;
             }
-            // PEFR < 60% -> Auto 9
-            // Assuming PEFR is liters, need baseline. 
-            // If pefr is RAW value, we can't know %. 
-            // If pefr provided is PERCENT PREDICTED, then:
-            if (asthma.daily.pefr < 60) {
-                return { score: 9, level: 'RED', drivers: ['PEFR < 60% Personal Best'] };
+            case 'Bronchiectasis':
+            case 'Post ICU Recovery': {
+                const bronch = log.specific;
+                const spColor = bronch?.sputum?.color || bronch?.sputumColor;
+                const spVol = bronch?.sputum?.volume || bronch?.sputumVolume;
+                // Green sputum -> +4
+                if (spColor === 'Green') {
+                    points += 4;
+                    drivers.push('Green Sputum');
+                }
+                // Large sputum volume -> +2
+                if (spVol === 'Large' || spVol === 'Large amount') {
+                    points += 2;
+                    drivers.push('Large Sputum Volume');
+                }
+                // Malaise -> +2
+                if (safeBool(bronch, 'malaise')) {
+                    points += 2;
+                    drivers.push('Malaise');
+                }
+                break;
             }
-            break;
+            case 'Interstitial Lung Disease (ILD)': {
+                const ild = log.specific;
+                // SpO2 drop >= 3% from baseline -> +3
+                if (baselineSpO2 - common.spo2.atRest >= 3) {
+                    points += 3;
+                    drivers.push('SpO2 Drop >= 3% from Baseline');
+                }
+                // Dry cough increase -> +3
+                const coughChange = safeGet(ild, 'dryCoughFrequencyChange');
+                if (coughChange >= 1) {
+                    points += 3;
+                    drivers.push('Worsening Dry Cough');
+                }
+                // Breathlessness at rest -> +4
+                const bAtRest = safeGet(ild, 'breathlessnessAtRest');
+                if (bAtRest > 3) {
+                    points += 4;
+                    drivers.push('Breathlessness at Rest');
+                }
+                break;
+            }
         }
-        case 'COPD': {
-            const copd = log.specific;
-            // Sputum purulence -> +4 (If logic implies purulence based on color/volume?)
-            // Usually "Green" or "Yellow" + Volume.
-            // Copd log has symptoms: coughFrequency, phlegmProduction.
-            // Needs color check if available in extended types. 
-            // patient-types says: COPDSpecificLog has NO sputum color?
-            // Wait, Bronchiectasis has sputum color. COPD currently in types:
-            // symptoms: { coughFrequency, phlegmProduction... }, daily: { energyVas... }
-            // If we can't check color, we use Phlegm Production high as proxy?
-            if (copd.symptoms.phlegmProduction >= 3) {
-                points += 4;
-                drivers.push('High Phlegm Production (Purulence proxy)');
-            }
-            // Chest tightness VAS > 7 -> +2
-            if (copd.daily.chestTightnessVas > 7) {
-                points += 2;
-                drivers.push('Chest Tightness > 7');
-            }
-            // Fever -> +3 (Not in COPD specific type explicitly, maybe in common symptoms "others" or specialized field?)
-            // We'll check common fields if we can find fever.
-            break;
-        }
-        case 'Bronchiectasis':
-        case 'Post ICU Recovery': {
-            const bronch = log.specific;
-            // Green sputum -> +4
-            if (bronch.sputum.color === 'Green') {
-                points += 4;
-                drivers.push('Green Sputum');
-            }
-            // Large sputum volume -> +2
-            if (bronch.sputum.volume === 'Large') {
-                points += 2;
-                drivers.push('Large Sputum Volume');
-            }
-            // Malaise -> +2
-            if (bronch.infectionScreen.malaise) {
-                points += 2;
-                drivers.push('Malaise');
-            }
-            // Hemoptysis -> 10 (Handled in Critical Triggers if color Red/Rusty)
-            break;
-        }
-        case 'Interstitial Lung Disease (ILD)': {
-            const ild = log.specific;
-            // SpO2 drop >= 3% from baseline -> +3
-            if (baselineSpO2 - common.spo2.atRest >= 3) {
-                points += 3;
-                drivers.push('SpO2 Drop >= 3% from Baseline');
-            }
-            // Dry cough increase -> +3
-            if (ild.dryCoughFrequencyChange >= 1) { // Assuming scale 0-4, change > 0
-                points += 3;
-                drivers.push('Worsening Dry Cough');
-            }
-            // Breathlessness at rest -> +4
-            if (ild.breathlessnessAtRest > 3) { // Threshold?
-                points += 4;
-                drivers.push('Breathlessness at Rest');
-            }
-            break;
-        }
+    }
+    catch (e) {
+        console.error('Scoring Engine specific logic error:', e);
+        // Continue with base points if specific logic fails
     }
     // Cap at 10
     const finalScore = Math.min(points, 10);

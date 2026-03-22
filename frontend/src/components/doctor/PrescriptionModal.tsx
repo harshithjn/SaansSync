@@ -322,7 +322,7 @@ export default function PrescriptionModal({
                             <Button
                                 onClick={handleGeneratePrescription}
                                 disabled={isGenerating}
-                                className="bg-blue-600 hover:bg-blue-700"
+                                className="bg-purple-600 hover:bg-purple-700"
                             >
                                 {isGenerating ? "Generating..." : "Generate Prescription"}
                             </Button>

@@ -1,199 +1,149 @@
 export declare function isAdminEmail(email?: string | null): boolean;
-export declare function startDoctorRegistration(phone: string): Promise<{
+export declare function createToken(userId: string, email: string, role: string): string;
+export declare function startDoctorRegistration(..._args: any[]): Promise<{
     success: boolean;
     error: string;
+}>;
+export declare function completeDoctorRegistration(..._args: any[]): Promise<{
+    success: boolean;
+    error: string;
+}>;
+export declare function doctorLoginWithPassword(email: string, password?: string): Promise<{
+    success: boolean;
+    error: string;
+    token?: undefined;
+    doctorProfile?: undefined;
 } | {
     success: boolean;
-    error?: undefined;
-}>;
-export declare function completeDoctorRegistration(params: {
-    phone: string;
     token: string;
-    email: string;
-    fullName: string;
-    altPhone?: string;
-}): Promise<{
-    success: boolean;
-    error: string;
-    doctorProfile?: undefined;
-} | {
-    success: boolean;
-    doctorProfile: any;
-    error?: undefined;
-}>;
-export declare function doctorLoginWithPassword(email: string, password: string): Promise<{
-    success: boolean;
-    error: string;
-    doctorProfile?: undefined;
-    access_token?: undefined;
-    refresh_token?: undefined;
-    user?: undefined;
-} | {
-    success: boolean;
-    doctorProfile: any;
-    access_token: string;
-    refresh_token: string;
-    user: {
+    doctorProfile: {
         id: string;
-        email: string | undefined;
+        authUserId: string | null;
+        email: string;
+        fullName: string;
+        approvalStatus: string;
+        password: string | null;
+        createdAt: Date;
+        updatedAt: Date;
     };
     error?: undefined;
 }>;
-export declare function doctorLoginWithOtp(email: string): Promise<{
+export declare function doctorLoginWithOtp(..._args: any[]): Promise<{
     success: boolean;
     error: string;
-} | {
-    success: boolean;
-    error?: undefined;
 }>;
-export declare function verifyDoctorOtp(email: string, token: string): Promise<{
+export declare function verifyDoctorOtp(..._args: any[]): Promise<{
     success: boolean;
     error: string;
-    doctorProfile?: undefined;
-    access_token?: undefined;
-    refresh_token?: undefined;
-    user?: undefined;
-} | {
-    success: boolean;
-    error: string;
-    doctorProfile: any;
-    access_token?: undefined;
-    refresh_token?: undefined;
-    user?: undefined;
-} | {
-    success: boolean;
-    doctorProfile: any;
-    access_token: string;
-    refresh_token: string;
-    user: {
-        id: string;
-        email: string | undefined;
-    };
-    error?: undefined;
 }>;
-export declare function setupDoctorPassword(phone: string, token: string, newPassword: string): Promise<{
+export declare function setupDoctorPassword(..._args: any[]): Promise<{
     success: boolean;
     error: string;
-} | {
-    success: boolean;
-    error?: undefined;
 }>;
-export declare function startPasswordReset(phone: string): Promise<{
+export declare function startPasswordReset(..._args: any[]): Promise<{
     success: boolean;
     error: string;
-} | {
-    success: boolean;
-    error?: undefined;
 }>;
-export declare function patientLoginWithOtp(phone: string): Promise<{
+export declare function patientLoginWithOtp(..._args: any[]): Promise<{
     success: boolean;
     error: string;
-} | {
-    success: boolean;
-    error?: undefined;
 }>;
-export declare function verifyPatientOtp(phone: string, token: string): Promise<{
+export declare function verifyPatientOtp(..._args: any[]): Promise<{
     success: boolean;
     error: string;
+}>;
+export declare function patientLoginWithPassword(email: string, password?: string): Promise<{
+    success: boolean;
+    error: string;
+    token?: undefined;
     patientProfile?: undefined;
-    access_token?: undefined;
-    refresh_token?: undefined;
-    user?: undefined;
 } | {
     success: boolean;
-    patientProfile: any;
-    access_token: string;
-    refresh_token: string;
-    user: {
+    token: string;
+    patientProfile: {
         id: string;
-        email: string | undefined;
+        authUserId: string | null;
+        email: string;
+        fullName: string;
+        password: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        doctorId: string | null;
+        diseaseType: string;
+        patientData: import("@prisma/client/runtime/library").JsonValue | null;
+        defaultPassword: string | null;
     };
     error?: undefined;
 }>;
-export declare function patientLoginWithPassword(email: string, password: string): Promise<{
+export declare function adminLogin(email: string, password?: string): Promise<{
     success: boolean;
     error: string;
-    session?: undefined;
+    token?: undefined;
 } | {
     success: boolean;
-    session: {
-        userId: any;
-        email: any;
-        role: string;
-    };
+    token: string;
     error?: undefined;
 }>;
-export declare function adminLogin(email: string, password: string): Promise<{
+export declare function doctorSignup(email: string, fullName: string, password?: string): Promise<{
     success: boolean;
     error: string;
-    access_token?: undefined;
-    refresh_token?: undefined;
-    user?: undefined;
+    token?: undefined;
+    doctorProfile?: undefined;
 } | {
     success: boolean;
-    access_token: string;
-    refresh_token: string;
-    user: {
-        id: string | undefined;
-        email: string | undefined;
-    };
-    error?: undefined;
-}>;
-export declare function doctorSignup(email: string, fullName: string, phone?: string): Promise<{
-    success: boolean;
-    error: string;
-    message?: undefined;
-} | {
-    success: boolean;
-    message: string;
-    error?: undefined;
-}>;
-export declare function testEmail(email: string): Promise<{
-    success: boolean;
-    error: string;
-} | {
-    success: boolean;
-    error?: undefined;
-}>;
-export declare function exchangeCodeForSession(code: string): Promise<{
-    success: boolean;
-    error: string;
-    access_token?: undefined;
-    refresh_token?: undefined;
-    user?: undefined;
-} | {
-    success: boolean;
-    access_token: string;
-    refresh_token: string;
-    user: {
+    token: string;
+    doctorProfile: {
         id: string;
-        email: string | undefined;
+        authUserId: string | null;
+        email: string;
+        fullName: string;
+        approvalStatus: string;
+        password: string | null;
+        createdAt: Date;
+        updatedAt: Date;
     };
     error?: undefined;
+}>;
+export declare function patientSignup(email: string, fullName: string, password?: string): Promise<{
+    success: boolean;
+    error: string;
+    token?: undefined;
+    patientProfile?: undefined;
+} | {
+    success: boolean;
+    token: string;
+    patientProfile: {
+        id: string;
+        authUserId: string | null;
+        email: string;
+        fullName: string;
+        password: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        doctorId: string | null;
+        diseaseType: string;
+        patientData: import("@prisma/client/runtime/library").JsonValue | null;
+        defaultPassword: string | null;
+    };
+    error?: undefined;
+}>;
+export declare function testEmail(..._args: any[]): Promise<{
+    success: boolean;
+    error: string;
+}>;
+export declare function exchangeCodeForSession(..._args: any[]): Promise<{
+    success: boolean;
+    error: string;
 }>;
 export declare function getAuthProfile(user: {
     id: string;
     email?: string | null;
+    role?: string;
 }): Promise<{
     user: {
         id: string;
         email?: string | null;
-    };
-    role: "doctor";
-    profile: any;
-    approved: boolean;
-} | {
-    user: {
-        id: string;
-        email?: string | null;
-    };
-    role: "patient";
-    profile: any;
-    approved: boolean;
-} | {
-    user: {
-        id: string;
-        email?: string | null;
+        role?: string;
     };
     role: "admin";
     profile: {
@@ -204,6 +154,46 @@ export declare function getAuthProfile(user: {
     user: {
         id: string;
         email?: string | null;
+        role?: string;
+    };
+    role: "doctor";
+    profile: {
+        id: string;
+        authUserId: string | null;
+        email: string;
+        fullName: string;
+        approvalStatus: string;
+        password: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+    };
+    approved: boolean;
+} | {
+    user: {
+        id: string;
+        email?: string | null;
+        role?: string;
+    };
+    role: "patient";
+    profile: {
+        id: string;
+        authUserId: string | null;
+        email: string;
+        fullName: string;
+        password: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        doctorId: string | null;
+        diseaseType: string;
+        patientData: import("@prisma/client/runtime/library").JsonValue | null;
+        defaultPassword: string | null;
+    };
+    approved: boolean;
+} | {
+    user: {
+        id: string;
+        email?: string | null;
+        role?: string;
     };
     role: null;
     profile: null;

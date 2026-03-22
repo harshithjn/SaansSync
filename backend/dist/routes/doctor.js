@@ -41,6 +41,7 @@ const doctorController = __importStar(require("../controllers/doctorController")
 const router = express_1.default.Router();
 router.post('/profile', doctorController.createDoctorProfile);
 router.get('/:doctorId/patients', doctorController.getDoctorPatients);
+router.get('/:doctorId', doctorController.getDoctorProfile);
 router.get('/:doctorId/logs', doctorController.getDoctorLogs);
 router.get('/:doctorId/alerts', doctorController.getDoctorAlerts);
 router.post('/:doctorId/assign-patient', doctorController.assignPatient);

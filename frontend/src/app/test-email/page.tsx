@@ -55,9 +55,9 @@ export default function TestEmailPage() {
           </Button>
         </div>
 
-        <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-          <h3 className="font-semibold text-blue-900 mb-2">Instructions:</h3>
-          <ol className="text-sm text-blue-800 space-y-1">
+        <div className="mt-6 p-4 bg-purple-50 rounded-lg">
+          <h3 className="font-semibold text-purple-900 mb-2">Instructions:</h3>
+          <ol className="text-sm text-purple-800 space-y-1">
             <li>1. Enter your email address</li>
             <li>2. Click "Send Test Email"</li>
             <li>3. Check your inbox (and spam folder)</li>

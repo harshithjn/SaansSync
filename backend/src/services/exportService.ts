@@ -1,4 +1,4 @@
-import { requireAdminClient } from '../config/supabaseClient'
+import prisma from '../config/db';
 
 function toCsv(rows: Record<string, any>[]): string {
   if (rows.length === 0) return ''
@@ -24,22 +24,23 @@ export async function exportDailyLogs(filters: {
   patientId?: string
   frequency?: string
 }) {
-  const admin = requireAdminClient()
-  let q: any = admin.from('daily_logs').select('*').order('created_at', { ascending: false })
-  if (filters.patientId) q = q.eq('patient_id', filters.patientId)
-  if (filters.disease) q = q.eq('disease_type', filters.disease)
-  if (filters.startDate) q = q.gte('log_date', filters.startDate)
-  if (filters.endDate) q = q.lte('log_date', filters.endDate)
+  const where: any = {};
+  if (filters.patientId) where.patientId = filters.patientId;
+  if (filters.disease) where.diseaseType = filters.disease;
+  if (filters.startDate) where.logDate = { gte: new Date(filters.startDate) };
+  if (filters.endDate) where.logDate = { ...where.logDate, lte: new Date(filters.endDate) };
 
-  const { data, error } = await q
-  if (error) throw error
+  const data = await prisma.dailyLog.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+  });
 
-  const rows = (data || []).map((log: any) => ({
-    date: log.log_date,
-    patient_id: log.patient_id,
-    disease_type: log.disease_type,
-    red_flag_score: log.red_flag_score,
-    created_at: log.created_at
+  const rows = data.map((log: any) => ({
+    date: log.logDate,
+    patient_id: log.patientId,
+    disease_type: log.diseaseType,
+    red_flag_score: log.redFlagScore,
+    created_at: log.createdAt
   }))
 
   return toCsv(rows)

@@ -52,8 +52,6 @@ export interface StructuredDiagnosis {
 }
 export interface PatientData {
     fullName: string;
-    mobileNumber: string;
-    alternateMobileNumber?: string;
     emailId: string;
     age: string;
     sex: string;

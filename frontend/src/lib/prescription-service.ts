@@ -2,6 +2,7 @@
 import api from './api'
 import { requireApprovedDoctor } from './session-manager'
 import { Prescription, PersonalizedAlert, PatientData } from './patient-types'
+import { formatDate } from './utils'
 
 // =====================================================
 // DATABASE-ONLY PRESCRIPTION MANAGEMENT
@@ -116,14 +117,6 @@ function convertToLegacyFormat(dbPrescription: any): Prescription {
 // =====================================================
 
 export function formatPrescriptionCard(prescription: Prescription): string {
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
-    })
-  }
 
   let prescriptionText = `
 PRESCRIPTION CARD

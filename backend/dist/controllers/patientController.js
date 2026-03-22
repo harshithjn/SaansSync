@@ -39,6 +39,9 @@ exports.updatePatient = updatePatient;
 exports.getPatientLogs = getPatientLogs;
 exports.getPatientMedications = getPatientMedications;
 exports.canLogToday = canLogToday;
+exports.getPatientReports = getPatientReports;
+exports.getPatientInstructions = getPatientInstructions;
+exports.addPatientInstruction = addPatientInstruction;
 const patientService = __importStar(require("../services/patientService"));
 async function createPatient(req, res) {
     try {
@@ -102,6 +105,40 @@ async function canLogToday(req, res) {
     }
     catch (err) {
         return res.status(500).json({ success: false, error: err?.message || 'Failed to check logging' });
+    }
+}
+async function getPatientReports(req, res) {
+    try {
+        const patientId = req.params.patientId;
+        const data = await patientService.getPatientReports(patientId);
+        return res.json(data);
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, error: err?.message || 'Failed to fetch reports' });
+    }
+}
+async function getPatientInstructions(req, res) {
+    try {
+        const patientId = req.params.patientId;
+        const data = await patientService.getPatientInstructions(patientId);
+        return res.json(data);
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, error: err?.message || 'Failed to fetch instructions' });
+    }
+}
+async function addPatientInstruction(req, res) {
+    try {
+        const patientId = req.params.patientId;
+        const { doctorId, instruction } = req.body;
+        if (!doctorId || !instruction) {
+            return res.status(400).json({ success: false, error: 'doctorId and instruction required' });
+        }
+        const data = await patientService.addPatientInstruction(patientId, doctorId, instruction);
+        return res.json({ success: true, instruction: data });
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, error: err?.message || 'Failed to add instruction' });
     }
 }
 //# sourceMappingURL=patientController.js.map

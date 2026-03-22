@@ -32,6 +32,9 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createAlert = createAlert;
 exports.evaluateAlert = evaluateAlert;
@@ -40,6 +43,7 @@ exports.acknowledgeAlert = acknowledgeAlert;
 const zod_1 = require("zod");
 const alertsService = __importStar(require("../services/alertsService")); // DAO
 const alertEvaluationService = __importStar(require("../services/alertService")); // Complex Logic
+const db_1 = __importDefault(require("../config/db"));
 const alertSchema = zod_1.z.object({
     patient_id: zod_1.z.string().uuid(),
     doctor_id: zod_1.z.string().uuid(),
@@ -105,14 +109,13 @@ async function acknowledgeAlert(req, res) {
         // Simple enough for direct DB or service call? 
         // Let's use service if available, but alertsService doesn't have it explicitly yet?
         // The previous file content had logic inline. Let's keep it but clean import.
-        const { requireAdminClient } = await Promise.resolve().then(() => __importStar(require('../config/supabaseClient')));
-        const admin = requireAdminClient();
-        const { error } = await admin
-            .from('saanssync_alerts')
-            .update({ acknowledged: true, acknowledged_at: new Date().toISOString() })
-            .eq('id', alertId);
-        if (error)
-            return res.status(500).json({ success: false, error: error.message });
+        await db_1.default.alert.update({
+            where: { id: alertId },
+            data: {
+                acknowledged: true,
+                acknowledgedAt: new Date()
+            }
+        });
         return res.json({ success: true });
     }
     catch (err) {

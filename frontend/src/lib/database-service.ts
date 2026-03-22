@@ -25,15 +25,14 @@ export async function createDoctorProfile(
   licenseNumber: string,
   specialization: string,
   hospitalAffiliation: string,
-  phone?: string
+  email?: string
 ) {
   try {
     const result = await api.post('/doctor/profile', {
       fullName,
       licenseNumber,
       specialization,
-      hospitalAffiliation,
-      phone
+      hospitalAffiliation
     })
     return result
   } catch (error) {

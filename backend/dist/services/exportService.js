@@ -1,7 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.exportDailyLogs = exportDailyLogs;
-const supabaseClient_1 = require("../config/supabaseClient");
+const db_1 = __importDefault(require("../config/db"));
 function toCsv(rows) {
     if (rows.length === 0)
         return '';
@@ -20,25 +23,25 @@ function toCsv(rows) {
     return lines.join('\n');
 }
 async function exportDailyLogs(filters) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
-    let q = admin.from('daily_logs').select('*').order('created_at', { ascending: false });
+    const where = {};
     if (filters.patientId)
-        q = q.eq('patient_id', filters.patientId);
+        where.patientId = filters.patientId;
     if (filters.disease)
-        q = q.eq('disease_type', filters.disease);
+        where.diseaseType = filters.disease;
     if (filters.startDate)
-        q = q.gte('log_date', filters.startDate);
+        where.logDate = { gte: new Date(filters.startDate) };
     if (filters.endDate)
-        q = q.lte('log_date', filters.endDate);
-    const { data, error } = await q;
-    if (error)
-        throw error;
-    const rows = (data || []).map((log) => ({
-        date: log.log_date,
-        patient_id: log.patient_id,
-        disease_type: log.disease_type,
-        red_flag_score: log.red_flag_score,
-        created_at: log.created_at
+        where.logDate = { ...where.logDate, lte: new Date(filters.endDate) };
+    const data = await db_1.default.dailyLog.findMany({
+        where,
+        orderBy: { createdAt: 'desc' }
+    });
+    const rows = data.map((log) => ({
+        date: log.logDate,
+        patient_id: log.patientId,
+        disease_type: log.diseaseType,
+        red_flag_score: log.redFlagScore,
+        created_at: log.createdAt
     }));
     return toCsv(rows);
 }

@@ -34,6 +34,7 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDoctorPatients = getDoctorPatients;
+exports.getDoctorProfile = getDoctorProfile;
 exports.getDoctorLogs = getDoctorLogs;
 exports.getDoctorAlerts = getDoctorAlerts;
 exports.assignPatient = assignPatient;
@@ -51,6 +52,16 @@ async function getDoctorPatients(req, res) {
     }
     catch (err) {
         return res.status(500).json({ success: false, error: err?.message || 'Failed to fetch patients' });
+    }
+}
+async function getDoctorProfile(req, res) {
+    try {
+        const doctorId = req.params.doctorId;
+        const data = await doctorService.getDoctorProfile(doctorId);
+        return res.json(data);
+    }
+    catch (err) {
+        return res.status(500).json({ success: false, error: err?.message || 'Failed to fetch doctor profile' });
     }
 }
 async function getDoctorLogs(req, res) {
@@ -144,12 +155,12 @@ async function deletePatientFolder(req, res) {
 }
 async function createDoctorProfile(req, res) {
     try {
-        const { fullName, email, phone } = req.body;
+        const { fullName, email } = req.body;
         if (!fullName)
             return res.status(400).json({ success: false, error: 'fullName required' });
         if (!req.user?.id)
             return res.status(401).json({ success: false, error: 'Unauthorized' });
-        const data = await doctorService.createDoctorProfile(req.user.id, { fullName, email, phone });
+        const data = await doctorService.createDoctorProfile(req.user.id, { fullName, email });
         return res.json({ success: true, profile: data });
     }
     catch (err) {

@@ -5,17 +5,21 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import {
     User,
     Mail,
-    Phone,
     Settings as SettingsIcon,
     Bell,
     Lock,
     Save,
     Calendar,
     Stethoscope,
-    Globe
+    Globe,
+    ShieldCheck,
+    ChevronRight,
+    Loader2,
+    CheckCircle2
 } from "lucide-react"
 import { usePatientAuth } from "@/lib/auth-guard"
 import { getPatientProfile } from "@/lib/database-service"
@@ -35,13 +39,11 @@ export default function PatientSettingsPage() {
     useEffect(() => {
         const loadProfile = async () => {
             try {
-                // Fetch basic profile from DB if we have an ID
                 let dbData = null
                 if (authState.profile?.id) {
                     dbData = await getPatientProfile(authState.profile.id)
                 }
 
-                // Overlay with session data for security
                 const sessionRes = await resolveUserProfile()
                 const sessionProfile = sessionRes.profile as any
 
@@ -49,15 +51,13 @@ export default function PatientSettingsPage() {
                     setProfile({
                         ...(dbData || {} as any),
                         full_name: sessionProfile.full_name || dbData?.full_name || authState.profile?.full_name,
-                        email: sessionProfile.email || dbData?.email || authState.profile?.email,
-                        phone: sessionProfile.mobile || sessionProfile.phone || dbData?.phone || authState.profile?.phone
+                        email: sessionProfile.email || dbData?.email || authState.profile?.email
                     })
                 } else if (dbData) {
                     setProfile(dbData)
                 }
             } catch (error) {
                 console.error("Failed to load patient profile:", error)
-                toast.error("Failed to load profile settings")
             } finally {
                 setLoading(false)
             }
@@ -69,169 +69,199 @@ export default function PatientSettingsPage() {
     }, [authState.profile?.id, authState.loading])
 
     const handleSave = () => {
-        toast.success(t('Settings saved successfully') || "Settings saved successfully")
+        toast.success(t('Identity configuration updated') || "Identity configuration updated")
         setIsEditing(false)
     }
 
     if (loading || authState.loading) {
         return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 font-['Matter_Regular',sans-serif]">
+                <div className="w-16 h-16 bg-slate-50 flex items-center justify-center rounded-[2rem] border border-slate-100 shadow-sm">
+                    <Loader2 className="w-8 h-8 animate-spin text-slate-200" />
+                </div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Synching Identity Nodes...</p>
             </div>
         )
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900 font-outfit">{t('Account Settings')}</h1>
-                    <p className="text-gray-500">{t('Manage your personal information and preferences')}</p>
+        <div className="max-w-6xl mx-auto space-y-12 font-['Matter_Regular',sans-serif] animate-in fade-in duration-1000">
+            {/* Page Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 border-b border-slate-50 pb-12">
+                <div className="space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[9px] font-black uppercase tracking-widest border border-slate-100/50">
+                        <User className="w-3 h-3" />
+                        Administrative Surface
+                    </div>
+                    <h1 className="text-5xl font-black text-slate-950 tracking-tighter leading-none">Identity Config</h1>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Manage patient credentials and localization</p>
                 </div>
                 <Button
-                    variant={isEditing ? "outline" : "default"}
-                    className={!isEditing ? "bg-green-600 hover:bg-green-700" : ""}
+                    variant={isEditing ? "ghost" : "default"}
+                    className={`h-14 px-8 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all duration-500 ${
+                        isEditing 
+                        ? "bg-slate-50 text-slate-400 hover:text-slate-950 border border-slate-100/50" 
+                        : "bg-slate-950 text-white shadow-2xl shadow-slate-100 hover:bg-slate-800"
+                    }`}
                     onClick={() => isEditing ? setIsEditing(false) : setIsEditing(true)}
                 >
-                    {isEditing ? t('Cancel') : t('Edit Profile')}
+                    {isEditing ? 'Cancel Edit' : 'Edit Identity'}
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Profile Overview Card */}
-                <Card className="p-6 col-span-1 space-y-6 shadow-sm border-0 bg-white/50 backdrop-blur-sm">
-                    <div className="flex flex-col items-center text-center space-y-3">
-                        <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center border-4 border-white shadow-sm">
-                            <User className="w-12 h-12 text-green-600" />
-                        </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-900">{profile?.full_name || authState.profile?.full_name}</h2>
-                            <p className="text-sm text-gray-500 mt-1">
-                                {profile?.patient_data?.diagnosis?.primaryCategory || t('Patient')}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4 pt-4 border-t border-gray-100">
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                            <Mail className="w-4 h-4" />
-                            <span className="truncate">{profile?.email || authState.profile?.email || t('No email')}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                            <Calendar className="w-4 h-4" />
-                            <span>{t('Age')}: {profile?.patient_data?.age || 'N/A'}</span>
-                        </div>
-                        <div className="flex items-center gap-3 text-sm text-gray-600">
-                            <Stethoscope className="w-4 h-4" />
-                            <span>{t('Diagnosis')}: {profile?.patient_data?.diagnosis?.primaryCategory || 'N/A'}</span>
-                        </div>
-                    </div>
-                </Card>
-
-                {/* Detailed Settings Forms */}
-                <div className="md:col-span-2 space-y-6">
-                    <Card className="p-6 shadow-sm border-0 bg-white">
-                        <div className="flex items-center gap-2 mb-6">
-                            <SettingsIcon className="w-5 h-5 text-green-600" />
-                            <h3 className="text-lg font-bold">{t('Personal Information')}</h3>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                {/* Profile Profile Surface */}
+                <div className="lg:col-span-4 space-y-8">
+                    <Card className="p-10 border-none bg-white rounded-[3.5rem] shadow-sm border border-slate-50 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-slate-950 opacity-[0.02] rounded-full -translate-y-16 translate-x-16 transition-all duration-700 group-hover:scale-150" />
+                        
+                        <div className="flex flex-col items-center text-center space-y-6 relative z-10">
+                            <div className="w-32 h-32 bg-slate-50 rounded-[3rem] flex items-center justify-center border-4 border-white shadow-xl group-hover:scale-105 transition-all duration-500 overflow-hidden">
+                                <img 
+                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.full_name || 'Patient'}`} 
+                                    className="w-24 h-24 object-contain"
+                                    alt="Avatar"
+                                />
+                            </div>
                             <div className="space-y-2">
-                                <Label htmlFor="fullName">{t('Full Name')}</Label>
+                                <h2 className="text-2xl font-black text-slate-950 tracking-tighter leading-none">
+                                    {profile?.full_name || authState.profile?.full_name}
+                                </h2>
+                                <Badge className="bg-emerald-50 text-emerald-500 border-none font-black text-[8px] uppercase tracking-[0.3em] px-4 py-1.5 rounded-full">
+                                    Verified Subject
+                                </Badge>
+                            </div>
+                        </div>
+
+                        <div className="space-y-6 pt-10 mt-10 border-t border-slate-50 relative z-10">
+                            <div className="flex items-center gap-4 group/item">
+                                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover/item:text-slate-950 transition-colors">
+                                    <Mail className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1.5">Primary Link</p>
+                                    <p className="text-sm font-bold text-slate-950 truncate">{profile?.email || authState.profile?.email || 'N/A'}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4 group/item">
+                                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover/item:text-slate-950 transition-colors">
+                                    <Calendar className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1.5">Metric Age</p>
+                                    <p className="text-sm font-bold text-slate-950">{profile?.patient_data?.age || 'Unset'} Cycles</p>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+
+                    <Card className="p-8 border-none bg-slate-950 rounded-[2.5rem] shadow-2xl shadow-slate-100 text-white relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-white/5 blur-3xl rounded-full" />
+                        <div className="flex items-center gap-4 mb-6">
+                            <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-white">Trust Engine</h4>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-bold leading-relaxed uppercase tracking-wider text-center">Your identity is cryptographically linked to your healthcare provider's node. All changes require formal synchronization.</p>
+                    </Card>
+                </div>
+
+                {/* Form Surface */}
+                <div className="lg:col-span-8 space-y-8">
+                    <Card className="p-10 border-none bg-white rounded-[3.5rem] shadow-sm border border-slate-50 space-y-10 hover:shadow-xl transition-all duration-700">
+                        <div className="flex items-center gap-4 border-b border-slate-50 pb-8">
+                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-950 shadow-sm">
+                                <SettingsIcon className="w-5 h-5" />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight">Access Credentials</h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Legal Full Identity</Label>
                                 <Input
                                     id="fullName"
                                     defaultValue={profile?.full_name || authState.profile?.full_name}
                                     disabled={!isEditing}
+                                    className="h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-sm text-slate-950 focus-visible:ring-slate-100 disabled:opacity-50 transition-all"
                                 />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="email">{t('Email Address')}</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        defaultValue={profile?.email || authState.profile?.email}
-                                        disabled={!isEditing}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="phone">{t('Phone Number')}</Label>
-                                    <Input
-                                        id="phone"
-                                        type="tel"
-                                        defaultValue={profile?.phone || authState.profile?.phone}
-                                        disabled={!isEditing}
-                                    />
-                                </div>
+                            <div className="space-y-4">
+                                <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Communication Endpoint</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    defaultValue={profile?.email || authState.profile?.email}
+                                    disabled={!isEditing}
+                                    className="h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-sm text-slate-950 focus-visible:ring-slate-100 disabled:opacity-50 transition-all"
+                                />
                             </div>
                         </div>
                     </Card>
 
-                    <Card className="p-6 shadow-sm border-0 bg-white">
-                        <div className="flex items-center gap-2 mb-6">
-                            <Globe className="w-5 h-5 text-green-600" />
-                            <h3 className="text-lg font-bold">{t('Language Preferences')}</h3>
+                    <Card className="p-10 border-none bg-white rounded-[3.5rem] shadow-sm border border-slate-50 space-y-10 hover:shadow-xl transition-all duration-700">
+                        <div className="flex items-center gap-4 border-b border-slate-50 pb-8">
+                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-950 shadow-sm">
+                                <Globe className="w-5 h-5" />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight">Localization</h3>
                         </div>
 
-                        <div className="space-y-4">
-                            <div className="flex flex-wrap gap-2">
-                                <Button
-                                    variant={language === 'en' ? 'default' : 'outline'}
-                                    className={language === 'en' ? 'bg-green-600' : ''}
-                                    onClick={() => setLanguage('en')}
-                                    size="sm"
+                        <div className="flex flex-wrap gap-4">
+                            {[
+                                { id: 'en', label: 'ENGLISH_GLOBAL', local: 'International' },
+                                { id: 'hi', label: 'HINDI_REGIONAL', local: 'हिन्दी' }
+                            ].map((lang) => (
+                                <button
+                                    key={lang.id}
+                                    onClick={() => setLanguage(lang.id as any)}
+                                    className={`flex-1 min-w-[200px] h-20 rounded-[1.75rem] border transition-all duration-500 flex flex-col items-center justify-center gap-1.5 group ${
+                                        language === lang.id 
+                                        ? 'bg-slate-950 text-white border-slate-950 shadow-2xl shadow-slate-100' 
+                                        : 'bg-slate-50 border-slate-50 text-slate-400 hover:border-slate-200'
+                                    }`}
                                 >
-                                    English
-                                </Button>
-                                <Button
-                                    variant={language === 'hi' ? 'default' : 'outline'}
-                                    className={language === 'hi' ? 'bg-green-600' : ''}
-                                    onClick={() => setLanguage('hi')}
-                                    size="sm"
-                                >
-                                    हिन्दी (Hindi)
-                                </Button>
-                            </div>
+                                    <span className={`text-[9px] font-black uppercase tracking-[0.2em] ${language === lang.id ? 'text-slate-400' : 'text-slate-300'}`}>{lang.label}</span>
+                                    <span className="text-sm font-black tracking-tight">{lang.local}</span>
+                                </button>
+                            ))}
                         </div>
                     </Card>
 
-                    <Card className="p-6 shadow-sm border-0 bg-white">
-                        <div className="flex items-center gap-2 mb-6">
-                            <Lock className="w-5 h-5 text-green-600" />
-                            <h3 className="text-lg font-bold">{t('Account Security')}</h3>
+                    <Card className="p-10 border-none bg-white rounded-[3.5rem] shadow-sm border border-slate-50 space-y-10 hover:shadow-xl transition-all duration-700">
+                        <div className="flex items-center gap-4 border-b border-slate-50 pb-8">
+                            <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-950 shadow-sm">
+                                <Lock className="w-5 h-5" />
+                            </div>
+                            <h3 className="text-xl font-black text-slate-900 tracking-tight">Surveillance Config</h3>
                         </div>
 
                         <div className="space-y-4">
-                            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="flex items-center gap-3">
-                                    <Bell className="w-4 h-4 text-gray-500" />
-                                    <div>
-                                        <p className="text-sm font-medium">{t('Daily Reminders')}</p>
-                                        <p className="text-xs text-gray-500">{t('Get notified when it is time to log your symptoms')}</p>
+                            <div className="flex items-center justify-between p-8 rounded-[2rem] bg-slate-50 border border-slate-100/50 group hover:bg-white transition-all duration-500">
+                                <div className="flex items-center gap-6">
+                                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-slate-100 text-slate-200 group-hover:text-emerald-500 transition-colors shadow-sm">
+                                        <Bell className="w-6 h-6" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-sm font-black text-slate-950 tracking-tight">Daily Triage Reminders</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Automated Clinical Prompts</p>
                                     </div>
                                 </div>
-                                <Button variant="ghost" size="sm" className="text-green-600">{t('Enabled')}</Button>
-                            </div>
-                            <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50 border border-gray-100">
-                                <div className="flex items-center gap-3">
-                                    <Lock className="w-4 h-4 text-gray-500" />
-                                    <div>
-                                        <p className="text-sm font-medium">{t('Change Password')}</p>
-                                        <p className="text-xs text-gray-500">{t('Update your login credentials')}</p>
-                                    </div>
+                                <div className="flex items-center gap-2 text-emerald-500 bg-emerald-50 px-4 py-2 rounded-xl">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    <span className="text-[9px] font-black uppercase tracking-widest">Active</span>
                                 </div>
-                                <Button variant="ghost" size="sm" className="text-green-600" disabled>{t('Manage')}</Button>
                             </div>
                         </div>
                     </Card>
 
                     {isEditing && (
-                        <div className="flex justify-end gap-3">
-                            <Button variant="outline" onClick={() => setIsEditing(false)}>{t('Cancel')}</Button>
-                            <Button className="gap-2 bg-green-600 hover:bg-green-700 text-white" onClick={handleSave}>
-                                <Save className="w-4 h-4" />
-                                {t('Save Changes')}
+                        <div className="flex justify-end pt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                            <Button 
+                                className="h-16 px-12 rounded-[1.5rem] bg-slate-950 text-white font-black text-sm tracking-tight hover:bg-slate-800 transition-all shadow-2xl shadow-slate-200 flex items-center gap-4 group" 
+                                onClick={handleSave}
+                            >
+                                <Save className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                Save Identity Manifest
                             </Button>
                         </div>
                     )}

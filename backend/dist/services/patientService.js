@@ -1,72 +1,31 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createPatient = createPatient;
 exports.getPatientById = getPatientById;
 exports.updatePatient = updatePatient;
 exports.getPatientLogs = getPatientLogs;
 exports.getPatientMedications = getPatientMedications;
+exports.getPatientReports = getPatientReports;
 exports.canLogToday = canLogToday;
-const supabaseClient_1 = require("../config/supabaseClient");
-function cleanPhone(phone) {
-    if (!phone)
-        return '';
-    return phone.replace(/\D/g, '');
-}
+exports.getPatientInstructions = getPatientInstructions;
+exports.addPatientInstruction = addPatientInstruction;
+const db_1 = __importDefault(require("../config/db"));
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
 async function resolveDoctorId(doctorId) {
     if (!doctorId)
         return null;
-    const admin = (0, supabaseClient_1.requireAdminClient)();
-    // Try direct id
-    const { data: byId } = await admin
-        .from('doctors')
-        .select('id')
-        .eq('id', doctorId)
-        .maybeSingle();
-    if (byId?.id)
-        return byId.id;
-    const { data: byAuth } = await admin
-        .from('doctors')
-        .select('id')
-        .eq('auth_user_id', doctorId)
-        .maybeSingle();
-    return byAuth?.id || doctorId;
+    const byId = await db_1.default.doctor.findUnique({ where: { id: doctorId }, select: { id: true } }).catch(() => null);
+    return byId?.id || doctorId;
 }
 async function createPatient(payload) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
     const doctorId = await resolveDoctorId(payload.doctorId || null);
-    const phone = cleanPhone(payload.patientData?.mobileNumber || payload.patientData?.phone || '');
-    // 1. Create Supabase Auth User
-    let authUserId = null;
-    try {
-        const { data: authUser, error: authError } = await admin.auth.admin.createUser({
-            email: payload.email,
-            password: payload.password || 'patient123',
-            email_confirm: true,
-            phone: phone.length >= 10 ? phone : undefined,
-            user_metadata: { role: 'patient', full_name: payload.fullName }
-        });
-        if (authUser?.user) {
-            authUserId = authUser.user.id;
-        }
-        else if (authError?.message?.includes('already registered')) {
-            // If user exists, try to find them
-            const { data: users } = await admin.auth.admin.listUsers();
-            const existing = users.users.find(u => u.email === payload.email || (phone && u.phone?.includes(phone)));
-            if (existing)
-                authUserId = existing.id;
-        }
-    }
-    catch (e) {
-        console.error('Failed to create auth user:', e);
-        // Continue - maybe we can link later? Or should we fail?
-        // Failing is safer so we know why login fails.
-    }
+    const authUserId = null;
     const patientData = payload.patientData || {};
     const comprehensive = {
-        // ... keep existing comprehensive ...
         email: payload.email,
-        password: payload.password,
-        mobile: phone,
         age: patientData?.age || '',
         sex: patientData?.sex || '',
         diagnosis: patientData?.diagnosis || {},
@@ -83,129 +42,128 @@ async function createPatient(payload) {
         created_at: new Date().toISOString(),
         disease_type: payload.diseaseType
     };
-    const { data: profile, error } = await admin
-        .from('patients')
-        .insert({
-        full_name: payload.fullName,
-        disease_type: payload.diseaseType,
-        doctor_id: doctorId,
-        phone,
-        email: payload.email,
-        auth_user_id: authUserId, // LINK IT HERE
-        patient_data: { ...comprehensive, ...patientData }
-        // default_password removed
-    })
-        .select()
-        .single();
-    if (error) {
-        console.error('Supabase create patient error:', error);
-        // Log to file for debugging
-        try {
-            const fs = require('fs');
-            const path = require('path');
-            const logPath = path.join(process.cwd(), 'debug_errors.log');
-            fs.appendFileSync(logPath, `${new Date().toISOString()} - Patient Create Error: ${JSON.stringify(error)}\n`);
-        }
-        catch (e) {
-            // ignore log error
-        }
-        throw error;
+    let hashedPassword = null;
+    if (payload.password || 'patient123') {
+        hashedPassword = await bcryptjs_1.default.hash(payload.password || 'patient123', 10);
     }
-    // Create doctor-patient assignment if table exists
-    // Create doctor-patient assignment if table exists
+    const patient = await db_1.default.patient.create({
+        data: {
+            email: payload.email,
+            fullName: payload.fullName,
+            diseaseType: payload.diseaseType,
+            doctorId: doctorId, // Use the already resolved doctorId
+            patientData: { ...comprehensive, ...patientData }, // Merge comprehensive and patientData
+            authUserId: authUserId,
+            password: hashedPassword,
+            defaultPassword: payload.password || 'patient123'
+        }
+    });
     if (doctorId) {
         try {
-            await admin
-                .from('doctor_patient_assignments')
-                .insert({ doctor_id: doctorId, patient_id: profile.id, status: 'active' });
+            await db_1.default.doctorPatientAssignment.create({
+                data: { doctorId, patientId: patient.id, status: 'active' }
+            });
         }
-        catch (assignError) {
-            console.error('Warning: Failed to assign doctor-patient (Patient created successfully):', assignError);
-            // Do not throw, as patient is created
-        }
+        catch (e) { }
     }
-    return profile;
+    return patient;
 }
 async function getPatientById(patientId) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
-    const { data, error } = await admin
-        .from('patients')
-        .select('*')
-        .eq('id', patientId)
-        .single();
-    if (error)
-        throw error;
+    const data = await db_1.default.patient.findUnique({ where: { id: patientId } });
+    if (!data)
+        throw new Error("Patient not found");
     return mapDbToPatientData(data);
 }
 async function updatePatient(patientId, updates) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
-    const payload = { updated_at: new Date().toISOString() };
+    const dataToUpdate = {};
     if (updates.full_name !== undefined)
-        payload.full_name = updates.full_name;
+        dataToUpdate.fullName = updates.full_name;
     if (updates.patient_data !== undefined)
-        payload.patient_data = updates.patient_data;
-    const { error } = await admin
-        .from('patients')
-        .update(payload)
-        .eq('id', patientId);
-    if (error)
-        throw error;
+        dataToUpdate.patientData = updates.patient_data;
+    await db_1.default.patient.update({
+        where: { id: patientId },
+        data: dataToUpdate
+    });
     return true;
 }
+function mapDbToLogData(log) {
+    if (!log)
+        return log;
+    const diseaseData = log.diseaseData || {};
+    const common = diseaseData.common || {};
+    const specific = diseaseData.specific || {};
+    return {
+        ...log,
+        date: log.logDate,
+        spo2: common.spo2?.atRest || common.spo2_at_rest || log.spo2_at_rest || 0,
+        spo2_at_rest: common.spo2?.atRest || common.spo2_at_rest || log.spo2_at_rest || 0,
+        spo2_on_exertion: common.spo2?.onExertion || common.spo2_on_exertion || log.spo2_on_exertion || 0,
+        pefr: specific.peakFlowPercent || specific.pefr || specific.peak_flow || log.pefr || 0,
+        peak_flow: specific.peakFlowPercent || specific.pefr || specific.peak_flow || log.pefr || 0,
+        mmrc_scale: common.mMRCScale || common.mmrc_scale || log.mmrc_scale || 0,
+        cough: common.symptoms?.find((s) => s.name?.toLowerCase() === 'cough')?.score || 0,
+        breathlessness: common.symptoms?.find((s) => s.name?.toLowerCase() === 'breathlessness')?.score || 0,
+        displayDate: log.logDate ? new Date(log.logDate).toLocaleDateString() : ''
+    };
+}
 async function getPatientLogs(patientId) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
-    const { data, error } = await admin
-        .from('daily_logs')
-        .select('*')
-        .eq('patient_id', patientId)
-        .order('created_at', { ascending: false });
-    if (error)
-        throw error;
-    return data || [];
+    const data = await db_1.default.dailyLog.findMany({
+        where: { patientId },
+        orderBy: { logDate: 'desc' }
+    });
+    return data.map(mapDbToLogData);
 }
 async function getPatientMedications(patientId) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
-    const { data, error } = await admin
-        .from('patients')
-        .select('patient_data')
-        .eq('id', patientId)
-        .single();
-    if (error)
-        throw error;
-    return data?.patient_data?.medications || [];
+    const data = await db_1.default.patient.findUnique({ where: { id: patientId }, select: { patientData: true } });
+    return data?.patientData?.medications || [];
+}
+async function getPatientReports(patientId) {
+    const data = await db_1.default.patient.findUnique({ where: { id: patientId }, select: { patientData: true } });
+    const pData = data?.patientData;
+    const pftRecords = pData?.pftRecords || [];
+    const otherReports = pData?.reports || [];
+    return { pftRecords, reports: otherReports };
 }
 async function canLogToday(patientId) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
-    const today = new Date().toISOString().split('T')[0];
-    const { count } = await admin
-        .from('daily_logs')
-        .select('*', { count: 'exact', head: true })
-        .eq('patient_id', patientId)
-        .eq('log_date', today);
-    return (count || 0) < 1;
+    const today = new Date(new Date().toISOString().split('T')[0]);
+    const count = await db_1.default.dailyLog.count({
+        where: { patientId, logDate: today }
+    });
+    return count < 1;
+}
+async function getPatientInstructions(patientId) {
+    return await db_1.default.doctorInstruction.findMany({
+        where: { patientId },
+        orderBy: { createdAt: 'desc' }
+    });
+}
+async function addPatientInstruction(patientId, doctorId, instruction) {
+    return await db_1.default.doctorInstruction.create({
+        data: { patientId, doctorId, instruction, isActive: true }
+    });
 }
 function mapDbToPatientData(data) {
-    if (data && data.patient_data) {
-        const dbData = data.patient_data;
+    if (data && data.patientData) {
+        const dbData = data.patientData;
         return {
-            fullName: data.full_name,
-            mobileNumber: dbData.mobile || dbData.mobileNumber || '',
+            fullName: data.fullName,
             emailId: data.email || dbData.email || '',
             age: dbData.age || '',
             sex: dbData.sex || dbData.gender || '',
             diagnosis: dbData.diagnosis || {
-                primaryCategory: dbData.disease_type || 'Unknown',
+                primaryCategory: data.diseaseType || 'Unknown',
                 subtype: dbData.disease_subtype || ''
             },
             medications: dbData.medications || [],
             pftRecords: dbData.pftRecords || [],
+            reports: dbData.reports || [],
             medicalHistory: dbData.medicalHistory || '',
             comorbidities: dbData.comorbidities || [],
             ltot: dbData.respiratorySupport?.ltot || { enabled: false },
             bipap: dbData.respiratorySupport?.bipap || { enabled: false },
             invasiveVentilation: dbData.respiratorySupport?.invasiveVentilation || { enabled: false },
             tracheostomy: dbData.respiratorySupport?.tracheostomy || { enabled: false },
-            registrationDate: data.created_at?.split('T')[0] || new Date().toISOString().split('T')[0]
+            registrationDate: data.createdAt ? new Date(data.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
         };
     }
     return data;

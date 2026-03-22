@@ -2,7 +2,6 @@
 export interface AuthSession {
     userId: string
     email?: string
-    phone?: string
     role: 'doctor' | 'patient'
     approved?: boolean
     profile?: DoctorProfile | PatientProfile
@@ -12,7 +11,6 @@ export interface DoctorProfile {
     id: string
     email: string
     full_name: string
-    phone?: string
     approval_status: 'pending' | 'approved' | 'rejected'
     created_at: string
     updated_at: string
@@ -23,7 +21,6 @@ export interface PatientProfile {
     auth_user_id: string
     email?: string
     full_name?: string
-    phone?: string
     patient_data: PatientData
     created_at: string
     updated_at: string

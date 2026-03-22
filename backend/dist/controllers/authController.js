@@ -46,24 +46,25 @@ exports.verifyPatientOtp = verifyPatientOtp;
 exports.patientLogin = patientLogin;
 exports.adminLogin = adminLogin;
 exports.doctorSignup = doctorSignup;
+exports.patientSignup = patientSignup;
 exports.testEmail = testEmail;
 exports.exchangeCallback = exchangeCallback;
 exports.authMe = authMe;
 exports.signOut = signOut;
 const authService = __importStar(require("../services/authService"));
 async function startDoctorRegistration(req, res) {
-    const { phone } = req.body;
-    if (!phone)
-        return res.status(400).json({ success: false, error: 'phone required' });
-    const result = await authService.startDoctorRegistration(phone);
+    const { email } = req.body;
+    if (!email)
+        return res.status(400).json({ success: false, error: 'email required' });
+    const result = await authService.startDoctorRegistration(email);
     return res.status(result.success ? 200 : 400).json(result);
 }
 async function completeDoctorRegistration(req, res) {
-    const { phone, token, email, fullName, altPhone } = req.body;
-    if (!phone || !token || !email || !fullName) {
-        return res.status(400).json({ success: false, error: 'phone, token, email, fullName required' });
+    const { token, email, fullName, password } = req.body;
+    if (!token || !email || !fullName || !password) {
+        return res.status(400).json({ success: false, error: 'token, email, fullName, password required' });
     }
-    const result = await authService.completeDoctorRegistration({ phone, token, email, fullName, altPhone });
+    const result = await authService.completeDoctorRegistration({ token, email, fullName, password });
     return res.status(result.success ? 200 : 400).json(result);
 }
 async function doctorLogin(req, res) {
@@ -88,38 +89,38 @@ async function verifyDoctorOtp(req, res) {
     return res.status(result.success ? 200 : 401).json(result);
 }
 async function setupDoctorPassword(req, res) {
-    const { phone, token, newPassword } = req.body;
-    if (!phone || !token || !newPassword)
-        return res.status(400).json({ success: false, error: 'phone, token, newPassword required' });
-    const result = await authService.setupDoctorPassword(phone, token, newPassword);
+    const { email, token, newPassword } = req.body;
+    if (!email || !token || !newPassword)
+        return res.status(400).json({ success: false, error: 'email, token, newPassword required' });
+    const result = await authService.setupDoctorPassword(email, token, newPassword);
     return res.status(result.success ? 200 : 400).json(result);
 }
 async function startPasswordReset(req, res) {
-    const { phone } = req.body;
-    if (!phone)
-        return res.status(400).json({ success: false, error: 'phone required' });
-    const result = await authService.startPasswordReset(phone);
+    const { email } = req.body;
+    if (!email)
+        return res.status(400).json({ success: false, error: 'email required' });
+    const result = await authService.startPasswordReset(email);
     return res.status(result.success ? 200 : 400).json(result);
 }
 async function completePasswordReset(req, res) {
-    const { phone, token, newPassword } = req.body;
-    if (!phone || !token || !newPassword)
-        return res.status(400).json({ success: false, error: 'phone, token, newPassword required' });
-    const result = await authService.setupDoctorPassword(phone, token, newPassword);
+    const { email, token, newPassword } = req.body;
+    if (!email || !token || !newPassword)
+        return res.status(400).json({ success: false, error: 'email, token, newPassword required' });
+    const result = await authService.setupDoctorPassword(email, token, newPassword);
     return res.status(result.success ? 200 : 400).json(result);
 }
 async function patientLoginOtp(req, res) {
-    const { phone } = req.body;
-    if (!phone)
-        return res.status(400).json({ success: false, error: 'phone required' });
-    const result = await authService.patientLoginWithOtp(phone);
+    const { email } = req.body;
+    if (!email)
+        return res.status(400).json({ success: false, error: 'email required' });
+    const result = await authService.patientLoginWithOtp(email);
     return res.status(result.success ? 200 : 400).json(result);
 }
 async function verifyPatientOtp(req, res) {
-    const { phone, token } = req.body;
-    if (!phone || !token)
-        return res.status(400).json({ success: false, error: 'phone and token required' });
-    const result = await authService.verifyPatientOtp(phone, token);
+    const { email, token } = req.body;
+    if (!email || !token)
+        return res.status(400).json({ success: false, error: 'email and token required' });
+    const result = await authService.verifyPatientOtp(email, token);
     return res.status(result.success ? 200 : 401).json(result);
 }
 async function patientLogin(req, res) {
@@ -137,10 +138,17 @@ async function adminLogin(req, res) {
     return res.status(result.success ? 200 : 401).json(result);
 }
 async function doctorSignup(req, res) {
-    const { email, fullName, phone } = req.body;
+    const { email, fullName, password } = req.body;
     if (!email || !fullName)
         return res.status(400).json({ success: false, error: 'email and fullName required' });
-    const result = await authService.doctorSignup(email, fullName, phone);
+    const result = await authService.doctorSignup(email, fullName, password);
+    return res.status(result.success ? 200 : 400).json(result);
+}
+async function patientSignup(req, res) {
+    const { email, fullName, password } = req.body;
+    if (!email || !fullName)
+        return res.status(400).json({ success: false, error: 'email and fullName required' });
+    const result = await authService.patientSignup(email, fullName, password);
     return res.status(result.success ? 200 : 400).json(result);
 }
 async function testEmail(req, res) {
@@ -160,7 +168,11 @@ async function exchangeCallback(req, res) {
 async function authMe(req, res) {
     if (!req.user?.id)
         return res.status(401).json({ user: null });
-    const data = await authService.getAuthProfile({ id: req.user.id, email: req.user.email });
+    const data = await authService.getAuthProfile({
+        id: req.user.id,
+        email: req.user.email,
+        role: req.user.role
+    });
     return res.json(data);
 }
 async function signOut(_req, res) {

@@ -1,7 +1,5 @@
-
-import { requireAdminClient } from '../config/supabaseClient'
+import prisma from '../config/db'
 import { calculateDailyScore, getRiskLevel } from '../scoring/scoringEngine'
-import { canLogToday } from './patientService'
 // @ts-ignore
 import { DailyLogSubmission } from '../types/shared'
 import * as alertService from './alertService'
@@ -13,14 +11,7 @@ export async function createDailyLog(payload: {
   commonData: any
   diseaseSpecificData: any
 }) {
-  const admin = requireAdminClient()
   const { patientId, diseaseType, commonData, diseaseSpecificData } = payload
-
-  // 1. Check if already logged today
-  //   const canLog = await canLogToday(patientId) 
-  //   if (!canLog) {
-  //     throw new Error('Daily logging limit reached (1 log per day)')
-  //   }
 
   // 1. Prepare submission object
   const submission: DailyLogSubmission = {
@@ -30,8 +21,7 @@ export async function createDailyLog(payload: {
     specific: diseaseSpecificData
   }
 
-  // 2. Evaluate Alert & Score (Using new separate service)
-  // This handles History Fetching, Weighted Average, and Alert Persistence internally.
+  // 2. Evaluate Alert & Score
   const evaluation = await alertService.evaluateAndStoreAlert(patientId, diseaseType, submission);
 
   const today = new Date().toISOString().split('T')[0]
@@ -41,66 +31,58 @@ export async function createDailyLog(payload: {
     common: commonData,
     specific: diseaseSpecificData,
     scored_at: new Date().toISOString(),
-    raw_score: evaluation.score, // Storing final weighted score as the daily reference
+    raw_score: evaluation.score,
     drivers: evaluation.drivers
   }
 
   // 4. Insert Daily Log
-  const { data: logData, error: logError } = await admin
-    .from('daily_logs')
-    .insert({
-      patient_id: patientId,
-      log_date: today,
-      disease_type: diseaseType,
-      disease_data: diseaseData,
-      red_flag_score: evaluation.score
-    })
-    .select()
-    .single()
+  const logData = await prisma.dailyLog.create({
+    data: {
+      patientId,
+      logDate: new Date(today),
+      diseaseType,
+      diseaseData,
+      redFlagScore: evaluation.score
+    }
+  });
 
-  if (logError) throw logError
-
-  // 5. Update Patient Folder Color (Doctor Dashboard)
+  // 5. Update Patient Folder Color
   try {
-    const { data: patient } = await admin
-      .from('patients')
-      .select('doctor_id, full_name')
-      .eq('id', patientId)
-      .single()
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+      select: { doctorId: true, fullName: true }
+    });
 
-    if (patient?.doctor_id) {
-      // Map Risk Level to Folder Color
+    if (patient?.doctorId) {
       let folderColor = 'green';
       if (evaluation.level === 'RED') folderColor = 'red';
       else if (evaluation.level === 'ORANGE') folderColor = 'orange';
       else if (evaluation.level === 'YELLOW') folderColor = 'yellow';
 
       try {
-        await doctorService.updatePatientFolder(patient.doctor_id, patientId, {
-          redFlagScore: evaluation.score,
+        await doctorService.updatePatientFolder(patient.doctorId, patientId, {
+          redFlagScore: evaluation.score as unknown as number,
           folderColor: folderColor
         })
       } catch (e) {
         console.error('Failed to update patient folder, trying upsert', e);
         await doctorService.upsertPatientFolder({
           patientId,
-          doctorId: patient.doctor_id,
-          fullName: patient.full_name,
+          doctorId: patient.doctorId,
+          fullName: patient.fullName,
           age: 0,
           diseaseType,
           lastLogDate: today,
           folderColor: folderColor,
-          redFlagScore: evaluation.score,
+          redFlagScore: evaluation.score as unknown as number,
           alertCount: 1
         })
       }
     }
   } catch (e) {
     console.error('Non-critical secondary update failed (folders):', e);
-    // Continue despite folder failure
   }
 
-  // Return structure compatible with frontend expectation
   return {
     logEntry: logData,
     alert: evaluation.level !== 'GREEN' ? { level: evaluation.level, score: evaluation.score, drivers: evaluation.drivers } : null,
@@ -110,13 +92,8 @@ export async function createDailyLog(payload: {
 }
 
 export async function getPatientLogs(patientId: string) {
-  const admin = requireAdminClient()
-  const { data, error } = await admin
-    .from('daily_logs')
-    .select('*')
-    .eq('patient_id', patientId)
-    .order('log_date', { ascending: false })
-
-  if (error) throw error
-  return data
+  return await prisma.dailyLog.findMany({
+    where: { patientId },
+    orderBy: { logDate: 'desc' }
+  });
 }

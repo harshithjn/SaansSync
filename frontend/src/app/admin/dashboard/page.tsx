@@ -10,7 +10,6 @@ import {
     XCircle,
     FileText,
     Mail,
-    Phone,
     Calendar,
     AlertCircle,
     RefreshCw,
@@ -21,7 +20,10 @@ import {
     getAllDoctors,
     approveDoctorAccount, 
     rejectDoctorAccount,
-    fixApprovedDoctors,
+    fixApprovedDoctors
+} from '@/lib/auth-service'
+import { formatDate } from '@/lib/utils'
+import {
     getCurrentUserProfile,
     signOut,
     type DoctorProfile 
@@ -233,7 +235,7 @@ export default function AdminDashboard() {
                                 onClick={handleFixApprovedDoctors}
                                 disabled={loading}
                                 variant="outline"
-                                className="gap-2 bg-blue-50 border-blue-300 text-blue-600 hover:bg-blue-100"
+                                className="gap-2 bg-purple-50 border-purple-300 text-purple-600 hover:bg-purple-100"
                             >
                                 <RefreshCw className="w-4 h-4" />
                                 Fix Approved Doctors
@@ -290,8 +292,8 @@ export default function AdminDashboard() {
 
                     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                                <Users className="w-5 h-5 text-blue-600" />
+                            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                                <Users className="w-5 h-5 text-purple-600" />
                             </div>
                             <div>
                                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
@@ -367,12 +369,6 @@ export default function AdminDashboard() {
                                                         <Mail className="w-4 h-4" />
                                                         {doctor.email}
                                                     </div>
-                                                    {doctor.phone && (
-                                                        <div className="flex items-center gap-1">
-                                                            <Phone className="w-4 h-4" />
-                                                            {doctor.phone}
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
                                             <div className={`px-3 py-1 rounded-full text-xs font-medium ${doctor.approval_status === 'pending'
@@ -388,7 +384,7 @@ export default function AdminDashboard() {
                                         <div className="grid md:grid-cols-2 gap-4 mb-4">
                                             <div className="flex items-center gap-2 text-sm text-gray-600">
                                                 <Calendar className="w-4 h-4" />
-                                                <span>Registered: {new Date(doctor.created_at).toLocaleDateString()}</span>
+                                                <span>Registered: {formatDate(doctor.created_at)}</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-sm text-gray-600">
                                                 <Users className="w-4 h-4" />
@@ -399,7 +395,7 @@ export default function AdminDashboard() {
                                         {doctor.updated_at !== doctor.created_at && (
                                             <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                                                 <p className="text-sm text-gray-600">
-                                                    <strong>Last Updated:</strong> {new Date(doctor.updated_at).toLocaleDateString()}
+                                                    <strong>Last Updated:</strong> {formatDate(doctor.updated_at)}
                                                 </p>
                                             </div>
                                         )}

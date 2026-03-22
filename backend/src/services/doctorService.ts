@@ -1,144 +1,121 @@
-import { requireAdminClient } from '../config/supabaseClient'
+import prisma from '../config/db'
 
-export async function createDoctorProfile(userId: string, payload: { fullName: string; email?: string; phone?: string }) {
-  const admin = requireAdminClient()
-  const { data, error } = await admin
-    .from('doctors')
-    .insert({
-      auth_user_id: userId,
-      full_name: payload.fullName,
-      email: payload.email,
-      phone: payload.phone || null,
-      approval_status: 'pending'
-    })
-    .select()
-    .single()
-
-  if (error) throw error
-  return data
+export async function createDoctorProfile(userId: string, payload: { fullName: string; email?: string }) {
+  return await prisma.doctor.create({
+    data: {
+      authUserId: userId,
+      fullName: payload.fullName,
+      email: payload.email || '',
+      approvalStatus: 'pending'
+    }
+  });
 }
 
 export async function getDoctorProfile(doctorId: string) {
-  const admin = requireAdminClient()
-  const doctorPK = await resolveDoctorId(doctorId)
-  const { data, error } = await admin
-    .from('doctors')
-    .select('*')
-    .eq('id', doctorPK)
-    .single()
-  if (error) throw error
-  return data
+  const doctorPK = await resolveDoctorId(doctorId);
+  if (!doctorPK) throw new Error("Doctor not found");
+  return await prisma.doctor.findUnique({ where: { id: doctorPK } });
 }
 
 async function resolveDoctorId(doctorId: string) {
-  const admin = requireAdminClient()
-  const { data: byId } = await admin.from('doctors').select('id').eq('id', doctorId).maybeSingle()
-  if (byId?.id) return byId.id
-  const { data: byAuth } = await admin.from('doctors').select('id').eq('auth_user_id', doctorId).maybeSingle()
-  return byAuth?.id || doctorId
+  let doc = await prisma.doctor.findUnique({ where: { id: doctorId } }).catch(() => null);
+  if (doc) return doc.id;
+  doc = await prisma.doctor.findUnique({ where: { authUserId: doctorId } }).catch(() => null);
+  if (doc) return doc.id;
+  return doctorId;
 }
 
 export async function getDoctorPatients(doctorId: string) {
-  const admin = requireAdminClient()
-  const doctorPK = await resolveDoctorId(doctorId)
+  const doctorPK = await resolveDoctorId(doctorId);
+  if (!doctorPK) return [];
 
-  const { data, error } = await admin
-    .from('patients')
-    .select('id, full_name, email, patient_data, created_at, doctor_id, disease_type')
-    .or(`doctor_id.eq.${doctorPK},doctor_id.eq.${doctorId}`)
+  const patients = await prisma.patient.findMany({
+    where: { OR: [{ doctorId: doctorPK }, { doctorId }] },
+    select: { id: true, fullName: true, email: true, patientData: true, createdAt: true, doctorId: true, diseaseType: true }
+  });
 
-  if (error) throw error
-
-  const mapped = (data || []).map((p: any) => ({
-    ...p,
-    disease_type: p.patient_data?.diagnosis?.primaryCategory || p.patient_data?.disease_type || p.disease_type || 'Unknown'
-  }))
-
-  return mapped
+  return patients.map(p => {
+    const pData = p.patientData as any;
+    return {
+      ...p,
+      disease_type: pData?.diagnosis?.primaryCategory || pData?.disease_type || p.diseaseType || 'Unknown'
+    };
+  });
 }
 
 export async function getDoctorLogs(doctorId: string) {
-  const admin = requireAdminClient()
-  const doctorPK = await resolveDoctorId(doctorId)
+  const doctorPK = await resolveDoctorId(doctorId);
+  if (!doctorPK) return [];
 
-  const { data: patients, error: patientsError } = await admin
-    .from('patients')
-    .select('id, full_name, patient_data')
-    .or(`doctor_id.eq.${doctorPK},doctor_id.eq.${doctorId}`)
+  const patients = await prisma.patient.findMany({
+    where: { OR: [{ doctorId: doctorPK }, { doctorId }] },
+    select: { id: true, fullName: true, patientData: true }
+  });
 
-  if (patientsError) throw patientsError
-  if (!patients || patients.length == 0) return []
+  if (patients.length === 0) return [];
+  const patientIds = patients.map(p => p.id);
 
-  const patientIds = patients.map((p: any) => p.id)
+  const logs = await prisma.dailyLog.findMany({
+    where: { patientId: { in: patientIds } },
+    orderBy: { createdAt: 'desc' }
+  });
 
-  const { data: logs, error: logsError } = await admin
-    .from('daily_logs')
-    .select('*')
-    .in('patient_id', patientIds)
-    .order('created_at', { ascending: false })
-
-  if (logsError) throw logsError
-
-  return (logs || []).map((log: any) => {
-    const patient = patients.find((p: any) => p.id === log.patient_id)
+  return logs.map(log => {
+    const patient = patients.find(p => p.id === log.patientId);
+    const pData = patient?.patientData as any;
     return {
       ...log,
-      patient_name: patient?.full_name || 'Unknown',
-      patient_disease: patient?.patient_data?.diagnosis?.primaryCategory || patient?.patient_data?.disease_type || 'Unknown'
-    }
-  })
+      patient_name: patient?.fullName || 'Unknown',
+      patient_disease: pData?.diagnosis?.primaryCategory || pData?.disease_type || 'Unknown'
+    };
+  });
 }
 
 export async function getDoctorAlerts(doctorId: string) {
-  const admin = requireAdminClient()
-  const doctorPK = await resolveDoctorId(doctorId)
+  const doctorPK = await resolveDoctorId(doctorId);
+  if (!doctorPK) return [];
 
-  const { data: alerts, error } = await admin
-    .from('saanssync_alerts')
-    .select('*')
-    .or(`doctor_id.eq.${doctorPK},doctor_id.eq.${doctorId}`)
-    .order('created_at', { ascending: false })
+  const alerts = await prisma.alert.findMany({
+    where: { OR: [{ doctorId: doctorPK }, { doctorId }] },
+    orderBy: { createdAt: 'desc' }
+  });
 
-  if (error) throw error
-
-  const mapped = (alerts || []).map((alert: any) => {
-    let type = 'pending-review'
-    let score = 1
+  return alerts.map(alert => {
+    let type = 'pending-review';
+    let red_flag_score = 1;
 
     if (alert.level === 'RED') {
-      type = 'critical'
-      score = 10
+      type = 'critical';
+      red_flag_score = 10;
     } else if (alert.level === 'ORANGE') {
-      type = 'high-risk'
-      score = 8
+      type = 'high-risk';
+      red_flag_score = 8;
     } else if (alert.level === 'YELLOW') {
-      type = 'high-risk'
-      score = 4
+      type = 'high-risk';
+      red_flag_score = 4;
     }
 
-    return {
-      ...alert,
-      type,
-      red_flag_score: score
-    }
-  })
-
-  return mapped
+    return { ...alert, type, red_flag_score };
+  });
 }
 
 export async function assignPatientToDoctor(doctorId: string, patientId: string, diseaseType?: string) {
-  const admin = requireAdminClient()
-  const doctorPK = await resolveDoctorId(doctorId)
+  const doctorPK = await resolveDoctorId(doctorId);
+  if (!doctorPK) return false;
 
-  await admin
-    .from('doctor_patient_mapping')
-    .upsert({ doctor_id: doctorPK, patient_id: patientId, disease_type: diseaseType || null })
+  await prisma.doctorPatientMapping.upsert({
+    where: { doctorId_patientId: { doctorId: doctorPK, patientId } },
+    update: { diseaseType: diseaseType || null },
+    create: { doctorId: doctorPK, patientId, diseaseType: diseaseType || null }
+  });
 
-  await admin
-    .from('doctor_patient_assignments')
-    .upsert({ doctor_id: doctorPK, patient_id: patientId, status: 'active' })
+  await prisma.doctorPatientAssignment.upsert({
+    where: { doctorId_patientId: { doctorId: doctorPK, patientId } },
+    update: { status: 'active' },
+    create: { doctorId: doctorPK, patientId, status: 'active' }
+  });
 
-  return true
+  return true;
 }
 
 export async function upsertPatientFolder(payload: {
@@ -152,86 +129,81 @@ export async function upsertPatientFolder(payload: {
   redFlagScore: number
   alertCount: number
 }) {
-  const admin = requireAdminClient()
-  const doctorPK = await resolveDoctorId(payload.doctorId)
-
-  const { data, error } = await admin
-    .from('patient_folders')
-    .upsert({
-      patient_id: payload.patientId,
-      doctor_id: doctorPK,
-      full_name: payload.fullName,
-      age: payload.age,
-      disease_type: payload.diseaseType,
-      last_log_date: payload.lastLogDate,
-      folder_color: payload.folderColor,
-      red_flag_score: payload.redFlagScore,
-      alert_count: payload.alertCount,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'patient_id,doctor_id' })
-    .select()
-    .maybeSingle() // Use maybeSingle to avoid throw on missing data
-
-  if (error) {
-    if (error.code === 'PGRST116') return null; // No folder found
-    console.error('Upsert folder failed:', error);
-    return null; // Don't throw for non-critical feature
-  }
+  const doctorPK = await resolveDoctorId(payload.doctorId);
+  if (!doctorPK) return null;
 
   try {
-    await assignPatientToDoctor(doctorPK, payload.patientId, payload.diseaseType)
+    const folder = await prisma.patientFolder.upsert({
+      where: { doctorId_patientId: { doctorId: doctorPK, patientId: payload.patientId } },
+      update: {
+        fullName: payload.fullName,
+        age: payload.age,
+        diseaseType: payload.diseaseType,
+        lastLogDate: payload.lastLogDate ? new Date(payload.lastLogDate) : null,
+        folderColor: payload.folderColor,
+        redFlagScore: payload.redFlagScore,
+        alertCount: payload.alertCount,
+        updatedAt: new Date()
+      },
+      create: {
+        patientId: payload.patientId,
+        doctorId: doctorPK,
+        fullName: payload.fullName,
+        age: payload.age,
+        diseaseType: payload.diseaseType,
+        lastLogDate: payload.lastLogDate ? new Date(payload.lastLogDate) : null,
+        folderColor: payload.folderColor,
+        redFlagScore: payload.redFlagScore,
+        alertCount: payload.alertCount
+      }
+    });
+
+    try {
+      await assignPatientToDoctor(doctorPK, payload.patientId, payload.diseaseType);
+    } catch (e) {
+      console.warn('Skipping patient assignment (non-critical):', e);
+    }
+
+    return folder;
   } catch (e) {
-    console.warn('Skipping patient assignment (non-critical):', e);
+    console.error('Upsert folder failed:', e);
+    return null;
   }
-  return data
 }
 
 export async function getPatientFolders(doctorId: string) {
-  const admin = requireAdminClient()
-  const doctorPK = await resolveDoctorId(doctorId)
-  const { data, error } = await admin
-    .from('patient_folders')
-    .select('*')
-    .eq('doctor_id', doctorPK)
-  if (error) throw error
-  return (data || []).map((row: any) => ({
-    patientId: row.patient_id,
-    fullName: row.full_name,
-    age: Number(row.age || 0),
-    diseaseType: row.disease_type,
-    lastLogDate: row.last_log_date,
-    folderColor: row.folder_color,
-    redFlagScore: Number(row.red_flag_score || 0),
-    alertCount: Number(row.alert_count || 0),
-    doctorId: row.doctor_id
-  }))
+  const doctorPK = await resolveDoctorId(doctorId);
+  if (!doctorPK) return [];
+
+  const folders = await prisma.patientFolder.findMany({
+    where: { doctorId: doctorPK }
+  });
+
+  return folders;
 }
 
 export async function updatePatientFolder(doctorId: string, patientId: string, updates: { redFlagScore?: number; alertCount?: number; folderColor?: string }) {
-  const admin = requireAdminClient()
-  const doctorPK = await resolveDoctorId(doctorId)
-  const { error } = await admin
-    .from('patient_folders')
-    .update({
-      red_flag_score: updates.redFlagScore,
-      alert_count: updates.alertCount,
-      folder_color: updates.folderColor,
-      updated_at: new Date().toISOString()
-    })
-    .eq('doctor_id', doctorPK)
-    .eq('patient_id', patientId)
-  if (error) throw error
-  return true
+  const doctorPK = await resolveDoctorId(doctorId);
+  if (!doctorPK) return false;
+
+  await prisma.patientFolder.update({
+    where: { doctorId_patientId: { doctorId: doctorPK, patientId } },
+    data: {
+      redFlagScore: updates.redFlagScore,
+      alertCount: updates.alertCount,
+      folderColor: updates.folderColor,
+      updatedAt: new Date()
+    }
+  });
+  return true;
 }
 
 export async function deletePatientFolder(doctorId: string, patientId: string) {
-  const admin = requireAdminClient()
-  const doctorPK = await resolveDoctorId(doctorId)
-  const { error } = await admin
-    .from('patient_folders')
-    .delete()
-    .eq('doctor_id', doctorPK)
-    .eq('patient_id', patientId)
-  if (error) throw error
-  return true
+  const doctorPK = await resolveDoctorId(doctorId);
+  if (!doctorPK) return false;
+
+  await prisma.patientFolder.delete({
+    where: { doctorId_patientId: { doctorId: doctorPK, patientId } }
+  });
+  return true;
 }

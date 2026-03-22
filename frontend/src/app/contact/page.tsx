@@ -1,11 +1,12 @@
 "use client"
 
 import { Header } from '@/components/common/Header'
-import { Mail, Phone, MapPin, Clock, Send, MessageCircle } from 'lucide-react'
+import { Mail, Phone, MapPin, Send, MessageCircle, ArrowUpRight, Wind, ShieldCheck, Heart } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useState } from 'react'
 import { toast } from '@/lib/toast'
+import Link from 'next/link'
 
 export default function ContactPage() {
     const [formData, setFormData] = useState({
@@ -17,8 +18,7 @@ export default function ContactPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        // Handle form submission
-        toast.success('Thank you for your message! We will get back to you soon.')
+        toast.success('Your message has been sent.')
         setFormData({ name: '', email: '', subject: '', message: '' })
     }
 
@@ -27,185 +27,127 @@ export default function ContactPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-[#fafafa] font-['Matter_Regular',sans-serif]">
             <Header currentPage="contact" />
 
-            <div className="container mx-auto px-4 py-12">
-                {/* Hero Section */}
-                <div className="text-center mb-16">
-                    <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-6">
-                        <MessageCircle className="w-10 h-10 text-green-600" />
-                    </div>
-                    <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                        Contact Us
-                    </h1>
-                    <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                        Get in touch with our team for support, questions, or partnership opportunities.
-                    </p>
-                </div>
-
-                <div className="grid lg:grid-cols-2 gap-12">
-                    {/* Contact Form */}
-                    <div className="bg-white rounded-2xl p-8 shadow-lg">
-                        <h2 className="text-2xl font-bold text-gray-900 mb-6">Send us a Message</h2>
-
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Full Name *
-                                    </label>
-                                    <Input
-                                        type="text"
-                                        value={formData.name}
-                                        onChange={(e) => handleInputChange('name', e.target.value)}
-                                        placeholder="Your full name"
-                                        required
-                                        className="h-12"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Email Address *
-                                    </label>
-                                    <Input
-                                        type="email"
-                                        value={formData.email}
-                                        onChange={(e) => handleInputChange('email', e.target.value)}
-                                        placeholder="your.email@example.com"
-                                        required
-                                        className="h-12"
-                                    />
-                                </div>
-                            </div>
-
+            <main className="container mx-auto px-8 py-32">
+                <div className="max-w-6xl mx-auto">
+                    <div className="grid lg:grid-cols-2 gap-32 items-start">
+                        {/* Clinical Information Area */}
+                        <div className="space-y-16">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Subject *
-                                </label>
-                                <Input
-                                    type="text"
-                                    value={formData.subject}
-                                    onChange={(e) => handleInputChange('subject', e.target.value)}
-                                    placeholder="What is this regarding?"
-                                    required
-                                    className="h-12"
-                                />
+                                <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-purple-50 text-purple-600 text-[10px] font-bold uppercase tracking-widest mb-10 border border-purple-100 shadow-sm">
+                                    <MessageCircle className="w-3.5 h-3.5" />
+                                    Get in Touch
+                                </div>
+                                <h1 className="text-6xl md:text-7xl font-bold text-slate-900 tracking-tight mb-10 leading-[0.9]">
+                                    Contact<br />
+                                    Support.
+                                </h1>
+                                <p className="text-xl text-slate-500 font-medium leading-relaxed max-w-md">
+                                    Our team is here to help you with any questions about using SaansSync.
+                                </p>
                             </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Message *
-                                </label>
-                                <textarea
-                                    value={formData.message}
-                                    onChange={(e) => handleInputChange('message', e.target.value)}
-                                    placeholder="Tell us more about your inquiry..."
-                                    required
-                                    rows={6}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                                />
-                            </div>
-
-                            <Button
-                                type="submit"
-                                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white gap-2"
-                            >
-                                <Send className="w-4 h-4" />
-                                Send Message
-                            </Button>
-                        </form>
-                    </div>
-
-                    {/* Contact Information */}
-                    <div className="space-y-8">
-                        {/* Contact Cards */}
-                        <div className="bg-white rounded-2xl p-8 shadow-lg">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Get in Touch</h2>
-
-                            <div className="space-y-6">
-                                <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
-                                        <Mail className="w-6 h-6 text-blue-600" />
+                            
+                            <div className="space-y-10">
+                                <div className="group border-b border-slate-100 pb-10 cursor-pointer transition-all hover:translate-x-2">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email Us</h3>
+                                        <ArrowUpRight className="w-5 h-5 text-slate-200 group-hover:text-purple-600 transition-all" />
                                     </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">Email Support</h3>
-                                        <p className="text-gray-600">support@saanssync.com</p>
-                                        <p className="text-sm text-gray-500">We'll respond within 24 hours</p>
-                                    </div>
+                                    <p className="text-2xl font-bold text-slate-900 tracking-tight">contact@harshithj.me</p>
                                 </div>
 
-                                <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                                        <Phone className="w-6 h-6 text-green-600" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">Phone Support</h3>
-                                        <p className="text-gray-600">+91 11 2659 3000</p>
-                                        <p className="text-sm text-gray-500">Mon-Fri, 9:00 AM - 6:00 PM IST</p>
-                                    </div>
-                                </div>
 
-                                <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
-                                        <MapPin className="w-6 h-6 text-purple-600" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">Office Address</h3>
-                                        <p className="text-gray-600">
-                                            All India Institute of Medical Sciences<br />
-                                            Ansari Nagar, New Delhi - 110029<br />
-                                            India
-                                        </p>
-                                    </div>
-                                </div>
 
-                                <div className="flex items-start gap-4">
-                                    <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
-                                        <Clock className="w-6 h-6 text-orange-600" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-gray-900 mb-1">Emergency Support</h3>
-                                        <p className="text-gray-600">24/7 Patient Monitoring</p>
-                                        <p className="text-sm text-gray-500">Critical alerts handled immediately</p>
-                                    </div>
+                                <div className="p-8 bg-purple-600 rounded-[2.5rem] text-white overflow-hidden relative group">
+                                    <h3 className="text-[10px] font-bold text-purple-100 uppercase tracking-widest mb-4 relative z-10">Care HQ</h3>
+                                    <p className="text-lg font-bold tracking-tight leading-snug relative z-10">
+                                        Empowering respiratory health<br />
+                                        across the nation.
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* FAQ Section */}
-                        <div className="bg-white rounded-2xl p-8 shadow-lg">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6">Quick Help</h2>
-
-                            <div className="space-y-4">
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">For Patients</h3>
-                                    <p className="text-sm text-gray-600">
-                                        Having trouble with your monitoring device or accessing your dashboard?
-                                        Contact our patient support team.
-                                    </p>
+                        {/* Submission Form Area */}
+                        <div className="bg-white rounded-[4rem] p-12 md:p-16 shadow-[0_50px_100px_-30px_rgba(0,0,0,0.05)] border border-slate-50 relative">
+                             <div className="absolute -top-10 -right-10 w-40 h-40 bg-slate-50 rounded-full blur-3xl opacity-50 pointer-events-none" />
+                             <div className="mb-12">
+                                <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Send a Message</h2>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">Tell us how we can assist you today.</p>
+                             </div>
+                            
+                            <form onSubmit={handleSubmit} className="space-y-10">
+                                <div className="space-y-8">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Your Name</label>
+                                        <Input
+                                            type="text"
+                                            value={formData.name}
+                                            onChange={(e) => handleInputChange('name', e.target.value)}
+                                            placeholder="John Doe"
+                                            required
+                                            className="h-14 bg-slate-50 border-none rounded-xl px-6 font-bold text-slate-900 placeholder:text-slate-200 focus-visible:ring-slate-100 transition-all text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Your Email</label>
+                                        <Input
+                                            type="email"
+                                            value={formData.email}
+                                            onChange={(e) => handleInputChange('email', e.target.value)}
+                                            placeholder="john@example.com"
+                                            required
+                                            className="h-14 bg-slate-50 border-none rounded-xl px-6 font-bold text-slate-900 placeholder:text-slate-200 focus-visible:ring-slate-100 transition-all text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">How can we help?</label>
+                                        <textarea
+                                            value={formData.message}
+                                            onChange={(e) => handleInputChange('message', e.target.value)}
+                                            placeholder="Tell us what you need..."
+                                            required
+                                            rows={5}
+                                            className="w-full p-6 bg-slate-50 border-none rounded-2xl font-bold text-slate-900 placeholder:text-slate-200 focus:ring-4 focus:ring-slate-50 transition-all resize-none outline-none text-sm"
+                                        />
+                                    </div>
                                 </div>
 
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">For Healthcare Providers</h3>
-                                    <p className="text-sm text-gray-600">
-                                        Need help with patient management or platform features?
-                                        Our clinical support team is here to assist.
-                                    </p>
+                                <Button
+                                    type="submit"
+                                    className="w-full h-16 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-bold text-lg tracking-tight shadow-xl shadow-slate-100 active:scale-[0.98] transition-all flex items-center justify-center gap-4"
+                                >
+                                    Send Message
+                                    <Send className="w-5 h-5" />
+                                </Button>
+                                <div className="flex items-center justify-center gap-3 text-slate-300">
+                                    <ShieldCheck className="w-4 h-4" />
+                                    <p className="text-[9px] font-bold uppercase tracking-widest">Your information is secure and private.</p>
                                 </div>
-
-                                <div>
-                                    <h3 className="font-semibold text-gray-900 mb-2">Technical Issues</h3>
-                                    <p className="text-sm text-gray-600">
-                                        Experiencing technical difficulties? Our IT support team
-                                        provides rapid resolution for all technical concerns.
-                                    </p>
-                                </div>
-                            </div>
+                            </form>
                         </div>
                     </div>
                 </div>
-            </div>
+            </main>
+
+            <footer className="py-24 border-t border-slate-50 bg-white">
+                <div className="container mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-10">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center overflow-hidden shadow-sm">
+                            <img src="/favicon.ico" alt="Logo" className="w-7 h-7 object-contain" />
+                        </div>
+                        <div className="flex flex-col">
+                             <span className="text-xl font-bold text-slate-900 tracking-tight">SaansSync</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Smart Respiratory Care</span>
+                        </div>
+                    </div>
+                    <div className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
+                        &copy; 2026 SaansSync Protocol. Optimized Outcomes.
+                    </div>
+                </div>
+            </footer>
         </div>
     )
 }

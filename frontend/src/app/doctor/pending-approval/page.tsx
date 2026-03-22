@@ -74,9 +74,9 @@ export default function DoctorPendingApprovalPage() {
 
   if (authState.loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-green-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function DoctorPendingApprovalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-green-50">
+    <div className="min-h-screen bg-linear-to-br from-purple-50 via-white to-green-50">
       <div className="flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-200">
@@ -113,12 +113,12 @@ export default function DoctorPendingApprovalPage() {
               </div>
 
               {/* What happens next */}
-              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+              <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
                 <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <Mail className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="font-semibold text-blue-900 mb-1">What happens next?</h3>
-                    <ul className="text-sm text-blue-800 space-y-1">
+                    <h3 className="font-semibold text-purple-900 mb-1">What happens next?</h3>
+                    <ul className="text-sm text-purple-800 space-y-1">
                       <li>• Admin team reviews your credentials</li>
                       <li>• You'll receive an email notification</li>
                       <li>• Once approved, you can access your dashboard</li>
@@ -131,7 +131,7 @@ export default function DoctorPendingApprovalPage() {
               <Button
                 onClick={handleCheckApproval}
                 disabled={checking}
-                className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white"
+                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white"
               >
                 {checking ? (
                   <div className="flex items-center gap-2">
@@ -169,7 +169,7 @@ export default function DoctorPendingApprovalPage() {
               <h4 className="text-sm font-semibold text-gray-900 mb-2">Need Help?</h4>
               <p className="text-xs text-gray-600">
                 If you have questions about your approval status, please contact our support team at{' '}
-                <a href="mailto:support@healthplatform.com" className="text-blue-600 hover:underline">
+                <a href="mailto:support@healthplatform.com" className="text-purple-600 hover:underline">
                   support@healthplatform.com
                 </a>
               </p>

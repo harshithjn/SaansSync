@@ -50,6 +50,7 @@ async function createLog(req, res) {
         return res.json({ success: true, logEntry: result.logEntry, alert: result.alert, score: result.score });
     }
     catch (err) {
+        console.error('CRITICAL LOG ERROR:', err);
         return res.status(500).json({ success: false, error: err?.message || 'Failed to create log' });
     }
 }

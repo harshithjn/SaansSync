@@ -32,20 +32,17 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createDailyLog = createDailyLog;
 exports.getPatientLogs = getPatientLogs;
-const supabaseClient_1 = require("../config/supabaseClient");
+const db_1 = __importDefault(require("../config/db"));
 const alertService = __importStar(require("./alertService"));
 const doctorService = __importStar(require("./doctorService"));
 async function createDailyLog(payload) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
     const { patientId, diseaseType, commonData, diseaseSpecificData } = payload;
-    // 1. Check if already logged today
-    //   const canLog = await canLogToday(patientId) 
-    //   if (!canLog) {
-    //     throw new Error('Daily logging limit reached (1 log per day)')
-    //   }
     // 1. Prepare submission object
     const submission = {
         patientId,
@@ -53,8 +50,7 @@ async function createDailyLog(payload) {
         common: commonData,
         specific: diseaseSpecificData
     };
-    // 2. Evaluate Alert & Score (Using new separate service)
-    // This handles History Fetching, Weighted Average, and Alert Persistence internally.
+    // 2. Evaluate Alert & Score
     const evaluation = await alertService.evaluateAndStoreAlert(patientId, diseaseType, submission);
     const today = new Date().toISOString().split('T')[0];
     // 3. Prepare Data for Log Storage
@@ -62,32 +58,26 @@ async function createDailyLog(payload) {
         common: commonData,
         specific: diseaseSpecificData,
         scored_at: new Date().toISOString(),
-        raw_score: evaluation.score, // Storing final weighted score as the daily reference
+        raw_score: evaluation.score,
         drivers: evaluation.drivers
     };
     // 4. Insert Daily Log
-    const { data: logData, error: logError } = await admin
-        .from('daily_logs')
-        .insert({
-        patient_id: patientId,
-        log_date: today,
-        disease_type: diseaseType,
-        disease_data: diseaseData,
-        red_flag_score: evaluation.score
-    })
-        .select()
-        .single();
-    if (logError)
-        throw logError;
-    // 5. Update Patient Folder Color (Doctor Dashboard)
-    const { data: patient } = await admin
-        .from('patients')
-        .select('doctor_id, full_name')
-        .eq('id', patientId)
-        .single();
-    if (patient?.doctor_id) {
-        try {
-            // Map Risk Level to Folder Color
+    const logData = await db_1.default.dailyLog.create({
+        data: {
+            patientId,
+            logDate: new Date(today),
+            diseaseType,
+            diseaseData,
+            redFlagScore: evaluation.score
+        }
+    });
+    // 5. Update Patient Folder Color
+    try {
+        const patient = await db_1.default.patient.findUnique({
+            where: { id: patientId },
+            select: { doctorId: true, fullName: true }
+        });
+        if (patient?.doctorId) {
             let folderColor = 'green';
             if (evaluation.level === 'RED')
                 folderColor = 'red';
@@ -95,33 +85,31 @@ async function createDailyLog(payload) {
                 folderColor = 'orange';
             else if (evaluation.level === 'YELLOW')
                 folderColor = 'yellow';
-            await doctorService.updatePatientFolder(patient.doctor_id, patientId, {
-                redFlagScore: evaluation.score,
-                folderColor: folderColor
-            });
-        }
-        catch (e) {
-            console.error('Failed to update patient folder', e);
-            // Fallback: Try upsert if update failed (folder might not exist)
             try {
+                await doctorService.updatePatientFolder(patient.doctorId, patientId, {
+                    redFlagScore: evaluation.score,
+                    folderColor: folderColor
+                });
+            }
+            catch (e) {
+                console.error('Failed to update patient folder, trying upsert', e);
                 await doctorService.upsertPatientFolder({
                     patientId,
-                    doctorId: patient.doctor_id,
-                    fullName: patient.full_name,
+                    doctorId: patient.doctorId,
+                    fullName: patient.fullName,
                     age: 0,
                     diseaseType,
                     lastLogDate: today,
-                    folderColor: evaluation.level === 'RED' ? 'red' : evaluation.level === 'ORANGE' ? 'orange' : evaluation.level === 'YELLOW' ? 'yellow' : 'green',
+                    folderColor: folderColor,
                     redFlagScore: evaluation.score,
                     alertCount: 1
                 });
             }
-            catch (upsertError) {
-                console.error('Failed to upsert folder', upsertError);
-            }
         }
     }
-    // Return structure compatible with frontend expectation
+    catch (e) {
+        console.error('Non-critical secondary update failed (folders):', e);
+    }
     return {
         logEntry: logData,
         alert: evaluation.level !== 'GREEN' ? { level: evaluation.level, score: evaluation.score, drivers: evaluation.drivers } : null,
@@ -130,14 +118,9 @@ async function createDailyLog(payload) {
     };
 }
 async function getPatientLogs(patientId) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
-    const { data, error } = await admin
-        .from('daily_logs')
-        .select('*')
-        .eq('patient_id', patientId)
-        .order('log_date', { ascending: false });
-    if (error)
-        throw error;
-    return data;
+    return await db_1.default.dailyLog.findMany({
+        where: { patientId },
+        orderBy: { logDate: 'desc' }
+    });
 }
 //# sourceMappingURL=logsService.js.map

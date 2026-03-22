@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { z } from 'zod'
 import * as alertsService from '../services/alertsService' // DAO
 import * as alertEvaluationService from '../services/alertService' // Complex Logic
+import prisma from '../config/db'
 
 const alertSchema = z.object({
   patient_id: z.string().uuid(),
@@ -76,15 +77,14 @@ export async function acknowledgeAlert(req: Request, res: Response) {
     // Simple enough for direct DB or service call? 
     // Let's use service if available, but alertsService doesn't have it explicitly yet?
     // The previous file content had logic inline. Let's keep it but clean import.
-    const { requireAdminClient } = await import('../config/supabaseClient')
-    const admin = requireAdminClient()
+    await prisma.alert.update({
+      where: { id: alertId },
+      data: {
+        acknowledged: true,
+        acknowledgedAt: new Date()
+      }
+    });
 
-    const { error } = await admin
-      .from('saanssync_alerts')
-      .update({ acknowledged: true, acknowledged_at: new Date().toISOString() })
-      .eq('id', alertId)
-
-    if (error) return res.status(500).json({ success: false, error: error.message })
     return res.json({ success: true })
   } catch (err: any) {
     return res.status(500).json({ success: false, error: err?.message || 'Failed to acknowledge alert' })

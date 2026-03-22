@@ -11,7 +11,13 @@ import {
     Pill,
     HelpCircle,
     Heart,
-    MessageSquare
+    MessageSquare,
+    ChevronRight,
+    ShieldCheck,
+    Languages,
+    Bell,
+    Settings,
+    LayoutDashboard
 } from "lucide-react"
 import { usePatientAuth } from "@/lib/auth-guard"
 import { signOut } from "@/lib/auth-service"
@@ -28,7 +34,7 @@ export default function PatientLayout({
     const authState = usePatientAuth()
 
     // Skip layout for login page
-    if (pathname === '/patient/login') {
+    if (pathname === '/sign-in') {
         return (
             <LanguageProvider>
                 {children}
@@ -39,8 +45,8 @@ export default function PatientLayout({
     const navigationItems = [
         {
             name: "Dashboard",
-            href: getDashboardRoute(authState.profile?.patient_data?.diagnosis?.primaryCategory),
-            icon: Home,
+            href: String(getDashboardRoute(authState.profile?.patient_data?.diagnosis?.primaryCategory)),
+            icon: LayoutDashboard,
             isActive: pathname.includes('/patient/dashboard/') && !pathname.includes('/reports') && !pathname.includes('/medications') && !pathname.includes('/help')
         },
         {
@@ -53,7 +59,7 @@ export default function PatientLayout({
             name: "Messages",
             href: `/patient/messages`,
             icon: MessageSquare,
-            isActive: pathname === `/patient/messages`
+            isActive: pathname.includes('/messages')
         },
         {
             name: "Help & Support",
@@ -64,66 +70,76 @@ export default function PatientLayout({
         {
             name: "Settings",
             href: `/patient/settings`,
-            icon: User,
+            icon: Settings,
             isActive: pathname === `/patient/settings`
         }
     ]
 
     const handleLogout = async () => {
         await signOut()
-        router.push("/patient/login")
+        router.push("/sign-in")
     }
 
     if (authState.loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading...</p>
+            <div className="min-h-screen bg-white flex items-center justify-center font-['Matter_Regular',sans-serif]">
+                <div className="text-center space-y-6">
+                    <div className="w-16 h-16 bg-slate-50 flex items-center justify-center rounded-[2rem] mx-auto border border-slate-100 shadow-sm animate-pulse">
+                        <img src="/favicon.ico" alt="Logo" className="w-8 h-8 opacity-50" />
+                    </div>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Setting up your workspace...</p>
                 </div>
             </div>
         )
     }
 
     if (!authState.user || authState.role !== 'patient') {
-        return null // Will redirect to login via usePatientAuth
+        return null
     }
 
     return (
         <LanguageProvider>
-            <div className="min-h-screen bg-gray-50 flex">
+            <div className="min-h-screen bg-white flex font-['Matter_Regular',sans-serif]">
                 {/* Sidebar - Fixed and Non-scrollable */}
-                <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-screen fixed">
-                    {/* Header */}
-                    <div className="px-6 py-4 border-b border-gray-200">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center">
-                                    <Heart className="w-4 h-4 text-white" />
-                                </div>
-                                <span className="font-semibold text-gray-900 text-sm">Patient Portal</span>
-                            </div>
-                            <LanguageToggle />
+                <aside className="w-80 bg-white border-r border-slate-50 flex flex-col h-screen fixed z-40 shadow-[1px_0_0_0_rgba(0,0,0,0.02)]">
+                    {/* Brand Section */}
+                    <div className="px-10 py-12">
+                        <div className="flex items-center gap-4 group">
+                           <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center transition-all group-hover:scale-110 duration-500 overflow-hidden shadow-sm">
+                               <img src="/favicon.ico" alt="Logo" className="w-7 h-7 object-contain" />
+                           </div>
+                           <div className="flex flex-col">
+                               <span className="text-2xl font-bold text-slate-900 tracking-tight leading-none">SaansSync</span>
+                               <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                    Online
+                               </span>
+                           </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">ID: {authState.profile?.id || 'Loading...'}</p>
                     </div>
 
-                    {/* Navigation */}
-                    <div className="flex-1 px-3 py-4">
-                        <nav className="space-y-1">
+                    {/* Navigation Engine */}
+                    <div className="flex-1 px-6 overflow-y-auto no-scrollbar">
+                        <nav className="space-y-2">
                             {navigationItems.map((item) => {
                                 const IconComponent = item.icon
                                 return (
                                     <Link key={item.name} href={item.href}>
                                         <div className={`
-                                        flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors
-                                        ${item.isActive
-                                                ? 'bg-green-600 text-white'
-                                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                                            flex items-center justify-between px-6 py-4 rounded-2xl transition-all duration-300 group
+                                            ${item.isActive
+                                                ? 'bg-purple-600 text-white shadow-lg shadow-purple-100'
+                                                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                                             }
-                                    `}>
-                                            <IconComponent className="w-4 h-4" />
-                                            <span>{item.name}</span>
+                                        `}>
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${item.isActive ? 'bg-white/10 text-white shadow-inner shadow-white/20' : 'bg-transparent text-slate-200 group-hover:bg-white group-hover:shadow-sm group-hover:text-slate-950'}`}>
+                                                    <IconComponent className="w-4 h-4" />
+                                                </div>
+                                                <span className="text-[11px] font-bold uppercase tracking-widest">{item.name}</span>
+                                            </div>
+                                            {item.isActive && <div className="w-1.5 h-1.5 rounded-full bg-white opacity-40" />}
+                                            {!item.isActive && <ChevronRight className="w-3.5 h-3.5 text-slate-100 group-hover:text-slate-200 group-hover:translate-x-1 transition-all" />}
                                         </div>
                                     </Link>
                                 )
@@ -131,37 +147,50 @@ export default function PatientLayout({
                         </nav>
                     </div>
 
-                    {/* Patient Profile & Logout - Fixed at bottom */}
-                    <div className="px-3 py-4 border-t border-gray-200 bg-gray-50">
-                        <div className="px-3 py-2 mb-2">
-                            <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 bg-gray-300 rounded-full flex items-center justify-center">
-                                    <User className="w-3 h-3 text-gray-600" />
+                    {/* Identity Footer */}
+                    <div className="p-8 border-t border-slate-50">
+                        <div className="bg-slate-50 rounded-[2.5rem] p-6 mb-6 border border-slate-100/50 group transition-all hover:bg-white hover:shadow-2xl hover:shadow-slate-100 duration-700">
+                             <div className="flex items-center gap-4 mb-4">
+                                <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-slate-100 shadow-sm relative overflow-hidden group-hover:scale-105 transition-all">
+                                     <div className="absolute inset-0 bg-slate-950 opacity-0 group-hover:opacity-[0.03] transition-opacity" />
+                                     <User className="w-6 h-6 text-slate-300" />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-medium text-gray-900 truncate">
-                                        {authState.profile?.full_name || 'Patient'}
+                                    <p className="text-sm font-bold text-slate-900 truncate tracking-tight leading-none">
+                                        {authState.profile?.full_name || 'Patient User'}
                                     </p>
-                                    <p className="text-xs text-gray-500 truncate">
-                                        {authState.profile?.email || authState.profile?.phone || 'No contact info'}
+                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest truncate mt-2 flex items-center gap-1.5">
+                                        Patient Account
                                     </p>
                                 </div>
-                            </div>
+                             </div>
+                             
+                             <div className="flex items-center justify-between border-t border-slate-100 pt-4">
+                                <LanguageToggle />
+                                <div className="w-8 h-8 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-300 hover:text-slate-950 cursor-pointer">
+                                   <Bell className="w-3.5 h-3.5" />
+                                </div>
+                             </div>
                         </div>
 
                         <button
                             onClick={handleLogout}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                            className="w-full flex items-center justify-between px-6 py-4 group bg-transparent hover:bg-rose-50 rounded-2xl transition-all duration-300"
                         >
-                            <LogOut className="w-3 h-3" />
-                            <span>Sign out</span>
+                            <div className="flex items-center gap-4">
+                                <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-white transition-colors">
+                                    <LogOut className="w-4 h-4 text-slate-200 group-hover:text-rose-500 transition-colors" />
+                                </div>
+                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-rose-600 transition-colors">Sign Out</span>
+                            </div>
+                            <div className="w-2 h-2 rounded-full bg-slate-100 group-hover:bg-rose-100 transition-colors" />
                         </button>
                     </div>
                 </aside>
 
-                {/* Main Content - Offset by sidebar width */}
-                <main className="flex-1 ml-64 overflow-auto">
-                    <div className="p-6">
+                {/* Content Stream */}
+                <main className="flex-1 ml-80 min-h-screen bg-white">
+                    <div className="max-w-7xl mx-auto p-8">
                         {children}
                     </div>
                 </main>

@@ -1,0 +1,200 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Doctor {
+  id              String   @id @default(uuid()) @db.Uuid
+  authUserId      String?  @unique @map("auth_user_id")
+  email           String   @unique
+  fullName        String   @map("full_name")
+  approvalStatus  String   @default("pending") @map("approval_status")
+  password        String?
+  createdAt       DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+
+  patients                   Patient[]
+  patientFolders             PatientFolder[]
+  alerts                     Alert[]
+  prescriptions              Prescription[]
+  messages                   Message[]
+  doctorInstructions         DoctorInstruction[]
+  doctorPatientAssignments   DoctorPatientAssignment[]
+  doctorPatientMappings      DoctorPatientMapping[]
+
+  @@map("doctors")
+}
+
+model Patient {
+  id              String   @id @default(uuid()) @db.Uuid
+  authUserId      String?  @unique @map("auth_user_id")
+  email           String   @unique
+  fullName        String   @map("full_name")
+  doctorId        String?  @map("doctor_id") @db.Uuid
+  diseaseType     String   @map("disease_type")
+  patientData     Json?    @default("{}") @map("patient_data")
+  defaultPassword String?  @map("default_password")
+  password        String?
+  createdAt       DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt       DateTime @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+
+  doctor          Doctor?  @relation(fields: [doctorId], references: [id])
+
+  folders                    PatientFolder[]
+  dailyLogs                  DailyLog[]
+  alerts                     Alert[]
+  prescriptions              Prescription[]
+  messages                   Message[]
+  pftRecords                 PftRecord[]
+  doctorInstructions         DoctorInstruction[]
+  assignments                DoctorPatientAssignment[]
+  mappings                   DoctorPatientMapping[]
+
+  @@map("patients")
+}
+
+model Message {
+  id          String   @id @default(uuid()) @db.Uuid
+  patientId   String   @map("patient_id") @db.Uuid
+  doctorId    String?  @map("doctor_id") @db.Uuid
+  senderRole  String   @map("sender_role") // 'patient' or 'doctor'
+  content     String
+  isRead      Boolean  @default(false) @map("is_read")
+  createdAt   DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor? @relation(fields: [doctorId], references: [id])
+
+  @@map("messages")
+}
+
+model PatientFolder {
+  id             String    @id @default(uuid()) @db.Uuid
+  patientId      String    @map("patient_id") @db.Uuid
+  doctorId       String    @map("doctor_id") @db.Uuid
+  fullName       String    @map("full_name")
+  age            Int?      @default(0)
+  diseaseType    String    @map("disease_type")
+  folderColor    String    @default("green") @map("folder_color")
+  redFlagScore   Decimal?  @default(1) @map("red_flag_score")
+  alertCount     Int?      @default(0) @map("alert_count")
+  lastLogDate    DateTime? @db.Timestamptz(6) @map("last_log_date")
+  updatedAt      DateTime  @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, patientId])
+  @@index([doctorId])
+  @@map("patient_folders")
+}
+
+model DailyLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  patientId      String   @map("patient_id") @db.Uuid
+  logDate        DateTime @db.Date @map("log_date")
+  diseaseType    String   @map("disease_type")
+  diseaseData    Json     @map("disease_data")
+  redFlagScore   Decimal? @default(1) @map("red_flag_score")
+  createdAt      DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+  updatedAt      DateTime @default(now()) @updatedAt @db.Timestamptz(6) @map("updated_at")
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([patientId, logDate])
+  @@index([patientId, logDate(sort: Desc)], name: "idx_logs_patient_date")
+  @@map("daily_logs")
+}
+
+model Alert {
+  id             String    @id @default(uuid()) @db.Uuid
+  patientId      String    @map("patient_id") @db.Uuid
+  doctorId       String?   @map("doctor_id") @db.Uuid
+  level          String
+  score          Decimal
+  reasonText     String    @map("reason_text")
+  alertData      Json?     @default("{}") @map("alert_data")
+  diseaseType    String    @map("disease_type")
+  acknowledged   Boolean?  @default(false)
+  acknowledgedAt DateTime? @db.Timestamptz(6) @map("acknowledged_at")
+  createdAt      DateTime  @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor? @relation(fields: [doctorId], references: [id])
+
+  @@index([doctorId])
+  @@map("saanssync_alerts")
+}
+
+model Prescription {
+  id             String   @id @default(uuid()) @db.Uuid
+  patientId      String   @map("patient_id") @db.Uuid
+  doctorId       String?  @map("doctor_id") @db.Uuid
+  date           DateTime @default(dbgenerated("CURRENT_DATE")) @db.Date
+  medications    Json     @default("[]")
+  instructions   String?
+  createdAt      DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor? @relation(fields: [doctorId], references: [id])
+
+  @@map("prescriptions")
+}
+
+model PftRecord {
+  id             String   @id @default(uuid()) @db.Uuid
+  patientId      String   @map("patient_id") @db.Uuid
+  date           DateTime @db.Date
+  values         Json     @default("{}")
+  createdAt      DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@map("pft_records")
+}
+
+model DoctorInstruction {
+  id             String   @id @default(uuid()) @db.Uuid
+  patientId      String   @map("patient_id") @db.Uuid
+  doctorId       String?  @map("doctor_id") @db.Uuid
+  instruction    String
+  isActive       Boolean? @default(true) @map("is_active")
+  createdAt      DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor  Doctor? @relation(fields: [doctorId], references: [id])
+
+  @@map("doctor_instructions")
+}
+
+model DoctorPatientAssignment {
+  id             String   @id @default(uuid()) @db.Uuid
+  doctorId       String   @map("doctor_id") @db.Uuid
+  patientId      String   @map("patient_id") @db.Uuid
+  status         String?  @default("active")
+  createdAt      DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  doctor  Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, patientId])
+  @@map("doctor_patient_assignments")
+}
+
+model DoctorPatientMapping {
+  id             String   @id @default(uuid()) @db.Uuid
+  doctorId       String   @map("doctor_id") @db.Uuid
+  patientId      String   @map("patient_id") @db.Uuid
+  diseaseType    String?  @map("disease_type")
+  createdAt      DateTime @default(now()) @db.Timestamptz(6) @map("created_at")
+
+  doctor  Doctor  @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  patient Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@unique([doctorId, patientId])
+  @@map("doctor_patient_mapping")
+}

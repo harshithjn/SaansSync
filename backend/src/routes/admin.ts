@@ -8,7 +8,6 @@ router.post('/doctors/:doctorId/approve', adminController.approveDoctorAccount)
 router.post('/doctors/:doctorId/reject', adminController.rejectDoctorAccount)
 router.post('/doctors/fix-approved', adminController.fixApprovedDoctors)
 
-router.post('/patients/search', adminController.findPatientByPhone)
 router.get('/patients/recent', adminController.getRecentPatients)
 
 export default router

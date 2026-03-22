@@ -4,11 +4,8 @@ import { notifyAuthChange } from './auth-events'
 
 export interface DoctorProfile {
   id: string
-  auth_user_id?: string
   email: string
   full_name: string
-  phone?: string
-  alt_phone?: string
   approval_status: 'pending' | 'approved' | 'rejected'
   created_at: string
   updated_at: string
@@ -16,9 +13,7 @@ export interface DoctorProfile {
 
 export interface PatientProfile {
   id: string
-  auth_user_id: string
-  phone: string
-  alt_phone?: string
+  email: string
   full_name?: string
   patient_data: any
   created_at: string
@@ -29,40 +24,9 @@ export interface PatientProfile {
 // DOCTOR AUTHENTICATION
 // =====================================================
 
-export async function startDoctorRegistration(phone: string) {
+export async function signInDoctorWithPassword(email: string, password?: string) {
   try {
-    return await api.post<{ success: boolean; error?: string }>(
-      '/auth/doctor/start-registration',
-      { phone }
-    )
-  } catch (error) {
-    return { success: false, error: (error as Error).message }
-  }
-}
-
-export async function completeDoctorRegistration(
-  phone: string,
-  token: string,
-  email: string,
-  fullName: string,
-  password: string,
-  altPhone?: string
-) {
-  try {
-    const result = await api.post<{ success: boolean; error?: string; doctorProfile?: DoctorProfile }>(
-      '/auth/doctor/complete-registration',
-      { phone, token, email, fullName, password, altPhone }
-    )
-    if (result?.success) notifyAuthChange()
-    return result
-  } catch (error) {
-    return { success: false, error: (error as Error).message }
-  }
-}
-
-export async function signInDoctorWithPassword(email: string, password: string) {
-  try {
-    const result = await api.post<{ success: boolean; error?: string; doctorProfile?: DoctorProfile }>(
+    const result = await api.post<{ success: boolean; error?: string; token?: string; doctorProfile?: DoctorProfile }>(
       '/auth/doctor/login',
       { email, password }
     )
@@ -73,58 +37,15 @@ export async function signInDoctorWithPassword(email: string, password: string) 
   }
 }
 
-export async function setupDoctorPassword(phone: string, token: string, newPassword: string) {
-  try {
-    return await api.post<{ success: boolean; error?: string }>(
-      '/auth/doctor/setup-password',
-      { phone, token, newPassword }
-    )
-  } catch (error) {
-    return { success: false, error: (error as Error).message }
-  }
-}
-
-export async function initiatePasswordReset(phone: string) {
-  try {
-    return await api.post<{ success: boolean; error?: string }>(
-      '/auth/password/reset/start',
-      { phone }
-    )
-  } catch (error) {
-    return { success: false, error: (error as Error).message }
-  }
-}
-
-export async function completePasswordReset(phone: string, token: string, newPassword: string) {
-  return setupDoctorPassword(phone, token, newPassword)
-}
-
-// Legacy compatibility: direct doctor signup (admin review)
 export async function signUpDoctor(
   email: string,
   fullName: string,
-  phone?: string
-): Promise<{ success: boolean; error?: string; message?: string }> {
+  password?: string
+): Promise<{ success: boolean; error?: string; token?: string; doctorProfile?: DoctorProfile }> {
   try {
-    return await api.post('/auth/doctor/signup', { email, fullName, phone })
-  } catch (error) {
-    return { success: false, error: (error as Error).message }
-  }
-}
-
-export async function signInDoctorWithOTP(email: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    return await api.post('/auth/doctor/login-otp', { email })
-  } catch (error) {
-    return { success: false, error: (error as Error).message }
-  }
-}
-
-export async function verifyDoctorOTP(email: string, token: string) {
-  try {
-    const result = await api.post<{ success: boolean; error?: string; doctorProfile?: DoctorProfile }>(
-      '/auth/doctor/verify-otp',
-      { email, token }
+    const result = await api.post<{ success: boolean; error?: string; token?: string; doctorProfile?: DoctorProfile }>(
+      '/auth/doctor/signup',
+      { email, fullName, password }
     )
     if (result?.success) notifyAuthChange()
     return result
@@ -134,23 +55,12 @@ export async function verifyDoctorOTP(email: string, token: string) {
 }
 
 // =====================================================
-// PATIENT AUTHENTICATION (Phone OTP Only)
+// PATIENT AUTHENTICATION
 // =====================================================
 
-export async function signInPatientWithOTP(phoneNumber: string) {
+export async function signInPatientWithPassword(email: string, password?: string) {
   try {
-    return await api.post<{ success: boolean; error?: string }>(
-      '/auth/patient/login-otp',
-      { phone: phoneNumber }
-    )
-  } catch (error) {
-    return { success: false, error: (error as Error).message }
-  }
-}
-
-export async function signInPatientWithPassword(email: string, password: string) {
-  try {
-    const result = await api.post<{ success: boolean; error?: string; patientProfile?: PatientProfile }>(
+    const result = await api.post<{ success: boolean; error?: string; token?: string; patientProfile?: PatientProfile }>(
       '/auth/patient/login',
       { email, password }
     )
@@ -161,11 +71,15 @@ export async function signInPatientWithPassword(email: string, password: string)
   }
 }
 
-export async function verifyPatientOTP(phoneNumber: string, token: string) {
+export async function signUpPatient(
+  email: string,
+  fullName: string,
+  password?: string
+): Promise<{ success: boolean; error?: string; token?: string; patientProfile?: PatientProfile }> {
   try {
-    const result = await api.post<{ success: boolean; error?: string; patientProfile?: PatientProfile }>(
-      '/auth/patient/verify-otp',
-      { phone: phoneNumber, token }
+    const result = await api.post<{ success: boolean; error?: string; token?: string; patientProfile?: PatientProfile }>(
+      '/auth/patient/signup',
+      { email, fullName, password }
     )
     if (result?.success) notifyAuthChange()
     return result
@@ -208,27 +122,9 @@ export async function getCurrentUserProfile() {
   }
 }
 
-export async function findPatientByPhone(phoneNumber: string) {
-  try {
-    return await api.post<{ found: boolean; patient?: any; error?: string }>(
-      '/admin/patients/search',
-      { phone: phoneNumber }
-    )
-  } catch (error) {
-    return { found: false, error: (error as Error).message }
-  }
-}
-
-export async function debugPatientPhoneNumbers(): Promise<void> {
-  try {
-    await api.get('/admin/patients/recent')
-  } catch {
-    // no-op
-  }
-}
 
 // =====================================================
-// ADMIN FUNCTIONS (Service Role Required - server only)
+// ADMIN FUNCTIONS
 // =====================================================
 
 export async function getAllDoctors(): Promise<DoctorProfile[]> {
@@ -264,9 +160,9 @@ export async function fixApprovedDoctors() {
 }
 
 
-export async function signInAdminWithPassword(email: string, password: string) {
+export async function signInAdminWithPassword(email: string, password?: string) {
   try {
-    const result = await api.post<{ success: boolean; error?: string }>(
+    const result = await api.post<{ success: boolean; error?: string; token?: string }>(
       '/auth/admin/login',
       { email, password }
     )

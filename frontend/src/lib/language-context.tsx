@@ -192,7 +192,7 @@ export function LanguageToggle() {
             <button
                 onClick={() => setLanguage('en')}
                 className={`px-3 py-1 text-sm rounded ${language === 'en'
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-purple-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
             >
@@ -201,7 +201,7 @@ export function LanguageToggle() {
             <button
                 onClick={() => setLanguage('hi')}
                 className={`px-3 py-1 text-sm rounded ${language === 'hi'
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-purple-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
             >

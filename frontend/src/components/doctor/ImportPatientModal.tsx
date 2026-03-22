@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { importPatientWithOTP, validatePatientId } from "@/lib/patient-transfer"
 import { PatientData } from "@/lib/patient-types"
-import { UserPlus, Shield, AlertTriangle, CheckCircle, User, Phone, Mail } from "lucide-react"
+import { UserPlus, Shield, AlertTriangle, CheckCircle, User, Mail } from "lucide-react"
 
 interface ImportPatientModalProps {
     doctorId: string
@@ -36,9 +36,9 @@ export default function ImportPatientModal({
         const errors: typeof validationErrors = {}
         
         if (!patientId.trim()) {
-            errors.patientId = 'Patient ID is required'
-        } else if (!validatePatientId(patientId.trim())) {
-            errors.patientId = 'Invalid Patient ID format (should be 10-digit mobile number)'
+            errors.patientId = 'Patient ID (Email) is required'
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(patientId.trim())) {
+            errors.patientId = 'Invalid Patient ID format (should be an email address)'
         }
         
         if (!otpCode.trim()) {
@@ -106,7 +106,7 @@ export default function ImportPatientModal({
                 {step === 'input' && (
                     <>
                         <div className="text-center">
-                            <UserPlus className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+                            <UserPlus className="w-12 h-12 text-purple-600 mx-auto mb-4" />
                             <h3 className="text-lg font-semibold mb-2">Import Patient</h3>
                             <p className="text-gray-600 text-sm">
                                 Enter the patient's transfer details to import their medical records
@@ -116,11 +116,11 @@ export default function ImportPatientModal({
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700">
-                                    Patient ID (Mobile Number)
+                                    Patient ID (Email ID)
                                 </label>
                                 <Input
-                                    type="tel"
-                                    placeholder="Enter 10-digit mobile number"
+                                    type="email"
+                                    placeholder="Enter patient email address"
                                     value={patientId}
                                     onChange={(e) => {
                                         setPatientId(e.target.value)
@@ -129,7 +129,6 @@ export default function ImportPatientModal({
                                         }
                                     }}
                                     className={validationErrors.patientId ? 'border-red-500' : ''}
-                                    maxLength={10}
                                 />
                                 {validationErrors.patientId && (
                                     <p className="text-sm text-red-600">{validationErrors.patientId}</p>
@@ -160,12 +159,12 @@ export default function ImportPatientModal({
                             </div>
                         </div>
 
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                             <div className="flex items-start gap-3">
-                                <Shield className="w-5 h-5 text-blue-600 mt-0.5" />
+                                <Shield className="w-5 h-5 text-purple-600 mt-0.5" />
                                 <div className="text-sm">
-                                    <p className="font-medium text-blue-800 mb-1">Secure Transfer</p>
-                                    <ul className="text-blue-700 space-y-1">
+                                    <p className="font-medium text-purple-800 mb-1">Secure Transfer</p>
+                                    <ul className="text-purple-700 space-y-1">
                                         <li>• Transfer codes expire in 10 minutes</li>
                                         <li>• Patient's previous doctor loses access immediately</li>
                                         <li>• All medical history is preserved</li>
@@ -192,7 +191,7 @@ export default function ImportPatientModal({
 
                 {step === 'importing' && (
                     <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
                         <h3 className="text-lg font-semibold mb-2">Importing Patient</h3>
                         <p className="text-gray-600 text-sm">Verifying transfer code and importing medical records...</p>
                     </div>
@@ -220,10 +219,6 @@ export default function ImportPatientModal({
                                     </div>
                                 </div>
                                 
-                                <div className="flex items-center gap-3">
-                                    <Phone className="w-5 h-5 text-green-600" />
-                                    <span className="text-sm">{importedPatient.mobileNumber}</span>
-                                </div>
                                 
                                 <div className="flex items-center gap-3">
                                     <Mail className="w-5 h-5 text-green-600" />

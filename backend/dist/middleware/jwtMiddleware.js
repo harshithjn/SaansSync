@@ -1,28 +1,40 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireAuth = requireAuth;
 exports.optionalAuth = optionalAuth;
-const supabaseClient_1 = require("../config/supabaseClient");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const db_1 = __importDefault(require("../config/db"));
+const JWT_SECRET = process.env.JWT_SECRET || 'saanssync_local_secret';
 async function requireAuth(req, res, next) {
-    const header = (req.headers.authorization || req.headers.Authorization);
-    if (!header || !header.startsWith('Bearer ')) {
-        return res.status(401).json({ success: false, error: 'Missing Authorization header' });
-    }
-    const token = header.split(' ')[1];
-    if (!supabaseClient_1.supabase) {
-        return res.status(500).json({ success: false, error: 'Supabase client not configured' });
-    }
     try {
-        const { data: { user }, error } = await supabaseClient_1.supabase.auth.getUser(token);
-        if (error || !user) {
-            console.error('Token verification failed:', error?.message);
-            return res.status(401).json({ success: false, error: 'Invalid or expired token', details: error?.message });
+        const authHeader = req.headers.authorization;
+        const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+        if (!token) {
+            return res.status(401).json({ success: false, error: 'Authorization token missing' });
         }
-        req.user = {
-            id: user.id,
-            email: user.email,
-            role: user.role
-        };
+        const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+        if (!decoded || !decoded.id) {
+            return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+        }
+        let role = decoded.role || 'UNKNOWN';
+        let email = decoded.email || '';
+        // Map DB roles if needed
+        const doctor = await db_1.default.doctor.findUnique({ where: { id: decoded.id } });
+        if (doctor) {
+            role = 'DOCTOR';
+            email = doctor.email;
+        }
+        else {
+            const patient = await db_1.default.patient.findUnique({ where: { id: decoded.id } });
+            if (patient) {
+                role = 'PATIENT';
+                email = patient.email;
+            }
+        }
+        req.user = { id: decoded.id, email, role };
         return next();
     }
     catch (err) {
@@ -31,16 +43,14 @@ async function requireAuth(req, res, next) {
     }
 }
 async function optionalAuth(req, _res, next) {
-    const header = (req.headers.authorization || req.headers.Authorization);
-    if (!header || !header.startsWith('Bearer '))
-        return next();
-    const token = header.split(' ')[1];
-    if (!supabaseClient_1.supabase)
-        return next();
     try {
-        const { data: { user } } = await supabaseClient_1.supabase.auth.getUser(token);
-        if (user) {
-            req.user = { id: user.id, email: user.email, role: user.role };
+        const authHeader = req.headers.authorization;
+        const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+        if (token) {
+            const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+            if (decoded && decoded.id) {
+                req.user = { id: decoded.id, email: decoded.email, role: decoded.role };
+            }
         }
     }
     catch {

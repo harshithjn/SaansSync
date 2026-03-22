@@ -4,14 +4,32 @@ export declare function createDailyLog(payload: {
     commonData: any;
     diseaseSpecificData: any;
 }): Promise<{
-    logEntry: any;
+    logEntry: {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        diseaseType: string;
+        patientId: string;
+        logDate: Date;
+        diseaseData: import("@prisma/client/runtime/library").JsonValue;
+        redFlagScore: import("@prisma/client/runtime/library").Decimal | null;
+    };
     alert: {
-        level: "RED" | "YELLOW" | "ORANGE";
+        level: "RED" | "ORANGE" | "YELLOW";
         score: number;
         drivers: string[];
     } | null;
     score: number;
     drivers: string[];
 }>;
-export declare function getPatientLogs(patientId: string): Promise<any[]>;
+export declare function getPatientLogs(patientId: string): Promise<{
+    id: string;
+    createdAt: Date;
+    updatedAt: Date;
+    diseaseType: string;
+    patientId: string;
+    logDate: Date;
+    diseaseData: import("@prisma/client/runtime/library").JsonValue;
+    redFlagScore: import("@prisma/client/runtime/library").Decimal | null;
+}[]>;
 //# sourceMappingURL=logsService.d.ts.map

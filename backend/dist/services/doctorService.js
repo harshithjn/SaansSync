@@ -1,6 +1,10 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createDoctorProfile = createDoctorProfile;
+exports.getDoctorProfile = getDoctorProfile;
 exports.getDoctorPatients = getDoctorPatients;
 exports.getDoctorLogs = getDoctorLogs;
 exports.getDoctorAlerts = getDoctorAlerts;
@@ -9,175 +13,188 @@ exports.upsertPatientFolder = upsertPatientFolder;
 exports.getPatientFolders = getPatientFolders;
 exports.updatePatientFolder = updatePatientFolder;
 exports.deletePatientFolder = deletePatientFolder;
-const supabaseClient_1 = require("../config/supabaseClient");
+const db_1 = __importDefault(require("../config/db"));
 async function createDoctorProfile(userId, payload) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
-    const { data, error } = await admin
-        .from('doctors')
-        .insert({
-        auth_user_id: userId,
-        full_name: payload.fullName,
-        email: payload.email,
-        phone: payload.phone || null,
-        approval_status: 'pending'
-    })
-        .select()
-        .single();
-    if (error)
-        throw error;
-    return data;
+    return await db_1.default.doctor.create({
+        data: {
+            authUserId: userId,
+            fullName: payload.fullName,
+            email: payload.email || '',
+            approvalStatus: 'pending'
+        }
+    });
+}
+async function getDoctorProfile(doctorId) {
+    const doctorPK = await resolveDoctorId(doctorId);
+    if (!doctorPK)
+        throw new Error("Doctor not found");
+    return await db_1.default.doctor.findUnique({ where: { id: doctorPK } });
 }
 async function resolveDoctorId(doctorId) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
-    const { data: byId } = await admin.from('doctors').select('id').eq('id', doctorId).maybeSingle();
-    if (byId?.id)
-        return byId.id;
-    const { data: byAuth } = await admin.from('doctors').select('id').eq('auth_user_id', doctorId).maybeSingle();
-    return byAuth?.id || doctorId;
+    let doc = await db_1.default.doctor.findUnique({ where: { id: doctorId } }).catch(() => null);
+    if (doc)
+        return doc.id;
+    doc = await db_1.default.doctor.findUnique({ where: { authUserId: doctorId } }).catch(() => null);
+    if (doc)
+        return doc.id;
+    return doctorId;
 }
 async function getDoctorPatients(doctorId) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
     const doctorPK = await resolveDoctorId(doctorId);
-    const { data, error } = await admin
-        .from('patients')
-        .select('id, full_name, email, patient_data, created_at, doctor_id, disease_type')
-        .or(`doctor_id.eq.${doctorPK},doctor_id.eq.${doctorId}`);
-    if (error)
-        throw error;
-    const mapped = (data || []).map((p) => ({
-        ...p,
-        disease_type: p.patient_data?.diagnosis?.primaryCategory || p.patient_data?.disease_type || p.disease_type || 'Unknown'
-    }));
-    return mapped;
+    if (!doctorPK)
+        return [];
+    const patients = await db_1.default.patient.findMany({
+        where: { OR: [{ doctorId: doctorPK }, { doctorId }] },
+        select: { id: true, fullName: true, email: true, patientData: true, createdAt: true, doctorId: true, diseaseType: true }
+    });
+    return patients.map(p => {
+        const pData = p.patientData;
+        return {
+            ...p,
+            disease_type: pData?.diagnosis?.primaryCategory || pData?.disease_type || p.diseaseType || 'Unknown'
+        };
+    });
 }
 async function getDoctorLogs(doctorId) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
     const doctorPK = await resolveDoctorId(doctorId);
-    const { data: patients, error: patientsError } = await admin
-        .from('patients')
-        .select('id, full_name, patient_data')
-        .or(`doctor_id.eq.${doctorPK},doctor_id.eq.${doctorId}`);
-    if (patientsError)
-        throw patientsError;
-    if (!patients || patients.length == 0)
+    if (!doctorPK)
         return [];
-    const patientIds = patients.map((p) => p.id);
-    const { data: logs, error: logsError } = await admin
-        .from('daily_logs')
-        .select('*')
-        .in('patient_id', patientIds)
-        .order('created_at', { ascending: false });
-    if (logsError)
-        throw logsError;
-    return (logs || []).map((log) => {
-        const patient = patients.find((p) => p.id === log.patient_id);
+    const patients = await db_1.default.patient.findMany({
+        where: { OR: [{ doctorId: doctorPK }, { doctorId }] },
+        select: { id: true, fullName: true, patientData: true }
+    });
+    if (patients.length === 0)
+        return [];
+    const patientIds = patients.map(p => p.id);
+    const logs = await db_1.default.dailyLog.findMany({
+        where: { patientId: { in: patientIds } },
+        orderBy: { createdAt: 'desc' }
+    });
+    return logs.map(log => {
+        const patient = patients.find(p => p.id === log.patientId);
+        const pData = patient?.patientData;
         return {
             ...log,
-            patient_name: patient?.full_name || 'Unknown',
-            patient_disease: patient?.patient_data?.diagnosis?.primaryCategory || patient?.patient_data?.disease_type || 'Unknown'
+            patient_name: patient?.fullName || 'Unknown',
+            patient_disease: pData?.diagnosis?.primaryCategory || pData?.disease_type || 'Unknown'
         };
     });
 }
 async function getDoctorAlerts(doctorId) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
     const doctorPK = await resolveDoctorId(doctorId);
-    const { data: alerts, error } = await admin
-        .from('saanssync_alerts')
-        .select('*')
-        .or(`doctor_id.eq.${doctorPK},doctor_id.eq.${doctorId}`)
-        .order('created_at', { ascending: false });
-    if (error)
-        throw error;
-    const mapped = (alerts || []).map((alert) => ({
-        ...alert,
-        type: alert.level === 'RED' ? 'critical' : alert.level === 'YELLOW' ? 'high-risk' : 'pending-review',
-        red_flag_score: alert.level === 'RED' ? 10 : alert.level === 'YELLOW' ? 5 : 1
-    }));
-    return mapped;
+    if (!doctorPK)
+        return [];
+    const alerts = await db_1.default.alert.findMany({
+        where: { OR: [{ doctorId: doctorPK }, { doctorId }] },
+        orderBy: { createdAt: 'desc' }
+    });
+    return alerts.map(alert => {
+        let type = 'pending-review';
+        let red_flag_score = 1;
+        if (alert.level === 'RED') {
+            type = 'critical';
+            red_flag_score = 10;
+        }
+        else if (alert.level === 'ORANGE') {
+            type = 'high-risk';
+            red_flag_score = 8;
+        }
+        else if (alert.level === 'YELLOW') {
+            type = 'high-risk';
+            red_flag_score = 4;
+        }
+        return { ...alert, type, red_flag_score };
+    });
 }
 async function assignPatientToDoctor(doctorId, patientId, diseaseType) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
     const doctorPK = await resolveDoctorId(doctorId);
-    await admin
-        .from('doctor_patient_mapping')
-        .upsert({ doctor_id: doctorPK, patient_id: patientId, disease_type: diseaseType || null });
-    await admin
-        .from('doctor_patient_assignments')
-        .upsert({ doctor_id: doctorPK, patient_id: patientId, status: 'active' });
+    if (!doctorPK)
+        return false;
+    await db_1.default.doctorPatientMapping.upsert({
+        where: { doctorId_patientId: { doctorId: doctorPK, patientId } },
+        update: { diseaseType: diseaseType || null },
+        create: { doctorId: doctorPK, patientId, diseaseType: diseaseType || null }
+    });
+    await db_1.default.doctorPatientAssignment.upsert({
+        where: { doctorId_patientId: { doctorId: doctorPK, patientId } },
+        update: { status: 'active' },
+        create: { doctorId: doctorPK, patientId, status: 'active' }
+    });
     return true;
 }
 async function upsertPatientFolder(payload) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
     const doctorPK = await resolveDoctorId(payload.doctorId);
-    const { data, error } = await admin
-        .from('patient_folders')
-        .upsert({
-        patient_id: payload.patientId,
-        doctor_id: doctorPK,
-        full_name: payload.fullName,
-        age: payload.age,
-        disease_type: payload.diseaseType,
-        last_log_date: payload.lastLogDate,
-        folder_color: payload.folderColor,
-        red_flag_score: payload.redFlagScore,
-        alert_count: payload.alertCount,
-        updated_at: new Date().toISOString()
-    }, { onConflict: 'patient_id,doctor_id' })
-        .select()
-        .single();
-    if (error)
-        throw error;
-    await assignPatientToDoctor(doctorPK, payload.patientId, payload.diseaseType);
-    return data;
+    if (!doctorPK)
+        return null;
+    try {
+        const folder = await db_1.default.patientFolder.upsert({
+            where: { doctorId_patientId: { doctorId: doctorPK, patientId: payload.patientId } },
+            update: {
+                fullName: payload.fullName,
+                age: payload.age,
+                diseaseType: payload.diseaseType,
+                lastLogDate: payload.lastLogDate ? new Date(payload.lastLogDate) : null,
+                folderColor: payload.folderColor,
+                redFlagScore: payload.redFlagScore,
+                alertCount: payload.alertCount,
+                updatedAt: new Date()
+            },
+            create: {
+                patientId: payload.patientId,
+                doctorId: doctorPK,
+                fullName: payload.fullName,
+                age: payload.age,
+                diseaseType: payload.diseaseType,
+                lastLogDate: payload.lastLogDate ? new Date(payload.lastLogDate) : null,
+                folderColor: payload.folderColor,
+                redFlagScore: payload.redFlagScore,
+                alertCount: payload.alertCount
+            }
+        });
+        try {
+            await assignPatientToDoctor(doctorPK, payload.patientId, payload.diseaseType);
+        }
+        catch (e) {
+            console.warn('Skipping patient assignment (non-critical):', e);
+        }
+        return folder;
+    }
+    catch (e) {
+        console.error('Upsert folder failed:', e);
+        return null;
+    }
 }
 async function getPatientFolders(doctorId) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
     const doctorPK = await resolveDoctorId(doctorId);
-    const { data, error } = await admin
-        .from('patient_folders')
-        .select('*')
-        .eq('doctor_id', doctorPK);
-    if (error)
-        throw error;
-    return (data || []).map((row) => ({
-        patientId: row.patient_id,
-        fullName: row.full_name,
-        age: Number(row.age || 0),
-        diseaseType: row.disease_type,
-        lastLogDate: row.last_log_date,
-        folderColor: row.folder_color,
-        redFlagScore: Number(row.red_flag_score || 0),
-        alertCount: Number(row.alert_count || 0),
-        doctorId: row.doctor_id
-    }));
+    if (!doctorPK)
+        return [];
+    const folders = await db_1.default.patientFolder.findMany({
+        where: { doctorId: doctorPK }
+    });
+    return folders;
 }
 async function updatePatientFolder(doctorId, patientId, updates) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
     const doctorPK = await resolveDoctorId(doctorId);
-    const { error } = await admin
-        .from('patient_folders')
-        .update({
-        red_flag_score: updates.redFlagScore,
-        alert_count: updates.alertCount,
-        folder_color: updates.folderColor,
-        updated_at: new Date().toISOString()
-    })
-        .eq('doctor_id', doctorPK)
-        .eq('patient_id', patientId);
-    if (error)
-        throw error;
+    if (!doctorPK)
+        return false;
+    await db_1.default.patientFolder.update({
+        where: { doctorId_patientId: { doctorId: doctorPK, patientId } },
+        data: {
+            redFlagScore: updates.redFlagScore,
+            alertCount: updates.alertCount,
+            folderColor: updates.folderColor,
+            updatedAt: new Date()
+        }
+    });
     return true;
 }
 async function deletePatientFolder(doctorId, patientId) {
-    const admin = (0, supabaseClient_1.requireAdminClient)();
     const doctorPK = await resolveDoctorId(doctorId);
-    const { error } = await admin
-        .from('patient_folders')
-        .delete()
-        .eq('doctor_id', doctorPK)
-        .eq('patient_id', patientId);
-    if (error)
-        throw error;
+    if (!doctorPK)
+        return false;
+    await db_1.default.patientFolder.delete({
+        where: { doctorId_patientId: { doctorId: doctorPK, patientId } }
+    });
     return true;
 }
 //# sourceMappingURL=doctorService.js.map

@@ -1,9 +1,24 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
-import { Badge } from "../../../components/ui/badge"
-import { usePatientAuth } from "@/lib/auth-guard"
+import { Badge } from "@/components/ui/badge"
+import { usePatientAuth } from '@/lib/auth-guard'
+import { formatDate } from '@/lib/utils'
+import { 
+    Pill, 
+    ShieldCheck, 
+    AlertCircle, 
+    Clock, 
+    Info, 
+    ArrowLeft,
+    CheckCircle2,
+    History,
+    Zap,
+    Loader2
+} from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 interface Medication {
     id: string
@@ -20,6 +35,7 @@ interface Medication {
 }
 
 export default function PatientMedicationsPage() {
+    const router = useRouter()
     const authState = usePatientAuth()
     const [medications, setMedications] = useState<Medication[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -27,10 +43,10 @@ export default function PatientMedicationsPage() {
     useEffect(() => {
         const loadMedications = async () => {
             if (!authState.user || authState.role !== 'patient') {
-                return // Will redirect via usePatientAuth
+                return
             }
 
-            // Simulate API call to fetch medications
+            // Mock data for premium presentation
             const mockMedications: Medication[] = [
                 {
                     id: "med-001",
@@ -41,7 +57,7 @@ export default function PatientMedicationsPage() {
                     startDate: "2023-06-15",
                     isActive: true,
                     instructions: "Take with food to reduce stomach upset. Take at the same times each day.",
-                    sideEffects: ["Nausea", "Skin sensitivity to sunlight", "Fatigue", "Loss of appetite"],
+                    sideEffects: ["Nausea", "Sun sensitivity", "Fatigue"],
                     category: "Anti-fibrotic"
                 },
                 {
@@ -52,33 +68,9 @@ export default function PatientMedicationsPage() {
                     route: "Oral",
                     startDate: "2023-10-20",
                     isActive: true,
-                    instructions: "Take in the morning with food. Do not stop suddenly - must be tapered gradually.",
-                    sideEffects: ["Increased appetite", "Weight gain", "Mood changes", "Difficulty sleeping"],
+                    instructions: "Take in the morning with food. Must be tapered gradually.",
+                    sideEffects: ["Appetite increase", "Weight gain"],
                     category: "Steroid"
-                },
-                {
-                    id: "med-003",
-                    drugName: "OMEPRAZOLE",
-                    dose: "20 mg",
-                    frequency: "Once daily (OD)",
-                    route: "Oral",
-                    startDate: "2023-06-15",
-                    isActive: true,
-                    instructions: "Take 30 minutes before breakfast on an empty stomach.",
-                    sideEffects: ["Headache", "Stomach pain", "Diarrhea"],
-                    category: "Acid reducer"
-                },
-                {
-                    id: "med-004",
-                    drugName: "SALBUTAMOL",
-                    dose: "100 mcg",
-                    frequency: "As needed (PRN)",
-                    route: "Inhalation",
-                    startDate: "2023-06-15",
-                    isActive: true,
-                    instructions: "Use when you feel short of breath. Shake inhaler before use. Rinse mouth after use.",
-                    sideEffects: ["Tremor", "Fast heartbeat", "Headache"],
-                    category: "Bronchodilator"
                 },
                 {
                     id: "med-005",
@@ -89,8 +81,8 @@ export default function PatientMedicationsPage() {
                     startDate: "2023-03-01",
                     endDate: "2023-03-07",
                     isActive: false,
-                    instructions: "Complete the full course even if you feel better.",
-                    sideEffects: ["Nausea", "Diarrhea", "Stomach pain"],
+                    instructions: "Complete the full course.",
+                    sideEffects: ["Nausea"],
                     category: "Antibiotic"
                 }
             ]
@@ -107,217 +99,195 @@ export default function PatientMedicationsPage() {
     const activeMedications = medications.filter(med => med.isActive)
     const pastMedications = medications.filter(med => !med.isActive)
 
-    const getCategoryColor = (category: string) => {
-        switch (category.toLowerCase()) {
-            case 'anti-fibrotic':
-                return 'bg-blue-100 text-blue-800'
-            case 'steroid':
-                return 'bg-orange-100 text-orange-800'
-            case 'bronchodilator':
-                return 'bg-green-100 text-green-800'
-            case 'antibiotic':
-                return 'bg-purple-100 text-purple-800'
-            case 'acid reducer':
-                return 'bg-yellow-100 text-yellow-800'
-            default:
-                return 'bg-gray-100 text-gray-800'
-        }
-    }
-
     if (authState.loading || isLoading) {
         return (
-            <div className="space-y-6">
-                <div className="animate-pulse">
-                    <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-                    <div className="space-y-4">
-                        <div className="h-32 bg-gray-200 rounded"></div>
-                        <div className="h-32 bg-gray-200 rounded"></div>
-                    </div>
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 font-['Matter_Regular',sans-serif]">
+                <div className="w-16 h-16 bg-slate-50 flex items-center justify-center rounded-[2rem] border border-slate-100 shadow-sm">
+                    <Loader2 className="w-8 h-8 animate-spin text-slate-200" />
                 </div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Accessing Pharmacy Records...</p>
             </div>
         )
     }
 
-    if (!authState.user || authState.role !== 'patient') {
-        return null // Will redirect via usePatientAuth
-    }
-
     return (
-        <div className="space-y-6">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">My Medications</h1>
-                <p className="text-gray-600">
-                    View your current and past medications with detailed instructions
-                </p>
+        <div className="max-w-6xl mx-auto space-y-12 font-['Matter_Regular',sans-serif] animate-in fade-in duration-1000">
+            {/* Clinical Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 border-b border-slate-50 pb-12">
+                <div className="space-y-4">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[9px] font-black uppercase tracking-widest border border-slate-100/50">
+                        <Pill className="w-3 h-3" />
+                        Therapeutic Protocol Dashboard
+                    </div>
+                    <h1 className="text-5xl font-black text-slate-950 tracking-tighter leading-none">Medication</h1>
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Active surveillance of prescribed pharmacological agents</p>
+                </div>
+                <Button 
+                    variant="ghost" 
+                    onClick={() => router.back()}
+                    className="h-14 px-8 rounded-2xl bg-slate-50 border border-slate-100/50 font-black text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-950 hover:bg-white hover:shadow-xl transition-all gap-3"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Hub
+                </Button>
             </div>
 
-            {/* Current Medications */}
-            <Card className="p-6">
-                <h2 className="text-lg font-semibold mb-4 text-green-600">
-                    Current Medications ({activeMedications.length})
-                </h2>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                {/* Protocol Feed */}
+                <div className="lg:col-span-8 space-y-12">
+                    <div className="space-y-6">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-black text-slate-950 tracking-tight">Active Protocols</h2>
+                            <Badge className="bg-emerald-50 text-emerald-500 border-none font-black text-[8px] uppercase tracking-widest px-4 py-2 rounded-xl">
+                                {activeMedications.length} Prescriptions Live
+                            </Badge>
+                        </div>
 
-                {activeMedications.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                        <p>No current medications on file.</p>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {activeMedications.map((medication) => (
-                            <div key={medication.id} className="p-4 border rounded-lg bg-green-50">
-                                <div className="flex justify-between items-start mb-3">
-                                    <div>
-                                        <h3 className="font-semibold text-lg">{medication.drugName}</h3>
-                                        <div className="flex items-center space-x-2 mt-1">
-                                            <Badge className={getCategoryColor(medication.category)}>
-                                                {medication.category}
-                                            </Badge>
-                                            <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                                Active
-                                            </Badge>
+                        <div className="grid grid-cols-1 gap-6">
+                            {activeMedications.map((med) => (
+                                <div key={med.id} className="bg-white rounded-[2.5rem] p-10 border border-slate-50 hover:shadow-2xl hover:shadow-slate-100 transition-all duration-700 group relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-slate-950 opacity-[0.02] -translate-y-16 translate-x-16 rounded-full group-hover:scale-150 transition-transform duration-1000" />
+                                    
+                                    <div className="flex flex-col md:flex-row md:items-start justify-between gap-8 mb-10">
+                                        <div className="flex items-center gap-6">
+                                            <div className="w-16 h-16 bg-slate-50 rounded-[1.25rem] flex items-center justify-center text-slate-300 group-hover:bg-slate-950 group-hover:text-white transition-all duration-500 shadow-sm border border-slate-100/50">
+                                                <Pill className="w-7 h-7" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <h3 className="text-2xl font-black text-slate-950 tracking-tight leading-none uppercase">{med.drugName}</h3>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-[10px] font-black text-purple-500 uppercase tracking-widest">{med.category}</span>
+                                                    <div className="w-1 h-1 bg-slate-100 rounded-full" />
+                                                    <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Protocol V1.2.0</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="text-left md:text-right shrink-0">
+                                            <div className="text-xl font-black text-slate-950 tracking-tighter mb-1">{med.dose}</div>
+                                            <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{med.frequency}</div>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <div className="font-medium">{medication.dose}</div>
-                                        <div className="text-sm text-gray-600">{medication.frequency}</div>
-                                        <div className="text-xs text-gray-500">{medication.route}</div>
-                                    </div>
-                                </div>
 
-                                <div className="space-y-3">
-                                    <div className="p-3 bg-white rounded border-l-4 border-blue-500">
-                                        <h4 className="font-medium text-sm text-blue-800 mb-1">Instructions</h4>
-                                        <p className="text-sm text-gray-700">{medication.instructions}</p>
-                                    </div>
-
-                                    {medication.sideEffects.length > 0 && (
-                                        <div className="p-3 bg-white rounded border-l-4 border-yellow-500">
-                                            <h4 className="font-medium text-sm text-yellow-800 mb-1">Possible Side Effects</h4>
-                                            <div className="flex flex-wrap gap-1">
-                                                {medication.sideEffects.map((effect, index) => (
-                                                    <Badge key={index} variant="outline" className="text-xs">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div className="p-6 rounded-[1.5rem] bg-slate-50 border border-slate-100/50 space-y-3 group/info">
+                                            <div className="flex items-center gap-2 text-purple-500">
+                                                <Zap className="w-3.5 h-3.5" />
+                                                <span className="text-[9px] font-black uppercase tracking-widest">Clinical Instruction</span>
+                                            </div>
+                                            <p className="text-[11px] font-bold text-slate-600 leading-relaxed font-['Matter_Regular'] italic">
+                                                "{med.instructions}"
+                                            </p>
+                                        </div>
+                                        <div className="p-6 rounded-[1.5rem] bg-slate-50 border border-slate-100/50 space-y-3">
+                                            <div className="flex items-center gap-2 text-rose-500">
+                                                <AlertCircle className="w-3.5 h-3.5" />
+                                                <span className="text-[9px] font-black uppercase tracking-widest">Observed Variance</span>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                {med.sideEffects.map((effect, i) => (
+                                                    <Badge key={i} className="bg-white text-slate-400 border border-slate-100 font-black text-[7px] uppercase tracking-widest py-1 px-3">
                                                         {effect}
                                                     </Badge>
                                                 ))}
                                             </div>
-                                            <p className="text-xs text-gray-600 mt-1">
-                                                Contact your doctor if you experience severe or persistent side effects.
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    <div className="text-xs text-gray-500">
-                                        Started: {new Date(medication.startDate).toLocaleDateString()}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
-            </Card>
-
-            {/* Past Medications */}
-            {pastMedications.length > 0 && (
-                <Card className="p-6">
-                    <h2 className="text-lg font-semibold mb-4 text-gray-600">
-                        Past Medications ({pastMedications.length})
-                    </h2>
-
-                    <div className="space-y-4">
-                        {pastMedications.map((medication) => (
-                            <div key={medication.id} className="p-4 border rounded-lg bg-gray-50">
-                                <div className="flex justify-between items-start mb-3">
-                                    <div>
-                                        <h3 className="font-semibold text-lg text-gray-700">{medication.drugName}</h3>
-                                        <div className="flex items-center space-x-2 mt-1">
-                                            <Badge className={getCategoryColor(medication.category)}>
-                                                {medication.category}
-                                            </Badge>
-                                            <Badge variant="outline" className="bg-gray-100 text-gray-600">
-                                                Completed
-                                            </Badge>
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <div className="font-medium text-gray-700">{medication.dose}</div>
-                                        <div className="text-sm text-gray-600">{medication.frequency}</div>
+
+                                    <div className="mt-8 pt-8 border-t border-slate-50 flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-[9px] font-black text-slate-300 uppercase tracking-widest">
+                                            <Clock className="w-3.5 h-3.5" />
+                                            Active Since: {formatDate(med.startDate)}
+                                        </div>
+                                        <div className="flex items-center gap-2 text-emerald-500">
+                                            <ShieldCheck className="w-4 h-4" />
+                                            <span className="text-[9px] font-black uppercase tracking-widest">Verified Session</span>
+                                        </div>
                                     </div>
                                 </div>
+                            ))}
+                        </div>
+                    </div>
 
-                                <div className="text-xs text-gray-500">
-                                    Duration: {new Date(medication.startDate).toLocaleDateString()} - {
-                                        medication.endDate ? new Date(medication.endDate).toLocaleDateString() : 'Ongoing'
-                                    }
-                                </div>
+                    {pastMedications.length > 0 && (
+                        <div className="space-y-6">
+                            <h2 className="text-xl font-black text-slate-400 tracking-tight uppercase tracking-widest text-[12px] flex items-center gap-3">
+                                <History className="w-4 h-4" />
+                                Archive Archives
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {pastMedications.map((med) => (
+                                    <div key={med.id} className="p-6 rounded-[2rem] border border-slate-50 bg-slate-50/30 flex items-center justify-between opacity-60 group hover:opacity-100 transition-all duration-500">
+                                        <div className="space-y-1.5">
+                                            <h4 className="font-black text-slate-900 tracking-tight text-lg uppercase">{med.drugName}</h4>
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Cycle Ended: {formatDate(med.endDate!)}</p>
+                                        </div>
+                                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-200 border border-slate-100">
+                                            <CheckCircle2 className="w-5 h-5" />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                </Card>
-            )}
-
-            {/* Medication Reminders */}
-            <Card className="p-6">
-                <h2 className="text-lg font-semibold mb-4 text-blue-600">Medication Reminders</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-blue-50 rounded-lg">
-                        <h3 className="font-medium text-blue-800 mb-2">Taking Your Medications</h3>
-                        <ul className="text-sm text-blue-700 space-y-1">
-                            <li>• Take medications at the same time each day</li>
-                            <li>• Use a pill organizer to stay organized</li>
-                            <li>• Set phone alarms as reminders</li>
-                            <li>• Don't skip doses without consulting your doctor</li>
-                        </ul>
-                    </div>
-
-                    <div className="p-4 bg-yellow-50 rounded-lg">
-                        <h3 className="font-medium text-yellow-800 mb-2">Important Safety Tips</h3>
-                        <ul className="text-sm text-yellow-700 space-y-1">
-                            <li>• Never stop medications suddenly</li>
-                            <li>• Tell all doctors about all your medications</li>
-                            <li>• Check with pharmacist about drug interactions</li>
-                            <li>• Store medications properly</li>
-                        </ul>
-                    </div>
+                        </div>
+                    )}
                 </div>
-            </Card>
 
-            {/* Emergency Information */}
-            <Card className="p-6">
-                <h2 className="text-lg font-semibold mb-4 text-red-600">Emergency Information</h2>
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-                    <h3 className="font-medium text-red-800 mb-2">When to Seek Immediate Help</h3>
-                    <ul className="text-sm text-red-700 space-y-1 mb-3">
-                        <li>• Severe allergic reaction (rash, swelling, difficulty breathing)</li>
-                        <li>• Severe side effects that concern you</li>
-                        <li>• Accidental overdose</li>
-                        <li>• Medication not working as expected</li>
-                    </ul>
-                    <p className="text-sm text-red-800">
-                        <strong>Emergency:</strong> Call 911 or go to the nearest emergency room
-                    </p>
-                    <p className="text-sm text-red-700">
-                        <strong>Non-emergency questions:</strong> Contact your healthcare provider or pharmacist
-                    </p>
-                </div>
-            </Card>
+                {/* Technical Support Column */}
+                <div className="lg:col-span-4 space-y-8">
+                    <Card className="p-10 border-none bg-slate-950 rounded-[3rem] shadow-2xl shadow-slate-100 text-white relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-3xl rounded-full group-hover:scale-150 transition-all duration-1000" />
+                        <div className="relative z-10 space-y-8">
+                            <div className="flex items-center gap-4">
+                                <Info className="w-5 h-5 text-purple-400" />
+                                <h3 className="text-xs font-black uppercase tracking-[0.3em]">Protocol Hygiene</h3>
+                            </div>
+                            <div className="space-y-6">
+                                {[
+                                    'Establish Temporal Consistency',
+                                    'Utilize Clinical Organization Tools',
+                                    'Engage Hardware Alerts',
+                                    'Maintain Bio-Feedback Loops'
+                                ].map((tip, i) => (
+                                    <div key={i} className="flex items-center gap-4 group/item">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-purple-500/50 group-hover/item:bg-purple-400 transition-colors" />
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover/item:text-white transition-colorsLeading-relaxed">{tip}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </Card>
 
-            {/* Medication History Note */}
-            <Card className="p-6">
-                <h2 className="text-lg font-semibold mb-4 text-gray-600">About Your Medication History</h2>
-                <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-700 mb-2">
-                        This list shows medications prescribed by your healthcare team. It may not include:
-                    </p>
-                    <ul className="text-sm text-gray-600 space-y-1">
-                        <li>• Over-the-counter medications you take on your own</li>
-                        <li>• Medications prescribed by other doctors</li>
-                        <li>• Supplements or vitamins</li>
-                    </ul>
-                    <p className="text-sm text-gray-700 mt-2">
-                        Always inform your healthcare team about ALL medications and supplements you're taking.
-                    </p>
+                    <Card className="p-10 border-none bg-rose-50 rounded-[3rem] border border-rose-100 space-y-8 group hover:bg-white transition-all duration-700">
+                        <div className="flex items-center gap-4 text-rose-600">
+                            <AlertCircle className="w-5 h-5" />
+                            <h3 className="text-xs font-black uppercase tracking-[0.3em]">Critical Variance</h3>
+                        </div>
+                        <div className="space-y-4">
+                            <p className="text-[10px] font-black text-rose-800 uppercase tracking-widest leading-relaxed">Seek immediate emergency intervention if variance includes:</p>
+                            <ul className="space-y-3">
+                                {[
+                                    'Acute Anaphylactic Response',
+                                    'Profound Respiratory Distress',
+                                    'Severe Systemic Toxicity'
+                                ].map((warn, i) => (
+                                    <li key={i} className="flex items-center gap-3">
+                                        <div className="w-1 h-1 bg-rose-300 rounded-full" />
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-rose-700">{warn}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                        <div className="pt-4 border-t border-rose-100 text-center">
+                            <p className="text-[14px] font-black text-rose-600 tracking-tighter">EMERGENCY_LINK_911</p>
+                        </div>
+                    </Card>
+
+                    <Card className="p-8 border-none bg-slate-50/50 rounded-[2.5rem] border border-slate-100">
+                        <p className="text-[9px] font-bold text-slate-400 leading-relaxed uppercase tracking-wider text-center">
+                            This manifest represents verified clinical assets. Consult your primary medical node for adjustment protocols.
+                        </p>
+                    </Card>
                 </div>
-            </Card>
+            </div>
         </div>
     )
 }

@@ -1,6 +1,18 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_USER: saanssync
+      POSTGRES_PASSWORD: saanssync_password
+      POSTGRES_DB: saanssync_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
   backend:
     build: ./backend
     ports:
@@ -9,6 +21,9 @@ services:
       - ./backend/.env
     environment:
       - PORT=3001
+      - DATABASE_URL=postgresql://saanssync:saanssync_password@db:5432/saanssync_db
+    depends_on:
+      - db
     restart: always
 
   frontend:
@@ -20,3 +35,6 @@ services:
     depends_on:
       - backend
     restart: always
+
+volumes:
+  pgdata:
