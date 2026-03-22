@@ -1,31 +1,44 @@
-version: '3.8'
+version: "3.8"
 
 services:
   db:
     image: postgres:15
+    container_name: saanssync_db
     restart: always
     environment:
       POSTGRES_USER: saanssync
       POSTGRES_PASSWORD: saanssync_password
       POSTGRES_DB: saanssync_db
-    ports:
-      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
+    container_name: saanssync_backend
+    restart: always
     ports:
       - "3001:3001"
     environment:
-      - PORT=3001
-      - DATABASE_URL=postgresql://saanssync:saanssync_password@db:5432/saanssync_db
+      PORT: 3001
+      DATABASE_URL: postgresql://saanssync:saanssync_password@db:5432/saanssync_db
     depends_on:
       - db
+
+  nginx:
+    image: nginx:alpine
+    container_name: saanssync_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - backend
     restart: always
 
 volumes:
   pgdata:
-
