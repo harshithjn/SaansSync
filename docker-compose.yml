@@ -14,11 +14,11 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   backend:
-    build: ./backend
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "3001:3001"
-    env_file:
-      - ./backend/.env
     environment:
       - PORT=3001
       - DATABASE_URL=postgresql://saanssync:saanssync_password@db:5432/saanssync_db
@@ -26,15 +26,6 @@ services:
       - db
     restart: always
 
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:3001
-    depends_on:
-      - backend
-    restart: always
-
 volumes:
   pgdata:
+
