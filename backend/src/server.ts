@@ -23,7 +23,9 @@ app.use(cors({
     "http://localhost:3000",
     "https://saanssync.harshithj.me"
   ],
-  credentials: true
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
 }))
 app.use(express.json())
 
