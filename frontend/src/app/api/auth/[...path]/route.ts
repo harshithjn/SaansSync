@@ -6,7 +6,7 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001'
 async function proxyAuth(req: NextRequest, params: { path: string[] }) {
   const path = params.path.join('/')
   const url = new URL(req.url)
-  const target = `${BACKEND_URL}/api/auth/${path}${url.search}`
+  const target = `${BACKEND_URL}/auth/${path}${url.search}`
 
   const headers = new Headers(req.headers)
   headers.delete('cookie')

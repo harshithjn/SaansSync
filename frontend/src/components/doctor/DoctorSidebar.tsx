@@ -94,11 +94,11 @@ export function DoctorSidebar() {
             {/* Global Search Interface */}
             <div className="px-8 mb-10">
                 <div className="relative group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-focus-within:text-slate-950 transition-colors" />
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-950 transition-colors" />
                     <input 
                         type="text" 
                         placeholder="Search patients..."
-                        className="w-full h-12 bg-slate-50 rounded-2xl pl-12 pr-4 text-[11px] font-bold tracking-tight text-slate-950 border-none outline-none focus:ring-4 focus:ring-slate-50 transition-all placeholder:text-slate-200"
+                        className="w-full h-12 bg-slate-50 rounded-2xl pl-12 pr-4 text-[11px] font-bold tracking-tight text-slate-950 border-none outline-none focus:ring-4 focus:ring-slate-50 transition-all placeholder:text-slate-400"
                     />
                 </div>
             </div>
@@ -114,11 +114,11 @@ export function DoctorSidebar() {
                                     flex items-center justify-between px-6 py-4 rounded-2xl transition-all duration-500 group
                                     ${item.isActive
                                         ? 'bg-slate-950 text-white shadow-2xl shadow-slate-200 scale-[1.02]'
-                                        : 'text-slate-400 hover:text-slate-950 hover:bg-slate-50'
+                                        : 'text-slate-950 hover:bg-slate-50'
                                     }
                                 `}>
                                     <div className="flex items-center gap-4">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${item.isActive ? 'bg-white/10 text-white shadow-inner shadow-white/20' : 'bg-transparent text-slate-200 group-hover:bg-white group-hover:shadow-sm group-hover:text-slate-950'}`}>
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${item.isActive ? 'bg-white/10 text-white shadow-inner shadow-white/20' : 'bg-transparent text-slate-400 group-hover:bg-white group-hover:shadow-sm group-hover:text-slate-950'}`}>
                                             <IconComponent className="w-4 h-4" />
                                         </div>
                                         <span className="text-[11px] font-bold uppercase tracking-wider">{item.name}</span>
@@ -138,19 +138,11 @@ export function DoctorSidebar() {
                     <div className="flex items-center gap-4">
                         <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center border border-slate-100 shadow-sm relative overflow-hidden group-hover:scale-105 transition-all">
                              <div className="absolute inset-0 bg-slate-950 opacity-0 group-hover:opacity-[0.03] transition-opacity" />
-                             <img 
-                                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${authState.profile?.full_name || 'Doctor'}`} 
-                                alt="Avatar" 
-                                className="w-10 h-10 object-contain"
-                             />
+                             <User className="w-6 h-6 text-slate-950" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="text-base font-bold text-slate-950 truncate tracking-tight leading-none group-hover:text-purple-600 transition-colors">
                                 {authState.profile?.full_name || 'Doctor'}
-                            </p>
-                            <p className="text-[9px] text-slate-300 font-bold uppercase tracking-[0.3em] truncate mt-2 flex items-center gap-1.5">
-                                <ShieldCheck className="w-3 h-3" />
-                                Verified Profile
                             </p>
                         </div>
                     </div>
@@ -164,7 +156,7 @@ export function DoctorSidebar() {
                         <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center group-hover:bg-white transition-colors">
                             <LogOut className="w-4 h-4 text-slate-200 group-hover:text-rose-500 transition-colors" />
                         </div>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest group-hover:text-rose-600 transition-colors">Sign Out</span>
+                        <span className="text-[10px] font-bold text-slate-950 uppercase tracking-widest group-hover:text-rose-600 transition-colors">Sign Out</span>
                     </div>
                     <div className="w-2 h-2 rounded-full bg-slate-100 group-hover:bg-rose-100 transition-colors" />
                 </button>

@@ -17,6 +17,10 @@ export interface AuthedRequest extends Request {
 export async function requireAuth(req: AuthedRequest, res: Response, next: NextFunction) {
   try {
     const authHeader = req.headers.authorization
+    console.log('--- Auth Debug ---')
+    console.log('Path:', req.path)
+    console.log('Authorization Header:', authHeader)
+    
     const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null
 
     if (!token) {

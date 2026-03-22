@@ -14,9 +14,18 @@ import exportsRouter from './routes/exports'
 import messageRouter from './routes/messageRoutes'
 import alertsRouter from './routes/alerts'
 
+import apiRouter from './routes/apiRouter'
+
 const PORT = process.env.PORT || 3001
 
 const app = express()
+
+// Request Logging for Debugging
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} - Origin: ${req.headers.origin}`);
+  next();
+});
+
 app.use(helmet())
 app.use(cors({
   origin: [
@@ -29,6 +38,9 @@ app.use(cors({
 }))
 app.use(express.json())
 
+
+// --- PUBLIC ROUTES ---
+app.use('/auth', authRouter)
 
 app.get('/health', (req, res) => {
     res.json({
@@ -56,6 +68,12 @@ app.get('/keepalive', async (req, res) => {
     }
 })
 
+// --- PROTECTED API ROUTES ---
+app.use('/api', (req, res, next) => {
+    if (req.path === '/' || req.path === '/db-status') return next()
+    return requireAuth(req as any, res as any, next as any)
+}, apiRouter)
+
 app.get('/api', (req, res) => {
     res.json({ message: 'SaansSync Backend API - Working with Database!' })
 })
@@ -69,26 +87,6 @@ app.get('/api/db-status', async (req, res) => {
     }
 })
 
-app.use('/api/auth', authRouter)
-app.use('/api/admin', adminRouter)
-app.use('/api/patient', patientRouter)
-app.use('/api/doctor', doctorRouter)
-app.use('/api/logs', logsRouter)
-app.use('/api/exports', exportsRouter)
-app.use('/api/messages', messageRouter)
-app.use('/api/alerts', alertsRouter)
-app.use('/api/prescriptions', prescriptionsRouter)
-
-app.use((req, res, next) => {
-    if (
-        req.path.startsWith('/api/auth') ||
-        req.path === '/health' ||
-        req.path === '/keepalive' ||
-        req.path === '/api/db-status' ||
-        req.path === '/api'
-    ) return next()
-    return requireAuth(req as any, res as any, next as any)
-})
 
 setInterval(async () => {
     try {
