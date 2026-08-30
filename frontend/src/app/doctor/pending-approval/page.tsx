@@ -19,15 +19,15 @@ export default function DoctorPendingApprovalPage() {
 
     setChecking(true)
     try {
-      // Get current user profile to check approval status
+
       const { role, profile, approved } = await getCurrentUserProfile()
 
       if (role === 'doctor' && approved) {
-        // Redirect to dashboard
+
         router.push(`/doctor/dashboard/${profile.id}`)
         return
-      } else if (role === 'doctor' && profile?.approval_status === 'rejected') {
-        // Show rejection message
+      } else if (role === 'doctor' && profile?.approvalStatus === 'rejected') {
+
         alert('Your account has been rejected. Please contact support for more information.')
       }
 
@@ -44,7 +44,6 @@ export default function DoctorPendingApprovalPage() {
     router.push('/login')
   }
 
-  // Auto-check approval status every 30 seconds
   useEffect(() => {
     if (!authState.user) return
 
@@ -55,18 +54,16 @@ export default function DoctorPendingApprovalPage() {
     return () => clearInterval(interval)
   }, [authState.user])
 
-  // Redirect if already approved
   useEffect(() => {
     if (!authState.loading && authState.approved && authState.role === 'doctor') {
       router.push(`/doctor/dashboard/${authState.profile?.id}`)
     }
   }, [authState, router])
 
-  // Check for email verification status from URL params
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const error = urlParams.get('error')
-    
+
     if (error === 'verification_failed') {
       toast.error('Email verification failed. Please try registering again.')
     }
@@ -74,9 +71,9 @@ export default function DoctorPendingApprovalPage() {
 
   if (authState.loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-green-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-green-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -84,7 +81,7 @@ export default function DoctorPendingApprovalPage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-purple-50 via-white to-green-50">
+    <div className="min-h-screen bg-linear-to-br from-teal-50 via-white to-green-50">
       <div className="flex items-center justify-center py-12 px-4">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-2xl p-8 shadow-xl border border-gray-200">
@@ -99,7 +96,7 @@ export default function DoctorPendingApprovalPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Status Card */}
+              {}
               <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -112,13 +109,13 @@ export default function DoctorPendingApprovalPage() {
                 </div>
               </div>
 
-              {/* What happens next */}
-              <div className="p-4 bg-purple-50 rounded-xl border border-purple-200">
+              {}
+              <div className="p-4 bg-teal-50 rounded-xl border border-teal-200">
                 <div className="flex items-start gap-3">
-                  <Mail className="w-5 h-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                  <Mail className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
                   <div>
-                    <h3 className="font-semibold text-purple-900 mb-1">What happens next?</h3>
-                    <ul className="text-sm text-purple-800 space-y-1">
+                    <h3 className="font-semibold text-teal-900 mb-1">What happens next?</h3>
+                    <ul className="text-sm text-teal-800 space-y-1">
                       <li>• Admin team reviews your credentials</li>
                       <li>• You'll receive an email notification</li>
                       <li>• Once approved, you can access your dashboard</li>
@@ -127,11 +124,11 @@ export default function DoctorPendingApprovalPage() {
                 </div>
               </div>
 
-              {/* Check Status Button */}
+              {}
               <Button
                 onClick={handleCheckApproval}
                 disabled={checking}
-                className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-white"
+                className="w-full h-12 bg-teal-600 hover:bg-teal-700 text-white"
               >
                 {checking ? (
                   <div className="flex items-center gap-2">
@@ -152,7 +149,7 @@ export default function DoctorPendingApprovalPage() {
                 </p>
               )}
 
-              {/* Sign Out */}
+              {}
               <div className="pt-4 border-t border-gray-200">
                 <Button
                   onClick={handleSignOut}
@@ -164,12 +161,12 @@ export default function DoctorPendingApprovalPage() {
               </div>
             </div>
 
-            {/* Contact Support */}
+            {}
             <div className="mt-6 p-4 bg-gray-50 rounded-xl">
               <h4 className="text-sm font-semibold text-gray-900 mb-2">Need Help?</h4>
               <p className="text-xs text-gray-600">
                 If you have questions about your approval status, please contact our support team at{' '}
-                <a href="mailto:support@healthplatform.com" className="text-purple-600 hover:underline">
+                <a href="mailto:support@healthplatform.com" className="text-teal-600 hover:underline">
                   support@healthplatform.com
                 </a>
               </p>

@@ -42,8 +42,8 @@ export async function createPatient(payload: { email: string; password?: string;
       email: payload.email,
       fullName: payload.fullName,
       diseaseType: payload.diseaseType,
-      doctorId: doctorId, // Use the already resolved doctorId
-      patientData: { ...comprehensive, ...patientData }, // Merge comprehensive and patientData
+      doctorId: doctorId,
+      patientData: { ...comprehensive, ...patientData },
       authUserId: authUserId,
       password: hashedPassword,
       defaultPassword: payload.password || 'patient123'

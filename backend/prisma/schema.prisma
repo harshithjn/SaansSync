@@ -62,7 +62,7 @@ model Message {
   id          String   @id @default(uuid()) @db.Uuid
   patientId   String   @map("patient_id") @db.Uuid
   doctorId    String?  @map("doctor_id") @db.Uuid
-  senderRole  String   @map("sender_role") // 'patient' or 'doctor'
+  senderRole  String   @map("sender_role")
   content     String
   isRead      Boolean  @default(false) @map("is_read")
   createdAt   DateTime @default(now()) @db.Timestamptz(6) @map("created_at")

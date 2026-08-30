@@ -12,10 +12,9 @@ interface LanguageContextType {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined)
 
-// Translation dictionary
 const translations = {
     en: {
-        // Common
+
         'common.loading': 'Loading...',
         'common.save': 'Save',
         'common.cancel': 'Cancel',
@@ -26,7 +25,6 @@ const translations = {
         'common.temperature': 'Temperature',
         'common.fahrenheit': 'Fahrenheit',
 
-        // Patient Dashboard
         'dashboard.title': 'Patient Dashboard',
         'dashboard.welcome': 'Welcome',
         'dashboard.vitals': 'Vital Signs (SpO₂)',
@@ -35,7 +33,6 @@ const translations = {
         'dashboard.oxygenation': 'Oxygenation Status',
         'dashboard.roomAir': 'Room Air',
 
-        // Vitals
         'vitals.spo2': 'SpO₂ (spo2)',
         'vitals.spo2AtRest': 'SpO₂ at Rest',
         'vitals.spo2OnExertion': 'SpO₂ on Exertion',
@@ -46,7 +43,6 @@ const translations = {
         'vitals.oxygenIncreased': 'Oxygen requirement increased by',
         'vitals.saturationLow': 'Is your saturation less than 88% for more than 3 hours in a day?',
 
-        // MMRC Scale
         'mmrc.title': 'mMRC Dyspnea Scale',
         'mmrc.grade0': 'I only get breathless with strenuous exercise',
         'mmrc.grade1': 'I get short of breath when hurrying on level ground or walking up a slight hill',
@@ -54,7 +50,6 @@ const translations = {
         'mmrc.grade3': 'I stop for breath after walking about 100 yards or after a few minutes on level ground',
         'mmrc.grade4': 'I am too breathless to leave the house or I am breathless when dressing',
 
-        // Symptoms
         'symptoms.cough': 'Cough',
         'symptoms.fever': 'Fever',
         'symptoms.expectoration': 'Expectoration',
@@ -64,24 +59,21 @@ const translations = {
         'symptoms.weakness': 'Generalised Weakness',
         'symptoms.pedalEdema': 'Pedal Edema',
 
-        // Medication Side Effects
         'sideEffects.title': 'Medication Side Effects',
         'sideEffects.fever': 'Fever',
         'sideEffects.dizziness': 'Dizziness',
         'sideEffects.itching': 'Itching',
 
-        // Control Status
         'control.wellControlled': 'Well Controlled',
         'control.partlyControlled': 'Partly Controlled',
         'control.poorlyControlled': 'Poorly Controlled',
 
-        // Virtual Pulmonary Rehabilitation
         'rehabilitation.title': 'Virtual Pulmonary Rehabilitation',
         'rehabilitation.description': 'Access guided breathing exercises and rehabilitation programs',
         'rehabilitation.start': 'Start Session',
     },
     hi: {
-        // Common
+
         'common.loading': 'लोड हो रहा है...',
         'common.save': 'सेव करें',
         'common.cancel': 'रद्द करें',
@@ -92,7 +84,6 @@ const translations = {
         'common.temperature': 'तापमान',
         'common.fahrenheit': 'फारेनहाइट',
 
-        // Patient Dashboard
         'dashboard.title': 'मरीज़ डैशबोर्ड',
         'dashboard.welcome': 'स्वागत',
         'dashboard.vitals': 'महत्वपूर्ण संकेत (SpO₂)',
@@ -101,7 +92,6 @@ const translations = {
         'dashboard.oxygenation': 'ऑक्सीजन स्थिति',
         'dashboard.roomAir': 'कमरे की हवा',
 
-        // Vitals
         'vitals.spo2': 'SpO₂ (sपो2)',
         'vitals.spo2AtRest': 'आराम के समय SpO₂',
         'vitals.spo2OnExertion': 'मेहनत के समय SpO₂',
@@ -112,7 +102,6 @@ const translations = {
         'vitals.oxygenIncreased': 'ऑक्सीजन की आवश्यकता बढ़ी',
         'vitals.saturationLow': 'क्या आपका सैचुरेशन दिन में 3 घंटे से ज्यादा 88% से कम रहता है?',
 
-        // MMRC Scale (Hindi)
         'mmrc.title': 'mMRC सांस की तकलीफ स्केल',
         'mmrc.grade0': 'मुझे केवल कड़ी मेहनत के दौरान सांस की तकलीफ होती है',
         'mmrc.grade1': 'समतल जमीन पर जल्दी चलने या हल्की चढ़ाई पर मुझे सांस की तकलीफ होती है',
@@ -120,7 +109,6 @@ const translations = {
         'mmrc.grade3': 'लगभग 100 गज चलने के बाद या समतल जमीन पर कुछ मिनट चलने के बाद मुझे सांस लेने के लिए रुकना पड़ता है',
         'mmrc.grade4': 'मैं घर से निकलने के लिए बहुत सांस फूलता हूं या कपड़े पहनते समय सांस फूलती है',
 
-        // Symptoms
         'symptoms.cough': 'खांसी',
         'symptoms.fever': 'बुखार',
         'symptoms.expectoration': 'कफ',
@@ -130,18 +118,15 @@ const translations = {
         'symptoms.weakness': 'सामान्य कमजोरी',
         'symptoms.pedalEdema': 'पैरों में सूजन',
 
-        // Medication Side Effects
         'sideEffects.title': 'दवा के साइड इफेक्ट्स',
         'sideEffects.fever': 'बुखार',
         'sideEffects.dizziness': 'चक्कर आना',
         'sideEffects.itching': 'खुजली',
 
-        // Control Status
         'control.wellControlled': 'अच्छी तरह नियंत्रित',
         'control.partlyControlled': 'आंशिक रूप से नियंत्रित',
         'control.poorlyControlled': 'खराब नियंत्रित',
 
-        // Virtual Pulmonary Rehabilitation
         'rehabilitation.title': 'वर्चुअल पल्मोनरी रिहैबिलिटेशन',
         'rehabilitation.description': 'निर्देशित सांस की एक्सरसाइज और रिहैबिलिटेशन प्रोग्राम का उपयोग करें',
         'rehabilitation.start': 'सेशन शुरू करें',
@@ -152,7 +137,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const [language, setLanguage] = useState<Language>('en')
 
     useEffect(() => {
-        // Load saved language preference
+
         const savedLanguage = localStorage.getItem('patient-language') as Language
         if (savedLanguage && (savedLanguage === 'en' || savedLanguage === 'hi')) {
             setLanguage(savedLanguage)
@@ -183,7 +168,6 @@ export function useLanguage() {
     return context
 }
 
-// Language toggle component
 export function LanguageToggle() {
     const { language, setLanguage } = useLanguage()
 
@@ -192,7 +176,7 @@ export function LanguageToggle() {
             <button
                 onClick={() => setLanguage('en')}
                 className={`px-3 py-1 text-sm rounded ${language === 'en'
-                        ? 'bg-purple-600 text-white'
+                        ? 'bg-teal-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
             >
@@ -201,7 +185,7 @@ export function LanguageToggle() {
             <button
                 onClick={() => setLanguage('hi')}
                 className={`px-3 py-1 text-sm rounded ${language === 'hi'
-                        ? 'bg-purple-600 text-white'
+                        ? 'bg-teal-600 text-white'
                         : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
             >

@@ -16,16 +16,12 @@ export function diagnosisToDiseaseType(diagnosis: string): string {
   return 'unknown';
 }
 
-/**
- * Safely format a date string or object to a human-readable format.
- * Prevents "Invalid Date" errors.
- */
 export function formatDate(dateInput: any, options: Intl.DateTimeFormatOptions = {}): string {
   if (!dateInput) return 'N/A';
-  
+
   const date = new Date(dateInput);
   if (isNaN(date.getTime())) return 'N/A';
-  
+
   return date.toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',

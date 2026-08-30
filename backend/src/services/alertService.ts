@@ -1,6 +1,6 @@
 import prisma from '../config/db'
 import { calculateDailyScore, calculateWeightedScore, getRiskLevel, AlertLevel, AlertResult } from '../scoring/scoringEngine'
-// @ts-ignore
+
 import { DailyLogSubmission } from '../types/shared'
 
 export interface EvaluatedAlert {
@@ -26,7 +26,7 @@ export async function evaluateAndStoreAlert(
     const todayResult = calculateDailyScore(submission, baselineSpO2);
 
     const historyLogs = await prisma.dailyLog.findMany({
-        where: { 
+        where: {
             patientId,
             logDate: { lt: new Date(new Date().toISOString().split('T')[0]) }
         },

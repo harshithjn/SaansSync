@@ -37,7 +37,6 @@ interface CleanAsthmaDashboardProps {
 export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis, headless = false }: CleanAsthmaDashboardProps) {
     const { t } = useLanguage()
 
-    // State
     const [patientData, setPatientData] = useState<any>(null)
     const [aqiData, setAqiData] = useState<any>(null)
     const [aqiLoading, setAqiLoading] = useState(true)
@@ -45,7 +44,6 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [activeAlerts, setActiveAlerts] = useState<any[]>([])
 
-    // Form Data
     const [formData, setFormData] = useState({
         spo2AtRest: 98,
         spo2OnExertion: 95,
@@ -143,9 +141,9 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
     }
 
     return (
-        <div className="space-y-12 font-['Matter_Regular',sans-serif]">
-            {/* Virtual Rehab Promo */}
-            <div className="bg-purple-600 rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-purple-100 relative overflow-hidden group">
+        <div className="space-y-12">
+            {}
+            <div className="bg-teal-600 rounded-[2.5rem] p-8 text-white flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-teal-100 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 -translate-y-32 translate-x-32 rounded-full blur-3xl" />
                 <div className="flex items-center gap-6 relative z-10">
                     <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md border border-white/20">
@@ -153,15 +151,15 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                     </div>
                     <div>
                         <h3 className="text-xl font-bold tracking-tight mb-1 uppercase">Exercise Session</h3>
-                        <p className="text-purple-100 text-xs font-bold uppercase tracking-widest opacity-90">Guided breathing & light exercise</p>
+                        <p className="text-teal-100 text-xs font-bold uppercase tracking-widest opacity-90">Guided breathing & light exercise</p>
                     </div>
                 </div>
-                <Button className="bg-white text-purple-600 hover:bg-purple-50 font-bold px-10 h-14 rounded-xl border-none shadow-lg relative z-10 text-base tracking-tight active:scale-95 transition-all">
+                <Button className="bg-white text-teal-600 hover:bg-teal-50 font-bold px-10 h-14 rounded-xl border-none shadow-lg relative z-10 text-base tracking-tight active:scale-95 transition-all">
                     Start Now
                 </Button>
             </div>
 
-            {/* Environmental Header */}
+            {}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Card className="p-8 border-none bg-white rounded-[2.5rem] shadow-sm border border-slate-100 relative overflow-hidden">
                     <div className="flex justify-between items-start mb-6 relative z-10">
@@ -174,7 +172,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{aqiData?.location || 'Nearby'}</p>
                             </div>
                         </div>
-                        <button 
+                        <button
                             disabled={aqiLoading}
                             onClick={async () => {
                                 setAqiLoading(true)
@@ -197,7 +195,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                     </div>
                 </Card>
 
-                <Card className={`p-8 border-none rounded-[2.5rem] shadow-sm border flex flex-col justify-between transition-all duration-500 overflow-hidden relative ${canLog ? 'bg-purple-600 text-white shadow-xl shadow-purple-100' : 'bg-white border-slate-100'}`}>
+                <Card className={`p-8 border-none rounded-[2.5rem] shadow-sm border flex flex-col justify-between transition-all duration-500 overflow-hidden relative ${canLog ? 'bg-teal-600 text-white shadow-xl shadow-teal-100' : 'bg-white border-slate-100'}`}>
                     <div className="flex justify-between items-start mb-6 relative z-10">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${canLog ? 'bg-white/10 text-white' : 'bg-slate-50 text-slate-200'}`}>
                             <Zap className="w-6 h-6" />
@@ -212,14 +210,14 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                         <h3 className={`text-2xl font-bold tracking-tight mb-1 ${canLog ? 'text-white' : 'text-slate-900'}`}>
                             {canLog ? 'Daily Log' : 'Check-in Complete'}
                         </h3>
-                        <p className={`text-[10px] font-bold uppercase tracking-widest ${canLog ? 'text-purple-100' : 'text-slate-300'}`}>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest ${canLog ? 'text-teal-100' : 'text-slate-300'}`}>
                             {canLog ? 'Update your health status' : 'Thank you for tracking today'}
                         </p>
                     </div>
                 </Card>
             </div>
 
-            {/* Entry Form */}
+            {}
             <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-slate-50 pb-10">
                     <div>
@@ -240,10 +238,10 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-20">
                     <div className="space-y-10">
                         <div className="flex items-center gap-4 mb-2">
-                            <Activity className="w-5 h-5 text-purple-600" />
+                            <Activity className="w-5 h-5 text-teal-600" />
                             <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-900">Health Readings</h4>
                         </div>
-                        
+
                         <div className="space-y-10">
                             <div>
                                 <div className="flex items-center justify-between mb-6">
@@ -256,7 +254,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                                     value={[formData.spo2AtRest]}
                                     onValueChange={(v) => setFormData(prev => ({ ...prev, spo2AtRest: v[0] }))}
                                     max={100} min={80} step={1}
-                                    className="[&_[role=slider]]:h-7 [&_[role=slider]]:w-7 [&_[role=slider]]:bg-purple-600 [&_[role=track]]:h-2 [&_[role=track]]:bg-slate-100"
+                                    className="[&_[role=slider]]:h-7 [&_[role=slider]]:w-7 [&_[role=slider]]:bg-teal-600 [&_[role=track]]:h-2 [&_[role=track]]:bg-slate-100"
                                 />
                             </div>
 
@@ -271,7 +269,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                                     value={[formData.peakFlowPercent]}
                                     onValueChange={(v) => setFormData(prev => ({ ...prev, peakFlowPercent: v[0] }))}
                                     max={100} min={40} step={1}
-                                    className="[&_[role=slider]]:h-7 [&_[role=slider]]:w-7 [&_[role=slider]]:bg-purple-600 [&_[role=track]]:h-2 [&_[role=track]]:bg-slate-100"
+                                    className="[&_[role=slider]]:h-7 [&_[role=slider]]:w-7 [&_[role=slider]]:bg-teal-600 [&_[role=track]]:h-2 [&_[role=track]]:bg-slate-100"
                                 />
                             </div>
                         </div>
@@ -279,7 +277,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
 
                     <div className="space-y-10">
                         <div className="flex items-center gap-4 mb-2">
-                            <Heart className="w-5 h-5 text-purple-600" />
+                            <Heart className="w-5 h-5 text-teal-600" />
                             <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-900">Quick Assessment</h4>
                         </div>
 
@@ -287,10 +285,10 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                             <div className="space-y-4">
                                 <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 block px-1">How is your breathing?</label>
                                 <Select value={formData.mMRCScale.toString()} onValueChange={(v) => setFormData(prev => ({ ...prev, mMRCScale: parseInt(v) }))}>
-                                    <SelectTrigger className="h-14 rounded-xl bg-slate-50 border border-slate-100 font-bold text-slate-900 px-6 text-sm hover:bg-slate-100 transition-all focus:ring-purple-100 shadow-none">
+                                    <SelectTrigger className="h-14 rounded-xl bg-slate-50 border border-slate-100 font-bold text-slate-900 px-6 text-sm hover:bg-slate-100 transition-all focus:ring-teal-100 shadow-none">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="rounded-2xl border-slate-100 shadow-xl p-2 font-['Matter_Regular',sans-serif]">
+                                    <SelectContent className="rounded-2xl border-slate-100 shadow-xl p-2">
                                         <SelectItem value="0" className="rounded-lg font-bold py-2.5">Normal breathing</SelectItem>
                                         <SelectItem value="1" className="rounded-lg font-bold py-2.5">Only during fast walks</SelectItem>
                                         <SelectItem value="2" className="rounded-lg font-bold py-2.5">Slower than others</SelectItem>
@@ -300,8 +298,8 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                                 </Select>
                             </div>
 
-                            <div className="p-6 bg-purple-50/50 rounded-2xl border border-purple-100/30">
-                                <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest mb-2 flex items-center gap-2">
+                            <div className="p-6 bg-teal-50/50 rounded-2xl border border-teal-100/30">
+                                <p className="text-[10px] font-bold text-teal-600 uppercase tracking-widest mb-2 flex items-center gap-2">
                                     <Thermometer className="w-4 h-4" /> Helpful Tip
                                 </p>
                                 <p className="text-xs text-slate-600 font-medium leading-relaxed">Relax for 5 minutes before taking your oxygen reading for the best accuracy.</p>
@@ -310,10 +308,10 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                     </div>
                 </div>
 
-                {/* Control Indicators */}
+                {}
                 <div className="mt-16 pt-12 border-t border-slate-50">
                     <div className="flex items-center gap-4 mb-10">
-                        <ShieldCheck className="w-5 h-5 text-purple-600" />
+                        <ShieldCheck className="w-5 h-5 text-teal-600" />
                         <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-900">Recent Symptoms (Last 24h)</h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -323,7 +321,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                             { key: 'relieverUse', label: 'Did you use your blue inhaler?' },
                             { key: 'activityLimitation', label: 'Did symptoms limit your activity?' }
                         ].map(({ key, label }) => (
-                            <div key={key} 
+                            <div key={key}
                                 className={`p-6 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${formData[key as keyof typeof formData] ? 'bg-rose-50 border-rose-100 shadow-sm' : 'bg-slate-50 border-slate-50 hover:border-slate-200'}`}
                                 onClick={() => setFormData(prev => ({ ...prev, [key]: !prev[key as keyof typeof formData] }))}>
                                 <span className={`text-sm font-bold tracking-tight ${formData[key as keyof typeof formData] ? 'text-rose-900' : 'text-slate-900'}`}>{label}</span>
@@ -351,15 +349,15 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                             value={[formData.rescueInhalerPuffs]}
                             onValueChange={(v) => setFormData(prev => ({ ...prev, rescueInhalerPuffs: v[0] }))}
                             max={10} min={0} step={1}
-                            className="[&_[role=slider]]:h-7 [&_[role=slider]]:w-7 [&_[role=slider]]:bg-purple-600 [&_[role=track]]:h-2 [&_[role=track]]:bg-white"
+                            className="[&_[role=slider]]:h-7 [&_[role=slider]]:w-7 [&_[role=slider]]:bg-teal-600 [&_[role=track]]:h-2 [&_[role=track]]:bg-white"
                         />
                     </div>
                 </div>
 
-                {/* Symptoms VAS */}
+                {}
                 <div className="mt-16 pt-12 border-t border-slate-50">
                     <div className="flex items-center gap-4 mb-10">
-                        <Activity className="w-5 h-5 text-purple-600" />
+                        <Activity className="w-5 h-5 text-teal-600" />
                         <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-900">How do you feel? (0-10)</h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-24 gap-y-16">
@@ -372,7 +370,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                             <div key={key}>
                                 <div className="flex items-center justify-between mb-6 group">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-purple-600 transition-colors">
+                                        <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-teal-600 transition-colors">
                                             <Icon className="w-4 h-4" />
                                         </div>
                                         <span className="text-sm font-bold text-slate-700 tracking-tight">{label}</span>
@@ -383,32 +381,32 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                                     value={[formData[key as keyof typeof formData] as number]}
                                     onValueChange={(v) => setFormData(prev => ({ ...prev, [key]: v[0] }))}
                                     max={10} min={0} step={1}
-                                    className="[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:bg-purple-600 [&_[role=track]]:h-1.5 [&_[role=track]]:bg-slate-100"
+                                    className="[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:bg-teal-600 [&_[role=track]]:h-1.5 [&_[role=track]]:bg-slate-100"
                                 />
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Medications Compliance */}
+                {}
                 <div className="mt-16 pt-12 border-t border-slate-50">
                     <div className="flex items-center justify-between mb-10">
                         <div className="flex items-center gap-4">
-                            <Pill className="w-5 h-5 text-purple-600" />
+                            <Pill className="w-5 h-5 text-teal-600" />
                             <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-900">Medications Taken</h4>
                         </div>
-                        <Badge className="bg-purple-50 text-purple-600 border-none font-bold text-[9px] uppercase tracking-widest px-4 py-1.5 rounded-full">Active Prescriptions</Badge>
+                        <Badge className="bg-teal-50 text-teal-600 border-none font-bold text-[9px] uppercase tracking-widest px-4 py-1.5 rounded-full">Active Prescriptions</Badge>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                         {formData.medications.map((med, i) => (
-                            <div key={i} className={`p-6 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${med.taken ? 'bg-purple-50 border-purple-100 shadow-sm' : 'bg-slate-50 border-slate-50 hover:border-slate-200'}`}
+                            <div key={i} className={`p-6 rounded-2xl border transition-all flex items-center justify-between group cursor-pointer ${med.taken ? 'bg-teal-50 border-teal-100 shadow-sm' : 'bg-slate-50 border-slate-50 hover:border-slate-200'}`}
                                 onClick={() => {
                                     const updated = [...formData.medications]
                                     updated[i].taken = !updated[i].taken
                                     setFormData(prev => ({ ...prev, medications: updated }))
                                 }}>
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${med.taken ? 'bg-white text-purple-600 shadow-sm' : 'bg-white text-slate-200 border border-slate-100'}`}>
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${med.taken ? 'bg-white text-teal-600 shadow-sm' : 'bg-white text-slate-200 border border-slate-100'}`}>
                                         <Pill className="w-6 h-6" />
                                     </div>
                                     <div>
@@ -416,7 +414,7 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5">{med.dose} • {med.frequency}</p>
                                     </div>
                                 </div>
-                                <div className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${med.taken ? 'bg-purple-600 border-purple-600 shadow-md shadow-purple-100' : 'bg-white border-slate-200'}`}>
+                                <div className={`w-8 h-8 rounded-lg border-2 flex items-center justify-center transition-all ${med.taken ? 'bg-teal-600 border-teal-600 shadow-md shadow-teal-100' : 'bg-white border-slate-200'}`}>
                                     {med.taken && <CheckCircle2 className="w-5 h-5 text-white" />}
                                 </div>
                             </div>
@@ -424,12 +422,12 @@ export default function CleanAsthmaDashboard({ patientId, patientName, diagnosis
                     </div>
                 </div>
 
-                {/* Submission Control */}
+                {}
                 <div className="mt-20 pt-16 border-t border-slate-50 flex flex-col items-center">
                     <Button
                         disabled={!canLog || isSubmitting}
                         onClick={handleSubmit}
-                        className={`h-16 px-16 rounded-[1.5rem] font-bold text-xl tracking-tight transition-all duration-300 shadow-lg active:scale-[0.98] ${canLog ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-100' : 'bg-slate-50 text-slate-300 shadow-none cursor-not-allowed'}`}
+                        className={`h-16 px-16 rounded-[1.5rem] font-bold text-xl tracking-tight transition-all duration-300 shadow-lg active:scale-[0.98] ${canLog ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-teal-100' : 'bg-slate-50 text-slate-300 shadow-none cursor-not-allowed'}`}
                     >
                         {isSubmitting ? (
                             <div className="flex items-center gap-4">

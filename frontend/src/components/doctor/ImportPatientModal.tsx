@@ -16,11 +16,11 @@ interface ImportPatientModalProps {
     onSuccess?: (patientData: PatientData) => void
 }
 
-export default function ImportPatientModal({ 
-    doctorId, 
-    isOpen, 
+export default function ImportPatientModal({
+    doctorId,
+    isOpen,
     onClose,
-    onSuccess 
+    onSuccess
 }: ImportPatientModalProps) {
     const [step, setStep] = useState<'input' | 'importing' | 'success' | 'error'>('input')
     const [patientId, setPatientId] = useState('')
@@ -34,13 +34,13 @@ export default function ImportPatientModal({
 
     const validateForm = () => {
         const errors: typeof validationErrors = {}
-        
+
         if (!patientId.trim()) {
             errors.patientId = 'Patient ID (Email) is required'
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(patientId.trim())) {
             errors.patientId = 'Invalid Patient ID format (should be an email address)'
         }
-        
+
         if (!otpCode.trim()) {
             errors.otpCode = 'Transfer code is required'
         } else if (otpCode.trim().length !== 6) {
@@ -48,7 +48,7 @@ export default function ImportPatientModal({
         } else if (!/^\d{6}$/.test(otpCode.trim())) {
             errors.otpCode = 'Transfer code must contain only numbers'
         }
-        
+
         setValidationErrors(errors)
         return Object.keys(errors).length === 0
     }
@@ -58,19 +58,18 @@ export default function ImportPatientModal({
 
         setStep('importing')
         setError('')
-        
+
         try {
             const result = await importPatientWithOTP(
                 doctorId,
                 patientId.trim(),
                 otpCode.trim()
             )
-            
+
             if (result.success && result.patientData) {
                 setImportedPatient(result.patientData)
                 setStep('success')
-                
-                // Call success callback if provided
+
                 if (onSuccess) {
                     onSuccess(result.patientData)
                 }
@@ -106,7 +105,7 @@ export default function ImportPatientModal({
                 {step === 'input' && (
                     <>
                         <div className="text-center">
-                            <UserPlus className="w-12 h-12 text-purple-600 mx-auto mb-4" />
+                            <UserPlus className="w-12 h-12 text-teal-600 mx-auto mb-4" />
                             <h3 className="text-lg font-semibold mb-2">Import Patient</h3>
                             <p className="text-gray-600 text-sm">
                                 Enter the patient's transfer details to import their medical records
@@ -159,12 +158,12 @@ export default function ImportPatientModal({
                             </div>
                         </div>
 
-                        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                        <div className="bg-teal-50 border border-teal-200 rounded-lg p-4">
                             <div className="flex items-start gap-3">
-                                <Shield className="w-5 h-5 text-purple-600 mt-0.5" />
+                                <Shield className="w-5 h-5 text-teal-600 mt-0.5" />
                                 <div className="text-sm">
-                                    <p className="font-medium text-purple-800 mb-1">Secure Transfer</p>
-                                    <ul className="text-purple-700 space-y-1">
+                                    <p className="font-medium text-teal-800 mb-1">Secure Transfer</p>
+                                    <ul className="text-teal-700 space-y-1">
                                         <li>• Transfer codes expire in 10 minutes</li>
                                         <li>• Patient's previous doctor loses access immediately</li>
                                         <li>• All medical history is preserved</li>
@@ -178,8 +177,8 @@ export default function ImportPatientModal({
                             <Button variant="outline" onClick={handleClose} className="flex-1">
                                 Cancel
                             </Button>
-                            <Button 
-                                onClick={handleImport} 
+                            <Button
+                                onClick={handleImport}
                                 className="flex-1"
                                 disabled={!patientId.trim() || !otpCode.trim()}
                             >
@@ -191,7 +190,7 @@ export default function ImportPatientModal({
 
                 {step === 'importing' && (
                     <div className="text-center py-8">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
                         <h3 className="text-lg font-semibold mb-2">Importing Patient</h3>
                         <p className="text-gray-600 text-sm">Verifying transfer code and importing medical records...</p>
                     </div>
@@ -218,13 +217,12 @@ export default function ImportPatientModal({
                                         </div>
                                     </div>
                                 </div>
-                                
-                                
+
                                 <div className="flex items-center gap-3">
                                     <Mail className="w-5 h-5 text-green-600" />
                                     <span className="text-sm">{importedPatient.emailId}</span>
                                 </div>
-                                
+
                                 <div className="pt-2 border-t border-green-200">
                                     <Badge className="bg-green-100 text-green-800">
                                         {importedPatient.diagnosis.primaryCategory}

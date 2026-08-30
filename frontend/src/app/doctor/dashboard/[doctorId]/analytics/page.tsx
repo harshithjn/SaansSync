@@ -39,11 +39,11 @@ export default function AnalyticsPage({
   const loadPatients = (doctorId: string) => {
     const patientFolders = getDoctorPatientFolders(doctorId)
     setPatients(patientFolders)
-    
+
     const totalPatients = patientFolders.length
     const criticalPatients = patientFolders.filter(p => p.redFlagScore >= 9).length
-    const averageRiskScore = totalPatients > 0 
-      ? patientFolders.reduce((sum, p) => sum + p.redFlagScore, 0) / totalPatients 
+    const averageRiskScore = totalPatients > 0
+      ? patientFolders.reduce((sum, p) => sum + p.redFlagScore, 0) / totalPatients
       : 0
     const totalAlerts = patientFolders.reduce((sum, p) => sum + p.alertCount, 0)
 
@@ -90,8 +90,8 @@ export default function AnalyticsPage({
   })()
 
   return (
-    <div className="space-y-12 font-['Matter_Regular',sans-serif]">
-      {/* Header */}
+    <div className="space-y-12">
+      {}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-2">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Overview</p>
@@ -105,7 +105,7 @@ export default function AnalyticsPage({
         </div>
       </div>
 
-      {/* Overview Stats */}
+      {}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <StatCard label="Total Population" count={overviewStats.totalPatients} color="text-slate-950" bg="bg-slate-50" icon={Users} />
         <StatCard label="Critical Triage" count={overviewStats.criticalPatients} color="text-rose-600" bg="bg-rose-50" icon={AlertTriangle} />
@@ -113,7 +113,7 @@ export default function AnalyticsPage({
         <StatCard label="Cumulative Alerts" count={overviewStats.totalAlerts} color="text-orange-600" bg="bg-orange-50" icon={Activity} />
       </div>
 
-      {/* Parameter Controls */}
+      {}
       <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
           <div className="flex items-center gap-3 flex-1 px-4">
             <Users className="w-5 h-5 text-slate-300" />
@@ -121,7 +121,7 @@ export default function AnalyticsPage({
               <SelectTrigger className="border-none bg-transparent hover:bg-slate-50 rounded-xl px-2 font-bold text-xs uppercase tracking-widest text-slate-900 focus:ring-0">
                 <SelectValue placeholder="Target Population" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl border-none shadow-2xl p-2 font-['Matter_Regular',sans-serif]">
+              <SelectContent className="rounded-2xl border-none shadow-2xl p-2">
                 <SelectItem value="all" className="rounded-xl text-xs font-bold uppercase tracking-widest">Global Overview</SelectItem>
                 {patients.map(p => (
                   <SelectItem key={p.patientId} value={p.patientId} className="rounded-xl text-xs font-bold uppercase tracking-widest">
@@ -140,7 +140,7 @@ export default function AnalyticsPage({
               <SelectTrigger className="border-none bg-transparent hover:bg-slate-50 rounded-xl px-2 font-bold text-xs uppercase tracking-widest text-slate-900 focus:ring-0">
                 <SelectValue placeholder="Observation Window" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl border-none shadow-2xl p-2 font-['Matter_Regular',sans-serif]">
+              <SelectContent className="rounded-2xl border-none shadow-2xl p-2">
                 <SelectItem value="7" className="rounded-xl text-xs font-bold uppercase tracking-widest">L-7 Days</SelectItem>
                 <SelectItem value="30" className="rounded-xl text-xs font-bold uppercase tracking-widest">L-30 Days</SelectItem>
                 <SelectItem value="90" className="rounded-xl text-xs font-bold uppercase tracking-widest">L-Quarter</SelectItem>
@@ -151,11 +151,11 @@ export default function AnalyticsPage({
       </div>
 
       {selectedPatient === "all" ? (
-        /* Global View */
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50">
              <div className="flex items-center gap-4 mb-10">
-                <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-teal-50 text-teal-500 rounded-2xl flex items-center justify-center">
                     <PieChart className="w-6 h-6" />
                 </div>
                 <div>
@@ -197,9 +197,9 @@ export default function AnalyticsPage({
           </Card>
         </div>
       ) : analyticsData ? (
-        /* Patient Specific */
+
         <div className="space-y-10">
-           {/* Insights Grid */}
+           {}
            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50 md:col-span-2">
                  <div className="flex items-center gap-4 mb-10">
@@ -242,7 +242,7 @@ export default function AnalyticsPage({
                     ))}
                  </div>
               </Card>
-              
+
               <Card className="p-10 border-none bg-slate-950 rounded-[3rem] shadow-2xl shadow-slate-200 flex flex-col justify-center items-center text-center overflow-hidden relative">
                  <div className="absolute top-0 right-0 w-64 h-64 bg-slate-900 rounded-full -translate-y-32 translate-x-32" />
                  <Activity className="w-16 h-16 text-slate-800 mb-6" />

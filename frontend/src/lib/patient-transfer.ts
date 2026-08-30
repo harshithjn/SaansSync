@@ -1,6 +1,5 @@
-// Patient Transfer System - OTP-Based Doctor Change
 import { PatientData } from './patient-types'
-// import { getPatientDataById, updatePatientData } from './patient-storage' // Removed - using database
+
 import { getDoctorPatientFolders, createPatientFolder, removeDoctorPatientMapping } from './doctor-patient-mapping'
 import { getPatientProfile } from './database-service'
 
@@ -25,19 +24,16 @@ const TRANSFER_OTP_STORAGE_KEY = 'patient_transfer_otps'
 const TRANSFER_AUDIT_STORAGE_KEY = 'patient_transfer_audit'
 const OTP_VALIDITY_MINUTES = 10
 
-// Generate 6-digit OTP
 function generateOTP(): string {
     return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
-// Generate OTP expiry time
 function getOTPExpiry(): string {
     const expiry = new Date()
     expiry.setMinutes(expiry.getMinutes() + OTP_VALIDITY_MINUTES)
     return expiry.toISOString()
 }
 
-// Store OTP
 function storeOTP(transferOTP: TransferOTP): void {
     if (typeof window === 'undefined') return
 
@@ -45,7 +41,6 @@ function storeOTP(transferOTP: TransferOTP): void {
         const stored = localStorage.getItem(TRANSFER_OTP_STORAGE_KEY)
         const allOTPs = stored ? JSON.parse(stored) : {}
 
-        // Store by patient ID (overwrite any existing OTP)
         allOTPs[transferOTP.patientId] = transferOTP
 
         localStorage.setItem(TRANSFER_OTP_STORAGE_KEY, JSON.stringify(allOTPs))
@@ -54,7 +49,6 @@ function storeOTP(transferOTP: TransferOTP): void {
     }
 }
 
-// Get stored OTP
 function getStoredOTP(patientId: string): TransferOTP | null {
     if (typeof window === 'undefined') return null
 
@@ -68,14 +62,12 @@ function getStoredOTP(patientId: string): TransferOTP | null {
     }
 }
 
-// Check if OTP is valid
 function isOTPValid(otp: TransferOTP): boolean {
     const now = new Date()
     const expiry = new Date(otp.expiresAt)
     return !otp.isUsed && now <= expiry
 }
 
-// Mark OTP as used
 function markOTPAsUsed(patientId: string): void {
     if (typeof window === 'undefined') return
 
@@ -92,7 +84,6 @@ function markOTPAsUsed(patientId: string): void {
     }
 }
 
-// Store audit log
 function storeAuditLog(auditLog: TransferAuditLog): void {
     if (typeof window === 'undefined') return
 
@@ -102,7 +93,6 @@ function storeAuditLog(auditLog: TransferAuditLog): void {
 
         allLogs.push(auditLog)
 
-        // Keep only last 1000 audit logs
         if (allLogs.length > 1000) {
             allLogs.splice(0, allLogs.length - 1000)
         }
@@ -113,10 +103,9 @@ function storeAuditLog(auditLog: TransferAuditLog): void {
     }
 }
 
-// Find current doctor for patient
 function findCurrentDoctor(patientId: string): string | null {
-    // Check all doctors to find who has this patient
-    const allDoctors = ['doctor@gmail.com'] // In production, this would be a proper doctor list
+
+    const allDoctors = ['doctor@gmail.com']
 
     for (const doctorId of allDoctors) {
         const folders = getDoctorPatientFolders(doctorId)
@@ -128,7 +117,6 @@ function findCurrentDoctor(patientId: string): string | null {
     return null
 }
 
-// STEP 1: Patient initiates transfer (generates OTP)
 export async function initiatePatientTransfer(patientId: string): Promise<{
     success: boolean
     otp?: string
@@ -136,7 +124,7 @@ export async function initiatePatientTransfer(patientId: string): Promise<{
     error?: string
 }> {
     try {
-        // Verify patient exists
+
         const patientData = await getPatientProfile(patientId)
         if (!patientData) {
             return {
@@ -145,7 +133,6 @@ export async function initiatePatientTransfer(patientId: string): Promise<{
             }
         }
 
-        // Find current doctor
         const currentDoctorId = findCurrentDoctor(patientId)
         if (!currentDoctorId) {
             return {
@@ -154,7 +141,6 @@ export async function initiatePatientTransfer(patientId: string): Promise<{
             }
         }
 
-        // Generate new OTP
         const otp = generateOTP()
         const expiresAt = getOTPExpiry()
 
@@ -166,10 +152,8 @@ export async function initiatePatientTransfer(patientId: string): Promise<{
             isUsed: false
         }
 
-        // Store OTP
         storeOTP(transferOTP)
 
-        // Show OTP to patient (in production, this would be via secure notification)
         return {
             success: true,
             otp,
@@ -185,7 +169,6 @@ export async function initiatePatientTransfer(patientId: string): Promise<{
     }
 }
 
-// STEP 2: New doctor imports patient using OTP
 export async function importPatientWithOTP(
     newDoctorId: string,
     patientId: string,
@@ -196,7 +179,7 @@ export async function importPatientWithOTP(
     error?: string
 }> {
     try {
-        // Verify patient exists
+
         const patientData = await getPatientProfile(patientId)
         if (!patientData) {
             return {
@@ -205,7 +188,6 @@ export async function importPatientWithOTP(
             }
         }
 
-        // Get stored OTP
         const storedOTP = getStoredOTP(patientId)
         if (!storedOTP) {
             return {
@@ -214,7 +196,6 @@ export async function importPatientWithOTP(
             }
         }
 
-        // Validate OTP
         if (storedOTP.otp !== otpCode) {
             return {
                 success: false,
@@ -229,7 +210,6 @@ export async function importPatientWithOTP(
             }
         }
 
-        // Find current doctor
         const oldDoctorId = findCurrentDoctor(patientId)
         if (!oldDoctorId) {
             return {
@@ -238,7 +218,6 @@ export async function importPatientWithOTP(
             }
         }
 
-        // Prevent self-transfer
         if (oldDoctorId === newDoctorId) {
             return {
                 success: false,
@@ -246,9 +225,6 @@ export async function importPatientWithOTP(
             }
         }
 
-        // STEP 3: Execute transfer
-
-        // Remove patient from old doctor
         const removed = removeDoctorPatientMapping(oldDoctorId, patientId)
         if (!removed) {
             return {
@@ -257,16 +233,13 @@ export async function importPatientWithOTP(
             }
         }
 
-        // Add patient to new doctor
-        const redFlagScore = Math.floor(Math.random() * 10) + 1 // In production, use actual score
-        const alertCount = Math.floor(Math.random() * 3) // In production, use actual count
+        const redFlagScore = Math.floor(Math.random() * 10) + 1
+        const alertCount = Math.floor(Math.random() * 3)
 
         createPatientFolder(patientData, newDoctorId, patientId, redFlagScore, alertCount)
 
-        // Mark OTP as used
         markOTPAsUsed(patientId)
 
-        // Create audit log
         const auditLog: TransferAuditLog = {
             patientId,
             oldDoctorId,
@@ -291,13 +264,11 @@ export async function importPatientWithOTP(
     }
 }
 
-// Check if patient has pending transfer
 export function hasPendingTransfer(patientId: string): boolean {
     const storedOTP = getStoredOTP(patientId)
     return storedOTP ? isOTPValid(storedOTP) : false
 }
 
-// Get transfer status
 export function getTransferStatus(patientId: string): {
     hasPending: boolean
     expiresAt?: string
@@ -319,7 +290,6 @@ export function getTransferStatus(patientId: string): {
     }
 }
 
-// Cancel pending transfer
 export function cancelPendingTransfer(patientId: string): boolean {
     try {
         markOTPAsUsed(patientId)
@@ -330,7 +300,6 @@ export function cancelPendingTransfer(patientId: string): boolean {
     }
 }
 
-// Get transfer history for patient (for debugging only - not visible to doctors)
 export function getTransferHistory(patientId: string): TransferAuditLog[] {
     if (typeof window === 'undefined') return []
 
@@ -348,7 +317,6 @@ export function getTransferHistory(patientId: string): TransferAuditLog[] {
     }
 }
 
-// Cleanup expired OTPs (run periodically)
 export function cleanupExpiredOTPs(): void {
     if (typeof window === 'undefined') return
 
@@ -372,7 +340,6 @@ export function cleanupExpiredOTPs(): void {
     }
 }
 
-// Format time remaining for display
 export function formatTimeRemaining(milliseconds: number): string {
     const minutes = Math.floor(milliseconds / (1000 * 60))
     const seconds = Math.floor((milliseconds % (1000 * 60)) / 1000)
@@ -384,9 +351,8 @@ export function formatTimeRemaining(milliseconds: number): string {
     }
 }
 
-// Validate patient ID format (mobile number)
 export function validatePatientId(patientId: string): boolean {
-    // Check if it's a valid mobile number (10 digits)
+
     const mobileRegex = /^[6-9]\d{9}$/
     return mobileRegex.test(patientId)
 }

@@ -9,7 +9,7 @@ export default function AsthmaDashboard() {
 
     if (authState.loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 font-['Matter_Regular',sans-serif]">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
                 <div className="w-16 h-16 bg-slate-50 flex items-center justify-center rounded-[2rem] border border-slate-100 shadow-sm">
                     <Loader2 className="w-8 h-8 animate-spin text-slate-200" />
                 </div>
@@ -19,7 +19,7 @@ export default function AsthmaDashboard() {
     }
 
     if (!authState.user || authState.role !== 'patient') {
-        return null // Will redirect via usePatientAuth
+        return null
     }
 
     return <PatientDashboardWrapper diseaseType="asthma" />

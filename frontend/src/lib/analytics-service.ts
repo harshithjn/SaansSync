@@ -1,4 +1,3 @@
-// Analytics & Graphs Service
 import { CommonPatientData, AsthmaData, COPDData, BronchiectasisData, ILDData, PostInfectionData, DiseaseType } from './monitoring-types'
 import { getPatientPFTHistory, PFTRecord } from './pft-history'
 import { getPatientAlerts } from './alert-system'
@@ -58,7 +57,6 @@ export interface AnalyticsInsight {
     actionRequired: boolean
 }
 
-// Generate comprehensive analytics for a patient
 export function generatePatientAnalytics(
     patientId: string,
     diseaseType: DiseaseType,
@@ -83,7 +81,6 @@ export function generatePatientAnalytics(
     }
 }
 
-// Generate trend data
 function generateTrends(
     commonData: CommonPatientData[],
     diseaseData: any[],
@@ -91,19 +88,15 @@ function generateTrends(
     alerts: any[],
     dateRange: { start: string; end: string }
 ): AnalyticsData['trends'] {
-    // SpO2 Trend
+
     const spo2Trend = generateSpo2Trend(commonData)
-    
-    // Symptom Trends
+
     const symptomTrends = generateSymptomTrends(commonData)
-    
-    // Medication Compliance
+
     const medicationCompliance = generateComplianceData(commonData)
-    
-    // Alert Frequency
+
     const alertFrequency = generateAlertFrequency(alerts, dateRange)
-    
-    // Disease-specific trends
+
     const diseaseSpecificTrends = generateDiseaseSpecificTrends(diseaseData)
 
     return {
@@ -115,14 +108,13 @@ function generateTrends(
     }
 }
 
-// Generate SpO2 trend
 function generateSpo2Trend(commonData: CommonPatientData[]): TrendData {
     const dates = commonData.map(data => data.firstLogDate.split('T')[0])
     const values = commonData.map(data => data.spo2.atRest)
-    
+
     const trend = calculateTrend(values)
-    const changePercent = values.length > 1 
-        ? ((values[values.length - 1] - values[0]) / values[0]) * 100 
+    const changePercent = values.length > 1
+        ? ((values[values.length - 1] - values[0]) / values[0]) * 100
         : 0
 
     return {
@@ -133,7 +125,6 @@ function generateSpo2Trend(commonData: CommonPatientData[]): TrendData {
     }
 }
 
-// Generate symptom trends
 function generateSymptomTrends(commonData: CommonPatientData[]): SymptomTrendData[] {
     const symptomMap = new Map<string, { dates: string[], scores: number[] }>()
 
@@ -163,7 +154,6 @@ function generateSymptomTrends(commonData: CommonPatientData[]): SymptomTrendDat
     })
 }
 
-// Generate compliance data
 function generateComplianceData(commonData: CommonPatientData[]): ComplianceData {
     const totalDays = commonData.length
     let compliantDays = 0
@@ -172,7 +162,7 @@ function generateComplianceData(commonData: CommonPatientData[]): ComplianceData
     commonData.forEach(data => {
         const dayCompliant = data.medications.every(med => med.taken)
         if (dayCompliant) compliantDays++
-        
+
         data.medications.forEach(med => {
             if (!med.taken && !missedMedications.includes(med.drugName)) {
                 missedMedications.push(med.drugName)
@@ -188,19 +178,17 @@ function generateComplianceData(commonData: CommonPatientData[]): ComplianceData
     }
 }
 
-// Generate alert frequency data
 function generateAlertFrequency(alerts: any[], dateRange: { start: string; end: string }): AlertFrequencyData {
     const startDate = new Date(dateRange.start)
     const endDate = new Date(dateRange.end)
-    
+
     const filteredAlerts = alerts.filter(alert => {
         const alertDate = new Date(alert.createdAt)
         return alertDate >= startDate && alertDate <= endDate
     })
 
-    // Group alerts by date
     const alertsByDate = new Map<string, { total: number; critical: number }>()
-    
+
     filteredAlerts.forEach(alert => {
         const date = alert.createdAt.split('T')[0]
         if (!alertsByDate.has(date)) {
@@ -223,31 +211,28 @@ function generateAlertFrequency(alerts: any[], dateRange: { start: string; end: 
     }
 }
 
-// Generate disease-specific trends
 function generateDiseaseSpecificTrends(diseaseData: any[]): any {
     if (diseaseData.length === 0) return {}
 
     const firstRecord = diseaseData[0]
-    
-    // Determine disease type from data structure
+
     if ('controlLevel' in firstRecord) {
-        // Asthma data
+
         return generateAsthmaTrends(diseaseData as AsthmaData[])
     } else if ('coughFrequency' in firstRecord) {
-        // COPD data
+
         return generateCOPDTrends(diseaseData as COPDData[])
     } else if ('breathlessnessChange' in firstRecord) {
-        // ILD data
+
         return generateILDTrends(diseaseData as ILDData[])
     } else if ('sputumVolume' in firstRecord) {
-        // Bronchiectasis/Post-Infection data
+
         return generateBronchiectasisTrends(diseaseData as BronchiectasisData[])
     }
 
     return {}
 }
 
-// Generate Asthma-specific trends
 function generateAsthmaTrends(data: AsthmaData[]): any {
     return {
         peakFlowTrend: {
@@ -268,7 +253,6 @@ function generateAsthmaTrends(data: AsthmaData[]): any {
     }
 }
 
-// Generate COPD-specific trends
 function generateCOPDTrends(data: COPDData[]): any {
     return {
         exacerbationRisk: {
@@ -293,7 +277,6 @@ function generateCOPDTrends(data: COPDData[]): any {
     }
 }
 
-// Generate ILD-specific trends
 function generateILDTrends(data: ILDData[]): any {
     return {
         progressionMonitoring: {
@@ -311,7 +294,6 @@ function generateILDTrends(data: ILDData[]): any {
     }
 }
 
-// Generate Bronchiectasis-specific trends
 function generateBronchiectasisTrends(data: BronchiectasisData[]): any {
     return {
         infectionMonitoring: {
@@ -328,11 +310,9 @@ function generateBronchiectasisTrends(data: BronchiectasisData[]): any {
     }
 }
 
-// Generate insights from trends
 function generateInsights(trends: AnalyticsData['trends'], diseaseType: DiseaseType): AnalyticsInsight[] {
     const insights: AnalyticsInsight[] = []
 
-    // SpO2 insights
     if (trends.spo2Trend.trend === 'declining') {
         insights.push({
             type: 'concerning',
@@ -351,7 +331,6 @@ function generateInsights(trends: AnalyticsData['trends'], diseaseType: DiseaseT
         })
     }
 
-    // Medication compliance insights
     if (trends.medicationCompliance.complianceRate < 80) {
         insights.push({
             type: 'concerning',
@@ -362,7 +341,6 @@ function generateInsights(trends: AnalyticsData['trends'], diseaseType: DiseaseT
         })
     }
 
-    // Alert frequency insights
     if (trends.alertFrequency.totalAlerts > 10) {
         insights.push({
             type: 'concerning',
@@ -373,7 +351,6 @@ function generateInsights(trends: AnalyticsData['trends'], diseaseType: DiseaseT
         })
     }
 
-    // Symptom insights
     trends.symptomTrends.forEach(symptom => {
         if (symptom.trend === 'worsening' && symptom.averageScore > 7) {
             insights.push({
@@ -389,7 +366,6 @@ function generateInsights(trends: AnalyticsData['trends'], diseaseType: DiseaseT
     return insights
 }
 
-// Generate recommendations based on insights
 function generateRecommendations(
     insights: AnalyticsInsight[],
     trends: AnalyticsData['trends'],
@@ -397,7 +373,6 @@ function generateRecommendations(
 ): string[] {
     const recommendations: string[] = []
 
-    // General recommendations based on insights
     insights.forEach(insight => {
         if (insight.actionRequired) {
             switch (insight.type) {
@@ -420,7 +395,6 @@ function generateRecommendations(
         }
     })
 
-    // Disease-specific recommendations
     switch (diseaseType) {
         case 'Asthma':
             if (trends.diseaseSpecificTrends.rescueInhalerUse?.averageUse > 2) {
@@ -445,50 +419,45 @@ function generateRecommendations(
     return recommendations
 }
 
-// Helper function to calculate trend
 function calculateTrend(values: number[]): 'improving' | 'stable' | 'declining' {
     if (values.length < 2) return 'stable'
-    
+
     const firstHalf = values.slice(0, Math.floor(values.length / 2))
     const secondHalf = values.slice(Math.floor(values.length / 2))
-    
+
     const firstAvg = firstHalf.reduce((sum, val) => sum + val, 0) / firstHalf.length
     const secondAvg = secondHalf.reduce((sum, val) => sum + val, 0) / secondHalf.length
-    
+
     const changePercent = ((secondAvg - firstAvg) / firstAvg) * 100
-    
+
     if (changePercent > 5) return 'improving'
     if (changePercent < -5) return 'declining'
     return 'stable'
 }
 
-// Mock functions for data retrieval (would be replaced with actual data fetching)
 function getCommonPatientDataHistory(patientId: string, dateRange: { start: string; end: string }): CommonPatientData[] {
-    // Mock implementation - would fetch historical data
+
     return []
 }
 
 function getDiseaseSpecificDataHistory(patientId: string, diseaseType: DiseaseType, dateRange: { start: string; end: string }): any[] {
-    // Mock implementation - would fetch historical disease-specific data
+
     return []
 }
 
-// Export analytics data
 export function exportAnalyticsData(analyticsData: AnalyticsData, format: 'csv' | 'json' = 'json'): string {
     if (format === 'json') {
         return JSON.stringify(analyticsData, null, 2)
     }
-    
-    // CSV format for trends
+
     const headers = ['Date', 'SpO2', 'Alert Count', 'Medication Compliance']
     const rows: string[][] = []
-    
-    // Combine data from different trends
+
     const maxLength = Math.max(
         analyticsData.trends.spo2Trend.dates.length,
         analyticsData.trends.alertFrequency.dates.length
     )
-    
+
     for (let i = 0; i < maxLength; i++) {
         const row = [
             analyticsData.trends.spo2Trend.dates[i] || '',
@@ -498,7 +467,7 @@ export function exportAnalyticsData(analyticsData: AnalyticsData, format: 'csv' 
         ]
         rows.push(row)
     }
-    
+
     return [headers, ...rows]
         .map(row => row.map(cell => `"${cell}"`).join(','))
         .join('\n')

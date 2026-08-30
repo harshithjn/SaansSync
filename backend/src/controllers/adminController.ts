@@ -3,7 +3,6 @@ import prisma from '../config/db'
 import { isAdminEmail } from '../services/authService'
 import { AuthedRequest } from '../middleware/jwtMiddleware'
 
-
 function ensureAdmin(req: AuthedRequest, res: Response): boolean {
   if (!isAdminEmail(req.user?.email || null)) {
     res.status(403).json({ success: false, error: 'Admin role required' })
@@ -71,7 +70,7 @@ export async function fixApprovedDoctors(_req: AuthedRequest, res: Response) {
 
 export async function getRecentPatients(req: AuthedRequest, res: Response) {
   if (!ensureAdmin(req, res)) return
-  
+
   try {
     const patients = await prisma.patient.findMany({
       select: { id: true, fullName: true, email: true, createdAt: true },

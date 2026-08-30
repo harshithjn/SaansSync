@@ -30,7 +30,7 @@ export const getDoctorConversations = async (doctorId: string) => {
         where: {
             OR: [
                 { doctorId },
-                { senderRole: 'patient' } // Needs refinement logically, but matching legacy exactly
+                { senderRole: 'patient' }
             ]
         },
         include: {

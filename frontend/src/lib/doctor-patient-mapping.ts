@@ -1,4 +1,3 @@
-// Doctor-Patient Mapping Service (BFF + local cache)
 import { DoctorPatientMapping, PatientFolder, DiseaseType } from './monitoring-types'
 import { PatientData } from './patient-types'
 import api from './api'
@@ -6,7 +5,6 @@ import api from './api'
 const MAPPING_STORAGE_KEY = 'doctor_patient_mappings'
 const PATIENT_FOLDERS_KEY = 'patient_folders'
 
-// Create mapping when patient is created
 export function createDoctorPatientMapping(
   doctorId: string,
   patientId: string,
@@ -35,14 +33,12 @@ export function createDoctorPatientMapping(
 
     localStorage.setItem(MAPPING_STORAGE_KEY, JSON.stringify(mappings))
 
-    // Persist mapping server-side (fire-and-forget)
     void api.post(`/doctor/${doctorId}/assign-patient`, { patientId, diseaseType }).catch(() => null)
   } catch (error) {
     console.error('Error creating doctor-patient mapping:', error)
   }
 }
 
-// Get all patients for a specific doctor (local cache)
 export function getDoctorPatients(doctorId: string): DoctorPatientMapping[] {
   if (typeof window === 'undefined') return []
 
@@ -56,7 +52,6 @@ export function getDoctorPatients(doctorId: string): DoctorPatientMapping[] {
   }
 }
 
-// Get patient's assigned doctor (local cache)
 export function getPatientDoctor(patientId: string): DoctorPatientMapping | null {
   if (typeof window === 'undefined') return null
 
@@ -70,7 +65,6 @@ export function getPatientDoctor(patientId: string): DoctorPatientMapping | null
   }
 }
 
-// Create/Update Patient Folder (server-first + local cache)
 export async function createPatientFolderAsync(
   patientData: PatientData,
   doctorId: string,
@@ -144,7 +138,6 @@ export function createPatientFolder(
   }
 }
 
-// Get patient folders for a doctor (server-first)
 export async function getDoctorPatientFoldersAsync(doctorId: string): Promise<PatientFolder[]> {
   if (typeof window === 'undefined') return []
 
@@ -155,7 +148,7 @@ export async function getDoctorPatientFoldersAsync(doctorId: string): Promise<Pa
       return data
     }
   } catch {
-    // ignore and fall back to cache
+
   }
 
   return getDoctorPatientFolders(doctorId)
@@ -174,7 +167,6 @@ export function getDoctorPatientFolders(doctorId: string): PatientFolder[] {
   }
 }
 
-// Update patient folder color and score (cache + best-effort server update)
 export function updatePatientFolderStatus(
   patientId: string,
   redFlagScore: number,
@@ -200,7 +192,6 @@ export function updatePatientFolderStatus(
 
       localStorage.setItem(PATIENT_FOLDERS_KEY, JSON.stringify(folders))
 
-      // best-effort server patch
       void api.patch(`/doctor/${folder.doctorId}/patient-folders/${patientId}`, {
         redFlagScore,
         alertCount,
@@ -212,7 +203,6 @@ export function updatePatientFolderStatus(
   }
 }
 
-// Helper function to map diagnosis to disease type
 function mapDiagnosisToDisease(primaryCategory: string): DiseaseType {
   switch (primaryCategory) {
     case 'Bronchial Asthma':

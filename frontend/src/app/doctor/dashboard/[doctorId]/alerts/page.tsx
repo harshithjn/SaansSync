@@ -17,7 +17,7 @@ interface StoredDoctorAlert {
   patientName?: string
   doctorId: string
   level: string
-  reason_text: string
+  reasonText: string
   triggers: string[]
   diseaseType: string
   timestamp: string
@@ -59,14 +59,14 @@ export default function AlertsPage({
       const rawAlerts = await getDoctorAlerts(docId)
       const mappedAlerts: StoredDoctorAlert[] = (rawAlerts || []).map((a: any) => ({
         id: a.id,
-        patientId: a.patient_id,
-        patientName: a.patient_name || a.patient_id,
-        doctorId: a.doctor_id,
+        patientId: a.patientId,
+        patientName: a.patientName || a.patientId,
+        doctorId: a.doctorId,
         level: a.level,
-        reason_text: a.reason_text,
-        triggers: a.alert_data?.drivers || [],
-        diseaseType: a.disease_type || 'Unknown',
-        timestamp: a.created_at,
+        reasonText: a.reasonText,
+        triggers: a.alertData?.drivers || [],
+        diseaseType: a.diseaseType || 'Unknown',
+        timestamp: a.createdAt,
         acknowledged: !!a.acknowledged
       }))
 
@@ -98,9 +98,9 @@ export default function AlertsPage({
     let filtered = [...alerts]
     if (searchTerm.trim()) {
       const s = searchTerm.toLowerCase()
-      filtered = filtered.filter(a => 
-        a.reason_text.toLowerCase().includes(s) || 
-        a.patientId.toLowerCase().includes(s) || 
+      filtered = filtered.filter(a =>
+        a.reasonText.toLowerCase().includes(s) ||
+        a.patientId.toLowerCase().includes(s) ||
         (a.patientName && a.patientName.toLowerCase().includes(s))
       )
     }
@@ -125,8 +125,8 @@ export default function AlertsPage({
   }
 
   return (
-    <div className="space-y-12 font-['Matter_Regular',sans-serif]">
-      {/* Header */}
+    <div className="space-y-12">
+      {}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-2">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Alerts</p>
@@ -139,7 +139,7 @@ export default function AlertsPage({
         </div>
       </div>
 
-      {/* Stats */}
+      {}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <StatCard label="Critical" count={statistics.red} color="text-rose-600" bg="bg-rose-50" icon={AlertTriangle} />
         <StatCard label="High Priority" count={statistics.orange} color="text-orange-600" bg="bg-orange-50" icon={AlertTriangle} />
@@ -147,7 +147,7 @@ export default function AlertsPage({
         <StatCard label="Resolved" count={statistics.acknowledged} color="text-emerald-600" bg="bg-emerald-50" icon={CheckCircle} />
       </div>
 
-      {/* Controls */}
+      {}
       <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm">
           <div className="relative flex-1 group">
             <Search className="absolute left-6 top-1/2 transform -translate-y-1/2 text-slate-300 w-5 h-5 group-focus-within:text-slate-900 transition-colors" />
@@ -163,7 +163,7 @@ export default function AlertsPage({
             <SelectTrigger className="w-full md:w-56 h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-xs uppercase tracking-widest text-slate-500 focus:ring-slate-100">
               <SelectValue placeholder="Severity" />
             </SelectTrigger>
-            <SelectContent className="rounded-2xl border-none shadow-2xl p-2 font-['Matter_Regular',sans-serif]">
+            <SelectContent className="rounded-2xl border-none shadow-2xl p-2">
               <SelectItem value="all" className="rounded-xl text-xs font-bold uppercase tracking-widest">All Severities</SelectItem>
               <SelectItem value="RED" className="rounded-xl text-xs font-bold uppercase tracking-widest text-rose-600">Critical (RED)</SelectItem>
               <SelectItem value="ORANGE" className="rounded-xl text-xs font-bold uppercase tracking-widest text-orange-600">High (ORANGE)</SelectItem>
@@ -175,14 +175,14 @@ export default function AlertsPage({
             <SelectTrigger className="w-full md:w-56 h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-xs uppercase tracking-widest text-slate-500 focus:ring-slate-100">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent className="rounded-2xl border-none shadow-2xl p-2 font-['Matter_Regular',sans-serif]">
+            <SelectContent className="rounded-2xl border-none shadow-2xl p-2">
               <SelectItem value="active" className="rounded-xl text-xs font-bold uppercase tracking-widest">Active Triages</SelectItem>
               <SelectItem value="acknowledged" className="rounded-xl text-xs font-bold uppercase tracking-widest">Historical Logs</SelectItem>
             </SelectContent>
           </Select>
       </div>
 
-      {/* List */}
+      {}
       <div className="space-y-4">
         {loading ? (
           <div className="py-24 text-center text-slate-400 font-bold uppercase tracking-widest text-xs">Synchronizing clinical logs...</div>
@@ -192,9 +192,9 @@ export default function AlertsPage({
               const config = getAlertConfig(alert.level)
               return (
                 <Card key={alert.id} className={`p-8 border-none bg-white rounded-[2.5rem] shadow-[0_12px_24px_-8px_rgba(0,0,0,0.02)] border border-slate-50 hover:shadow-xl hover:-translate-y-1 transition-all duration-500 overflow-hidden relative group`}>
-                   {/* Background Accent */}
+                   {}
                    {!alert.acknowledged && <div className={`absolute top-0 right-0 w-32 h-32 opacity-[0.03] -translate-y-16 translate-x-16 rounded-full ${config.bg.replace('50', '500')}`} />}
-                   
+
                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
                       <div className="flex items-start gap-6">
                          <div className={`w-14 h-14 rounded-[1.25rem] flex items-center justify-center transition-all duration-500 ${alert.acknowledged ? 'bg-slate-50 text-slate-300' : config.bg + ' ' + config.color}`}>
@@ -212,8 +212,8 @@ export default function AlertsPage({
                             <h4 className="text-lg font-bold text-slate-900 tracking-tight mb-1">
                                {alert.patientName} <span className="text-slate-300 font-medium ml-2 text-sm italic">ID: {alert.patientId.slice(0, 8)}</span>
                             </h4>
-                            <p className={`text-sm font-bold leading-relaxed mb-4 ${alert.acknowledged ? 'text-slate-400' : 'text-slate-600'}`}>{alert.reason_text}</p>
-                            
+                            <p className={`text-sm font-bold leading-relaxed mb-4 ${alert.acknowledged ? 'text-slate-400' : 'text-slate-600'}`}>{alert.reasonText}</p>
+
                             <div className="flex items-center gap-6 text-[10px] font-bold text-slate-300 uppercase tracking-widest">
                                <div className="flex items-center gap-2">
                                  <Clock className="w-3.5 h-3.5" />

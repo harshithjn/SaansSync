@@ -42,7 +42,7 @@ export default function DoctorSettingsPage() {
                 if (dbProfile && sessionProfile) {
                     setProfile({
                         ...dbProfile,
-                        full_name: sessionProfile.full_name || dbProfile.full_name,
+                        fullName: sessionProfile.fullName || dbProfile.fullName,
                         email: sessionProfile.email || dbProfile.email
                     })
                 } else {
@@ -71,8 +71,8 @@ export default function DoctorSettingsPage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-12 font-['Matter_Regular',sans-serif]">
-            {/* Header */}
+        <div className="max-w-4xl mx-auto space-y-12">
+            {}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-2">
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Account Settings</p>
@@ -89,7 +89,7 @@ export default function DoctorSettingsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-                {/* Profile Overview Card */}
+                {}
                 <div className="space-y-6">
                     <Card className="p-8 border-none bg-white rounded-[2.5rem] shadow-sm border border-slate-50 flex flex-col items-center text-center">
                         <div className="relative group mb-6">
@@ -100,12 +100,12 @@ export default function DoctorSettingsPage() {
                                 <Camera className="w-4 h-4" />
                             </button>
                         </div>
-                        
+
                         <div>
-                            <h2 className="text-xl font-bold text-slate-900 tracking-tight">{profile?.full_name}</h2>
+                            <h2 className="text-xl font-bold text-slate-900 tracking-tight">{profile?.fullName}</h2>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 mb-4 flex items-center justify-center gap-2">
                                 <Shield className="w-3 h-3 text-emerald-500" />
-                                {profile?.approval_status === 'approved' ? 'Active Doctor' : 'Under Review'}
+                                {profile?.approvalStatus === 'approved' ? 'Active Doctor' : 'Under Review'}
                             </p>
                             <Badge variant="secondary" className="bg-slate-50 text-slate-500 border-none font-bold text-[9px] uppercase tracking-widest px-3 py-1">
                                 {profile?.specialization || 'Pulmonologist'}
@@ -120,11 +120,11 @@ export default function DoctorSettingsPage() {
                     </div>
                 </div>
 
-                {/* Forms */}
+                {}
                 <div className="md:col-span-2 space-y-8">
                     <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50">
                         <div className="flex items-center gap-4 mb-10">
-                            <div className="w-10 h-10 bg-purple-50 text-purple-500 rounded-xl flex items-center justify-center">
+                            <div className="w-10 h-10 bg-teal-50 text-teal-500 rounded-xl flex items-center justify-center">
                                 <User className="w-5 h-5" />
                             </div>
                             <div>
@@ -161,7 +161,7 @@ export default function DoctorSettingsPage() {
                             <div className="space-y-3">
                                 <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Hospital Affiliation</Label>
                                 <Input
-                                    defaultValue={profile?.license_number || "LCN-99102-X"}
+                                    defaultValue={profile?.licenseNumber || "LCN-99102-X"}
                                     disabled={true}
                                     className="h-14 bg-slate-100 border-none rounded-2xl px-6 font-bold text-slate-400"
                                 />

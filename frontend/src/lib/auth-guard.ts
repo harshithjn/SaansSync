@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth as useGlobalAuth } from '@/components/auth/AuthProvider'
-import api from './api'
+import { authApi } from './api'
 
 export interface AuthState {
   user: any | null
@@ -24,15 +24,15 @@ export function useAuth(): AuthState {
 
   useEffect(() => {
     let mounted = true;
-    
+
     if (globalLoading) return;
-    
+
     if (!token || !user) {
       if (mounted) setAuthState({ user: null, loading: false, role: null, approved: false, profile: null });
       return;
     }
 
-    api.get<any>('/auth/me')
+    authApi.get<any>('/me')
       .then((res) => {
         if (mounted) {
           setAuthState({
@@ -50,7 +50,7 @@ export function useAuth(): AuthState {
           setAuthState({ user: null, loading: false, role: null, approved: false, profile: null });
         }
       });
-      
+
     return () => { mounted = false; };
   }, [globalLoading, token, user]);
 
@@ -126,7 +126,7 @@ export function useAdminAuth() {
 
 export async function checkClientAuth() {
   try {
-    const data = await api.get<any>('/auth/me');
+    const data = await authApi.get<any>('/me');
     if (!data?.user) return null;
     return {
       role: data.role,

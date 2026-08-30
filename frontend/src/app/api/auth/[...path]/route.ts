@@ -31,13 +31,12 @@ async function proxyAuth(req: NextRequest, params: { path: string[] }) {
   try {
     data = raw ? JSON.parse(raw) : null
   } catch {
-    // leave as text
+
   }
 
   const response = NextResponse.json(data, { status: res.status })
   response.headers.set('content-type', contentType)
 
-  // On successful auth responses, set cookies
   if (data?.access_token) {
     console.log(`✅ [Proxy] Login Successful. Setting Cookies. AccessToken Length: ${data.access_token.length}`)
     const cookieStore = await cookies()
@@ -46,7 +45,7 @@ async function proxyAuth(req: NextRequest, params: { path: string[] }) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 3600 // 1 hour explicitly
+      maxAge: 3600
     })
     if (data.refresh_token) {
       cookieStore.set('saanssync_refresh', data.refresh_token, {
@@ -54,7 +53,7 @@ async function proxyAuth(req: NextRequest, params: { path: string[] }) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 86400 * 30 // 30 days
+        maxAge: 86400 * 30
       })
     }
   } else {

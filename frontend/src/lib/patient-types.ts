@@ -1,4 +1,3 @@
-// Primary Diagnosis Categories
 export const PRIMARY_DIAGNOSIS_CATEGORIES = [
     "Interstitial Lung Disease (ILD)",
     "Bronchial Asthma",
@@ -7,7 +6,6 @@ export const PRIMARY_DIAGNOSIS_CATEGORIES = [
     "Post ICU Recovery"
 ]
 
-// Disease Classification Constants
 export const ILD_SUBTYPES = [
     "Idiopathic pulmonary fibrosis",
     "Hypersensitivity pneumonitis",
@@ -138,7 +136,6 @@ export const FREQUENCY_LIST = [
     "Stat (Single dose)"
 ]
 
-// Medication Drug Name Options
 export const DRUG_NAME_OPTIONS = [
     "Myxolone",
     "MMF (Mycophenolate Mofetil)",
@@ -152,7 +149,6 @@ export const DRUG_NAME_OPTIONS = [
     "Other"
 ]
 
-// PFT Normal Ranges
 export const PFT_RANGES = {
     FVC: { min: 80, max: 120, unit: "% predicted" },
     FEV1: { min: 80, max: 120, unit: "% predicted" },
@@ -162,26 +158,23 @@ export const PFT_RANGES = {
     "Max SpO2": { min: 95, max: 100, unit: "%" }
 }
 
-// Structured Diagnosis Interface
 export interface StructuredDiagnosis {
     primaryCategory: string
     subtype: string
     ctdType?: string
     sarcoidosisStage?: string
-    fibroticiLD?: string  // For ILD: "Yes" or "No"
-    customSubtype?: string // For "Others" option with free text
+    fibroticiLD?: string
+    customSubtype?: string
 }
 
-// Types
 export interface PatientData {
-    // Step 1: Basic Information (Updated)
+
     fullName: string
     emailId: string
     age: string
     sex: string
     registrationDate: string
 
-    // Step 2: Diagnosis & Medical History (Updated)
     diagnosis: StructuredDiagnosis
     medicalHistory: string
     comorbidities: string[]
@@ -190,23 +183,18 @@ export interface PatientData {
     smokingStatus: string
     packYears: string
 
-    // Step 3: Medications
     medications: Medication[]
 
-    // Step 4: PFT Records
     pftRecords: PFTRecord[]
 
-    // Step 5: Respiratory Support
     requiresRespiratorySupport: string
     ltot: LTOTConfig
     bipap: BiPAPConfig
     invasiveVentilation: InvasiveVentilationConfig
     tracheostomy: TracheostomyConfig
 
-    // Patient Vitals (for patient dashboard)
     vitals?: PatientVitals
 
-    // Additional Notes
     additionalNotes?: string
 }
 
@@ -224,14 +212,14 @@ export interface Medication {
 
 export interface PFTRecord {
     id: string
-    // Spirometry
+
     fvc: string
     fev1: string
-    fvcLitres: string  // FVC in litres - numeric input
-    fev1Litres: string // FEV1 in litres - numeric input
-    // Diffusion
+    fvcLitres: string
+    fev1Litres: string
+
     dlco: string
-    // Exercise
+
     sixMWD: string
     minSpO2: string
     maxSpO2: string
@@ -278,7 +266,6 @@ export interface TracheostomyConfig {
     fiO2: string
 }
 
-// Patient Vitals and Respiratory Status (for patient dashboard)
 export interface PatientVitals {
     spo2: string
     respiratoryStatus: {
@@ -302,7 +289,6 @@ export interface StepValidation {
     errors: ValidationError[]
 }
 
-// Prescription Types
 export interface Prescription {
     id: string
     patientId: string
@@ -329,13 +315,12 @@ export interface PersonalizedAlert {
     id: string
     type: 'pulmonary-rehabilitation' | 'chest-physiotherapy' | 'suctioning' | 'custom'
     name: string
-    frequency: string // "1 time a day", "2 times a day", etc.
-    interval?: string // "every 6 hours", "every 4 hours", etc.
+    frequency: string
+    interval?: string
     instructions?: string
     isActive: boolean
 }
 
-// Alert frequency options
 export const PERSONALIZED_ALERT_TYPES = [
     {
         type: 'pulmonary-rehabilitation',
@@ -362,16 +347,12 @@ export const PERSONALIZED_ALERT_TYPES = [
     }
 ]
 
-// ============================================================
-// DAILY LOG TYPES & DASHBOARD INTERFACES
-// ============================================================
-
 export interface DailyLogCommon {
-    logDate: string; // ISO Date
+    logDate: string;
     aqi: {
         pm25: number;
         pm10: number;
-        status: string; // 'Good' | 'Poor' | 'Hazardous' etc
+        status: string;
     };
     spo2: {
         atRest: number;
@@ -379,27 +360,25 @@ export interface DailyLogCommon {
     };
     oxygenRequirement: {
         status: 'Static' | 'Increased' | 'Decreased';
-        delta?: number; // Litres
+        delta?: number;
     };
-    mMRCScore: string | number; // 0-4
+    mMRCScore: string | number;
     medicationAdherence: {
-        medicationId: string; // ID from PatientData.medications
+        medicationId: string;
         taken: boolean;
-        name?: string; // Optional for display
+        name?: string;
     }[];
     sideEffects: {
         type: string;
         description?: string;
     }[];
     symptoms: {
-        vasScore: number; // 0-10
+        vasScore: number;
         previousVasScore?: number;
         hasPedalEdema: boolean;
         others?: string;
     };
 }
-
-// Disease Specific Logs
 
 export type AsthmaControlStatus = 'Well controlled' | 'Partly controlled' | 'Poorly controlled';
 
@@ -409,7 +388,7 @@ export interface AsthmaSpecificLog {
         nightWaking: boolean;
         relieverUse: boolean;
         activityLimitation: boolean;
-        classification?: AsthmaControlStatus; // Computed
+        classification?: AsthmaControlStatus;
     };
     daily: {
         rescuePuffs: number;
@@ -419,14 +398,14 @@ export interface AsthmaSpecificLog {
 
 export interface COPDSpecificLog {
     symptoms: {
-        coughFrequency: number; // 0-4
-        phlegmProduction: number; // 0-4
-        exerciseTolerance: boolean; // Yes/No (Limited?)
-        sleepDisturbance: boolean; // Yes/No
+        coughFrequency: number;
+        phlegmProduction: number;
+        exerciseTolerance: boolean;
+        sleepDisturbance: boolean;
     };
     daily: {
-        energyVas: number; // 0-10
-        chestTightnessVas: number; // 0-10
+        energyVas: number;
+        chestTightnessVas: number;
         stepCount?: number;
     };
 }
@@ -436,31 +415,28 @@ export interface BronchiectasisSpecificLog {
         volume: 'None' | 'Small' | 'Moderate' | 'Large';
         color: 'White' | 'Pale Yellow' | 'Green' | 'Red/Rusty';
     };
-    clearanceEase: number; // 1-5
+    clearanceEase: number;
     infectionScreen: {
         fever: boolean;
         malaise: boolean;
     };
 }
 
-// Post-ICU reuses Bronchiectasis structure as per requirements
 export type PostICUSpecificLog = BronchiectasisSpecificLog;
 
 export interface ILDSpecificLog {
-    dryCoughFrequencyChange: number; // 0-4 or scale
-    breathlessnessAtRest: number; // VAS or scale? Assuming similar to mMRC or VAS
+    dryCoughFrequencyChange: number;
+    breathlessnessAtRest: number;
     kbildScore?: number;
-    // SpO2 trends are derived from common section
+
 }
 
 export interface DailyLogSubmission {
     patientId: string;
-    diseaseType: string; // "Bronchial Asthma", "COPD", etc.
+    diseaseType: string;
     common: DailyLogCommon;
     specific: AsthmaSpecificLog | COPDSpecificLog | BronchiectasisSpecificLog | ILDSpecificLog;
 }
-
-// Alerts
 
 export type AlertLevel = 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED';
 
@@ -468,8 +444,8 @@ export interface Alert {
     id: string;
     patientId: string;
     doctorId?: string;
-    date: string; // ISO
-    score: number; // 0-10
+    date: string;
+    score: number;
     level: AlertLevel;
     drivers: string[];
     diseaseType: string;

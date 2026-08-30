@@ -11,15 +11,15 @@ import { getDoctorPatientFolders } from "@/lib/doctor-patient-mapping"
 import { exportPatientData, generateExportSummary, downloadFile } from "@/lib/export-service"
 import { ExportOptions, PatientFolder } from "@/lib/monitoring-types"
 import { toast } from "@/lib/toast"
-import { 
-    Bell, 
-    CheckCircle2, 
-    AlertCircle, 
-    Info, 
-    Filter, 
-    Search, 
-    ShieldCheck, 
-    Calendar, 
+import {
+    Bell,
+    CheckCircle2,
+    AlertCircle,
+    Info,
+    Filter,
+    Search,
+    ShieldCheck,
+    Calendar,
     ArrowRight,
     Loader2,
     CheckCircle,
@@ -74,10 +74,10 @@ export default function ExportDataPage({
   const loadData = (doctorId: string) => {
     const patientFolders = getDoctorPatientFolders(doctorId)
     setPatients(patientFolders)
-    
+
     const exportSummary = generateExportSummary(doctorId)
     setSummary(exportSummary)
-    
+
     loadExportHistory()
   }
 
@@ -121,7 +121,7 @@ export default function ExportDataPage({
 
   const handleExport = async () => {
     setIsExporting(true)
-    
+
     try {
       const finalOptions: ExportOptions = {
         ...exportOptions,
@@ -130,7 +130,7 @@ export default function ExportDataPage({
 
       const exportResult = exportPatientData(doctorId, finalOptions)
       downloadFile(exportResult.data, exportResult.filename, exportResult.mimeType)
-      
+
       const exportRecord = {
         id: Date.now().toString(),
         filename: exportResult.filename,
@@ -140,10 +140,10 @@ export default function ExportDataPage({
         createdAt: new Date().toISOString(),
         size: new Blob([exportResult.data]).size
       }
-      
+
       saveExportHistory(exportRecord)
       toast.success("Data Exported Successfully")
-      
+
     } catch (error) {
       console.error('Export failed:', error)
       toast.error('System Export Failure')
@@ -161,8 +161,8 @@ export default function ExportDataPage({
   }
 
   return (
-    <div className="space-y-12 font-['Matter_Regular',sans-serif]">
-      {/* Dynamic Header */}
+    <div className="space-y-12">
+      {}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-2">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] ml-1">Data Export</p>
@@ -179,7 +179,7 @@ export default function ExportDataPage({
         </div>
       </div>
 
-      {/* Aggregate Metrics */}
+      {}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <MetricCard label="Candidate Pool" count={summary.totalPatients} icon={Users} color="text-slate-950" bg="bg-slate-50" />
         <MetricCard label="Disease Vectors" count={Object.keys(summary.byDisease).length} icon={Activity} color="text-slate-950" bg="bg-slate-50" />
@@ -188,7 +188,7 @@ export default function ExportDataPage({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* Export Configuration Engine */}
+        {}
         <div className="lg:col-span-2 space-y-10">
           <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50 overflow-hidden relative">
             <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -translate-y-16 translate-x-16 opacity-50" />
@@ -201,7 +201,7 @@ export default function ExportDataPage({
                 <p className="text-xs font-medium text-slate-400">Select clinical subjects for data extraction.</p>
               </div>
             </div>
-            
+
             <div className="space-y-6 relative z-10">
               <div className="flex items-center space-x-4 p-4 bg-slate-50 rounded-2xl border border-slate-100">
                 <Checkbox
@@ -260,14 +260,14 @@ export default function ExportDataPage({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
               <div className="space-y-3">
                 <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 ml-1">File Format</label>
-                <Select 
-                  value={exportOptions.format} 
+                <Select
+                  value={exportOptions.format}
                   onValueChange={(v: "csv" | "excel" | "pdf") => setExportOptions(prev => ({ ...prev, format: v }))}
                 >
                   <SelectTrigger className="h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-xs uppercase tracking-widest text-slate-950 focus:ring-0">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-2xl border-none shadow-2xl p-2 font-['Matter_Regular',sans-serif]">
+                  <SelectContent className="rounded-2xl border-none shadow-2xl p-2">
                     <SelectItem value="csv" className="rounded-xl text-xs font-bold uppercase tracking-widest">STRUCTURED CSV</SelectItem>
                     <SelectItem value="excel" className="rounded-xl text-xs font-bold uppercase tracking-widest">EXCEL WORKBOOK</SelectItem>
                     <SelectItem value="pdf" className="rounded-xl text-xs font-bold uppercase tracking-widest">CLINICAL PDF REPORT</SelectItem>
@@ -277,14 +277,14 @@ export default function ExportDataPage({
 
               <div className="space-y-3">
                 <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 ml-1">Data Frequency</label>
-                <Select 
-                  value={exportOptions.frequency} 
+                <Select
+                  value={exportOptions.frequency}
                   onValueChange={(v: "daily" | "weekly" | "monthly") => setExportOptions(prev => ({ ...prev, frequency: v }))}
                 >
                   <SelectTrigger className="h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-xs uppercase tracking-widest text-slate-950 focus:ring-0">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="rounded-2xl border-none shadow-2xl p-2 font-['Matter_Regular',sans-serif]">
+                  <SelectContent className="rounded-2xl border-none shadow-2xl p-2">
                     <SelectItem value="daily" className="rounded-xl text-xs font-bold uppercase tracking-widest">HIGH-RES (DAILY)</SelectItem>
                     <SelectItem value="weekly" className="rounded-xl text-xs font-bold uppercase tracking-widest">AGGREGATE (WEEKLY)</SelectItem>
                     <SelectItem value="monthly" className="rounded-xl text-xs font-bold uppercase tracking-widest">SUMMARY (MONTHLY)</SelectItem>
@@ -347,8 +347,8 @@ export default function ExportDataPage({
             </div>
 
             <div className="mt-10">
-              <Button 
-                onClick={handleExport} 
+              <Button
+                onClick={handleExport}
                 disabled={isExporting || (selectedPatients.length === 0 && patients.length === 0)}
                 className="w-full h-20 bg-slate-950 hover:bg-slate-800 text-white rounded-[2rem] font-bold text-sm uppercase tracking-[0.2em] transition-all duration-300 shadow-2xl shadow-slate-200 active:scale-[0.98] flex items-center justify-center gap-4"
               >
@@ -368,11 +368,11 @@ export default function ExportDataPage({
           </Card>
         </div>
 
-        {/* Audit Log / History */}
+        {}
         <div className="space-y-10">
           <Card className="p-8 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50">
             <div className="flex items-center gap-4 mb-8">
-              <div className="w-10 h-10 bg-purple-50 text-purple-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-teal-50 text-teal-600 rounded-xl flex items-center justify-center">
                 <Calendar className="w-5 h-5" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 tracking-tight">Export History</h3>
@@ -417,24 +417,24 @@ export default function ExportDataPage({
              <div className="relative z-10 space-y-6">
                 <h3 className="text-lg font-bold tracking-tight">Templates</h3>
                 <div className="space-y-3">
-                  <TemplateButton 
-                    label="CRITICAL TRIAGE POOL" 
+                  <TemplateButton
+                    label="CRITICAL TRIAGE POOL"
                     onClick={() => {
                       setSelectedPatients(patients.filter(p => p.redFlagScore >= 9).map(p => p.patientId))
                       setExportOptions(prev => ({ ...prev, format: 'pdf', includeGraphs: true }))
                       toast.success("Template: Critical Triage Loaded")
                     }}
                   />
-                  <TemplateButton 
-                    label="MONTHLY LONGITUDINAL" 
+                  <TemplateButton
+                    label="MONTHLY LONGITUDINAL"
                     onClick={() => {
                       setSelectedPatients(patients.map(p => p.patientId))
                       setExportOptions(prev => ({ ...prev, format: 'pdf', includeGraphs: true }))
                       toast.success("Template: Monthly Longitudinal Loaded")
                     }}
                   />
-                   <TemplateButton 
-                    label="DAILY TELEMETRY SYNC" 
+                   <TemplateButton
+                    label="DAILY TELEMETRY SYNC"
                     onClick={() => {
                       setSelectedPatients(patients.map(p => p.patientId))
                       setExportOptions(prev => ({ ...prev, format: 'csv', frequency: 'daily' }))
@@ -467,7 +467,7 @@ function MetricCard({ label, count, icon: Icon, color, bg }: any) {
 
 function TemplateButton({ label, onClick }: any) {
     return (
-        <button 
+        <button
             onClick={onClick}
             className="w-full flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:bg-white/10 transition-all text-left group"
         >

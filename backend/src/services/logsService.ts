@@ -1,6 +1,6 @@
 import prisma from '../config/db'
 import { calculateDailyScore, getRiskLevel } from '../scoring/scoringEngine'
-// @ts-ignore
+
 import { DailyLogSubmission } from '../types/shared'
 import * as alertService from './alertService'
 import * as doctorService from './doctorService'
@@ -13,7 +13,6 @@ export async function createDailyLog(payload: {
 }) {
   const { patientId, diseaseType, commonData, diseaseSpecificData } = payload
 
-  // 1. Prepare submission object
   const submission: DailyLogSubmission = {
     patientId,
     diseaseType,
@@ -21,12 +20,10 @@ export async function createDailyLog(payload: {
     specific: diseaseSpecificData
   }
 
-  // 2. Evaluate Alert & Score
   const evaluation = await alertService.evaluateAndStoreAlert(patientId, diseaseType, submission);
 
   const today = new Date().toISOString().split('T')[0]
 
-  // 3. Prepare Data for Log Storage
   const diseaseData = {
     common: commonData,
     specific: diseaseSpecificData,
@@ -35,7 +32,6 @@ export async function createDailyLog(payload: {
     drivers: evaluation.drivers
   }
 
-  // 4. Insert Daily Log
   const logData = await prisma.dailyLog.create({
     data: {
       patientId,
@@ -46,7 +42,6 @@ export async function createDailyLog(payload: {
     }
   });
 
-  // 5. Update Patient Folder Color
   try {
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },

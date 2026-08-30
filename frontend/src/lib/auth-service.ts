@@ -1,33 +1,28 @@
-// Production Authentication Service (BFF-backed)
-import api from './api'
+import api, { authApi } from './api'
 import { notifyAuthChange } from './auth-events'
 
 export interface DoctorProfile {
   id: string
   email: string
-  full_name: string
-  approval_status: 'pending' | 'approved' | 'rejected'
-  created_at: string
-  updated_at: string
+  fullName: string
+  approvalStatus: 'pending' | 'approved' | 'rejected'
+  createdAt: string
+  updatedAt: string
 }
 
 export interface PatientProfile {
   id: string
   email: string
-  full_name?: string
-  patient_data: any
-  created_at: string
-  updated_at: string
+  fullName?: string
+  patientData: any
+  createdAt: string
+  updatedAt: string
 }
-
-// =====================================================
-// DOCTOR AUTHENTICATION
-// =====================================================
 
 export async function signInDoctorWithPassword(email: string, password?: string) {
   try {
-    const result = await api.post<{ success: boolean; error?: string; token?: string; doctorProfile?: DoctorProfile }>(
-      '/auth/doctor/login',
+    const result = await authApi.post<{ success: boolean; error?: string; token?: string; doctorProfile?: DoctorProfile }>(
+      '/doctor/login',
       { email, password }
     )
     if (result?.success) notifyAuthChange()
@@ -43,8 +38,8 @@ export async function signUpDoctor(
   password?: string
 ): Promise<{ success: boolean; error?: string; token?: string; doctorProfile?: DoctorProfile }> {
   try {
-    const result = await api.post<{ success: boolean; error?: string; token?: string; doctorProfile?: DoctorProfile }>(
-      '/auth/doctor/signup',
+    const result = await authApi.post<{ success: boolean; error?: string; token?: string; doctorProfile?: DoctorProfile }>(
+      '/doctor/signup',
       { email, fullName, password }
     )
     if (result?.success) notifyAuthChange()
@@ -54,14 +49,10 @@ export async function signUpDoctor(
   }
 }
 
-// =====================================================
-// PATIENT AUTHENTICATION
-// =====================================================
-
 export async function signInPatientWithPassword(email: string, password?: string) {
   try {
-    const result = await api.post<{ success: boolean; error?: string; token?: string; patientProfile?: PatientProfile }>(
-      '/auth/patient/login',
+    const result = await authApi.post<{ success: boolean; error?: string; token?: string; patientProfile?: PatientProfile }>(
+      '/patient/login',
       { email, password }
     )
     if (result?.success) notifyAuthChange()
@@ -77,8 +68,8 @@ export async function signUpPatient(
   password?: string
 ): Promise<{ success: boolean; error?: string; token?: string; patientProfile?: PatientProfile }> {
   try {
-    const result = await api.post<{ success: boolean; error?: string; token?: string; patientProfile?: PatientProfile }>(
-      '/auth/patient/signup',
+    const result = await authApi.post<{ success: boolean; error?: string; token?: string; patientProfile?: PatientProfile }>(
+      '/patient/signup',
       { email, fullName, password }
     )
     if (result?.success) notifyAuthChange()
@@ -88,13 +79,22 @@ export async function signUpPatient(
   }
 }
 
-// =====================================================
-// GENERAL AUTH FUNCTIONS
-// =====================================================
+export async function signInAsGuest(role: 'doctor' | 'patient') {
+  try {
+    const result = await authApi.post<{ success: boolean; error?: string; token?: string; doctorProfile?: DoctorProfile; patientProfile?: PatientProfile }>(
+      '/guest',
+      { role }
+    )
+    if (result?.success) notifyAuthChange()
+    return result
+  } catch (error) {
+    return { success: false, error: (error as Error).message }
+  }
+}
 
 export async function getCurrentUser() {
   try {
-    const data = await api.get<{ user: any | null }>('/auth/me')
+    const data = await authApi.get<{ user: any | null }>('/me')
     return data?.user ?? null
   } catch (error) {
     return null
@@ -103,7 +103,7 @@ export async function getCurrentUser() {
 
 export async function signOut() {
   try {
-    await api.post('/auth/signout')
+    await authApi.post('/signout')
     notifyAuthChange(null)
     return true
   } catch (error) {
@@ -113,19 +113,14 @@ export async function signOut() {
 
 export async function getCurrentUserProfile() {
   try {
-    const data = await api.get<{ role: 'doctor' | 'patient' | 'admin' | null; profile: any | null; approved?: boolean }>(
-      '/auth/me'
+    const data = await authApi.get<{ role: 'doctor' | 'patient' | 'admin' | null; profile: any | null; approved?: boolean }>(
+      '/me'
     )
     return data
   } catch (error) {
     return { role: null, profile: null }
   }
 }
-
-
-// =====================================================
-// ADMIN FUNCTIONS
-// =====================================================
 
 export async function getAllDoctors(): Promise<DoctorProfile[]> {
   try {
@@ -159,11 +154,10 @@ export async function fixApprovedDoctors() {
   }
 }
 
-
 export async function signInAdminWithPassword(email: string, password?: string) {
   try {
-    const result = await api.post<{ success: boolean; error?: string; token?: string }>(
-      '/auth/admin/login',
+    const result = await authApi.post<{ success: boolean; error?: string; token?: string }>(
+      '/admin/login',
       { email, password }
     )
     if (result?.success) notifyAuthChange()

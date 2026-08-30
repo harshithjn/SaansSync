@@ -35,27 +35,27 @@ export function Header({ currentPage = 'home' }: HeaderProps) {
     }
 
     return (
-        <header className="sticky top-0 z-50 w-full border-b border-slate-50 bg-white/70 backdrop-blur-xl font-['Matter_Regular',sans-serif]">
-            <div className="container mx-auto px-8 h-24 flex items-center justify-between relative">
-                {/* Logo */}
-                <Link href="/" className="flex items-center gap-4 group">
-                    <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center transition-all group-hover:shadow-xl group-hover:scale-105 duration-500 overflow-hidden">
-                        <img src="/favicon.ico" alt="SaansSync Logo" className="w-7 h-7 object-contain" />
+        <header className="sticky top-0 z-50 w-full border-b border-slate-50 bg-white/70 backdrop-blur-xl">
+            <div className="container mx-auto px-6 h-16 flex items-center justify-between relative">
+                {}
+                <Link href="/" className="flex items-center gap-3 group">
+                    <div className="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center transition-all group-hover:shadow-lg group-hover:scale-105 duration-500 overflow-hidden">
+                        <img src="/favicon.ico" alt="SaansSync Logo" className="w-5 h-5 object-contain" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-2xl font-bold text-slate-900 tracking-tight leading-none">SaansSync</span>
-                        <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1.5">Smart Respiratory Care</span>
+                        <span className="text-base font-bold text-slate-900 tracking-tight leading-none">SaansSync</span>
+                        <span className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">Smart Respiratory Care</span>
                     </div>
                 </Link>
 
-                {/* Desktop Navigation - Centered */}
-                <nav className="hidden md:flex items-center gap-2 absolute left-1/2 transform -translate-x-1/2 bg-slate-50/50 p-1.5 rounded-[1.5rem] border border-slate-100/50">
+                {}
+                <nav className="hidden md:flex items-center gap-1 absolute left-1/2 transform -translate-x-1/2 bg-slate-50/50 p-1 rounded-xl border border-slate-100/50">
                     {navItems.map((item) => (
                         <button
                             key={item.key}
                             onClick={() => handleNavigation(item.href)}
-                            className={`px-5 py-2 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all duration-300 ${isActive(item.href)
-                                ? 'bg-white text-purple-600 shadow-sm'
+                            className={`px-4 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${isActive(item.href)
+                                ? 'bg-white text-teal-600 shadow-sm'
                                 : 'text-slate-400 hover:text-slate-900 hover:bg-white/50'
                                 }`}
                         >
@@ -64,52 +64,52 @@ export function Header({ currentPage = 'home' }: HeaderProps) {
                     ))}
                 </nav>
 
-                {/* Right section */}
-                <div className="flex items-center gap-5">
+                {}
+                <div className="flex items-center gap-3">
                     {user ? (
-                        <div className="flex items-center gap-6">
-                            <div className="hidden lg:flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-xl border border-slate-100">
-                                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">
+                        <div className="flex items-center gap-3">
+                            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-lg border border-slate-100">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">
                                     {user.email?.split('@')[0]}
                                 </span>
                             </div>
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
+                            <Button
+                                variant="ghost"
+                                size="sm"
                                 onClick={logout}
-                                className="text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl px-4"
+                                className="text-[9px] font-black uppercase tracking-widest text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg px-3 h-8"
                             >
-                                Sig-Out
+                                Sign Out
                             </Button>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                             <Link href="/sign-in">
-                                <Button variant="ghost" size="sm" className="hidden sm:flex text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-purple-600 rounded-xl px-4 h-11">
+                                <Button variant="ghost" size="sm" className="hidden sm:flex text-[9px] font-bold uppercase tracking-widest text-slate-500 hover:text-teal-600 rounded-lg px-3 h-9">
                                     Login
                                 </Button>
                             </Link>
                             <Link href="/sign-up">
-                                <Button className="hidden sm:flex bg-purple-600 text-white hover:bg-purple-700 text-[10px] font-bold uppercase tracking-widest rounded-xl px-6 h-11 shadow-lg shadow-purple-100 transition-all active:scale-95">
+                                <Button className="hidden sm:flex bg-teal-600 text-white hover:bg-teal-700 text-[9px] font-bold uppercase tracking-widest rounded-lg px-4 h-9 shadow-md shadow-teal-100 transition-all active:scale-95">
                                     Sign Up
                                 </Button>
                             </Link>
                         </div>
                     )}
 
-                    {/* Mobile menu button */}
+                    {}
                     <button
-                        className="md:hidden w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-900 transition-all active:scale-95 border border-slate-100"
+                        className="md:hidden w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-900 transition-all active:scale-95 border border-slate-100"
                         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                         aria-label="Toggle menu"
                     >
-                        {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+                        {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
                     </button>
                 </div>
             </div>
 
-            {/* Mobile menu */}
+            {}
             {mobileMenuOpen && (
                 <div className="md:hidden border-t border-slate-100 bg-white/95 backdrop-blur-xl animate-in fade-in slide-in-from-top-4 duration-500">
                     <nav className="container mx-auto px-8 py-8 flex flex-col gap-3">
@@ -127,9 +127,9 @@ export function Header({ currentPage = 'home' }: HeaderProps) {
                         ))}
                         <div className="pt-6 border-t border-slate-50 mt-4 flex flex-col gap-4">
                             {user ? (
-                                <Button 
+                                <Button
                                     variant="outline"
-                                    className="w-full h-14 rounded-2xl border-2 border-slate-100 font-black text-[10px] uppercase tracking-widest text-rose-600" 
+                                    className="w-full h-14 rounded-2xl border-2 border-slate-100 font-black text-[10px] uppercase tracking-widest text-rose-600"
                                     onClick={logout}
                                 >
                                     Terminate Session
@@ -144,7 +144,7 @@ export function Header({ currentPage = 'home' }: HeaderProps) {
                                         Login
                                     </Button>
                                     <Button
-                                        className="w-full h-12 rounded-xl bg-purple-600 text-white font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-purple-100"
+                                        className="w-full h-12 rounded-xl bg-teal-600 text-white font-bold text-[10px] uppercase tracking-widest shadow-lg shadow-teal-100"
                                         onClick={() => handleNavigation('/sign-up')}
                                     >
                                         Sign Up

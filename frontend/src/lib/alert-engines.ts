@@ -1,15 +1,8 @@
-/**
- * SaansSync Alert Engines — FINAL (LOCKED)
- * Asthma, COPD, Bronchiectasis/Post ICU, ILD
- * RED / YELLOW / GREEN with reason_text for doctor dashboard
- */
-
 export type AlertLevel = 'RED' | 'ORANGE' | 'YELLOW' | 'GREEN'
 export type DiseaseType = 'ILD' | 'ASTHMA' | 'COPD' | 'BRONCHIECTASIS' | 'POST_ICU'
 
 export type AsthmaControlLevel = 'well-controlled' | 'partly-controlled' | 'poorly-controlled'
 
-/** Inputs from today's log + stored baselines / yesterday */
 export interface AsthmaLogInput {
   patientId: string
   spo2Rest: number
@@ -28,9 +21,9 @@ export interface AsthmaLogInput {
   baselineSpO2?: number
   baselineMrc?: number
   baselineCoughVas?: number
-  /** Yesterday's control level */
+
   yesterdayControl?: AsthmaControlLevel
-  /** Yesterday's rescue puffs */
+
   yesterdayRescuePuffs?: number
 }
 
@@ -46,7 +39,7 @@ export interface COPDLogInput {
   sleepDisturbed?: boolean
   wheeze?: boolean
   temperatureF?: number
-  hemoptysisAmount?: string // 'one cup' etc
+  hemoptysisAmount?: string
   exerciseToleranceGood?: boolean
   baselineSpO2?: number
   baselineMrc?: number
@@ -77,7 +70,7 @@ export interface BronchiectasisLogInput {
   baselineSpO2?: number
   baselineMrc?: number
   baselineOxygenFlow?: number
-  /** For 3-day rule: day before yesterday */
+
   dayBeforeSputumColor?: string
   dayBeforeSputumVolume?: string
   yesterdaySputumColor?: string
@@ -127,7 +120,6 @@ export interface AlertOutput {
   diseaseType: DiseaseType
 }
 
-// --- Doctor-facing alert storage (RED/YELLOW/GREEN with reason_text)
 const SAANSSYNC_ALERTS_KEY = 'saanssync_doctor_alerts'
 
 export interface StoredDoctorAlert {
@@ -161,7 +153,7 @@ export function storeDoctorAlert(alert: AlertOutput, doctorId: string, patientNa
       acknowledged: false
     }
     alerts.push(entry)
-    // Keep last 500 alerts
+
     const trimmed = alerts.slice(-500)
     localStorage.setItem(SAANSSYNC_ALERTS_KEY, JSON.stringify(trimmed))
   } catch (e) {
@@ -198,7 +190,6 @@ export function acknowledgeSaansSyncAlert(id: string): void {
 const ASTHMA_CONTROL_HISTORY_KEY = 'asthma_control_history'
 const RESCUE_INHALER_HISTORY_KEY = 'rescue_inhaler_history'
 
-/** Get yesterday's control level and rescue puffs for 2-day rules (from enhanced-alert-system storage). */
 export function getYesterdayAsthmaData(patientId: string): { yesterdayControl?: AsthmaControlLevel; yesterdayRescuePuffs?: number } {
   if (typeof window === 'undefined') return {}
   try {
@@ -225,7 +216,6 @@ export function getYesterdayAsthmaData(patientId: string): { yesterdayControl?: 
   }
 }
 
-/** Store today's asthma control and rescue puffs for next-day 2-day rules (call on submit). */
 export function storeTodayAsthmaData(patientId: string, controlLevel: AsthmaControlLevel, rescuePuffs: number): void {
   if (typeof window === 'undefined') return
   try {
@@ -248,7 +238,6 @@ export function storeTodayAsthmaData(patientId: string, controlLevel: AsthmaCont
   }
 }
 
-// --- Asthma control classification (4 questions → 0, 1–2, 3–4 checkboxes)
 export function classifyAsthmaControl(
   nightWaking: boolean,
   daytimeSymptoms: boolean,
@@ -265,12 +254,10 @@ export function classifyAsthmaControl(
   return 'poorly-controlled'
 }
 
-// --- ASTHMA ALERT ENGINE
 export function asthmaAlertEngine(input: AsthmaLogInput): AlertOutput {
   const triggers: string[] = []
   const t: AsthmaLogInput = input
 
-  // STEP 2 — RED (immediate)
   if (t.hemoptysis) {
     return { level: 'RED', reason_text: 'Action recommended: Hemoptysis reported.', triggers: ['Hemoptysis = YES'], timestamp: new Date().toISOString(), patientId: t.patientId, diseaseType: 'ASTHMA' }
   }
@@ -284,7 +271,6 @@ export function asthmaAlertEngine(input: AsthmaLogInput): AlertOutput {
     return { level: 'RED', reason_text: 'Action recommended: Rescue inhaler use ≥8 puffs today.', triggers: ['Rescue inhaler ≥ 8 puffs'], timestamp: new Date().toISOString(), patientId: t.patientId, diseaseType: 'ASTHMA' }
   }
 
-  // STEP 3 — RED (control-based, 2 consecutive days)
   if (t.asthmaControlToday === 'poorly-controlled' && t.yesterdayControl === 'poorly-controlled') {
     return { level: 'RED', reason_text: 'Action recommended: Poorly controlled asthma for 2 consecutive days.', triggers: ['Poorly controlled asthma × 2 days'], timestamp: new Date().toISOString(), patientId: t.patientId, diseaseType: 'ASTHMA' }
   }
@@ -292,7 +278,6 @@ export function asthmaAlertEngine(input: AsthmaLogInput): AlertOutput {
     return { level: 'RED', reason_text: 'Action recommended: Rescue inhaler use >6 puffs/day for 2 consecutive days.', triggers: ['Rescue >6 puffs × 2 days'], timestamp: new Date().toISOString(), patientId: t.patientId, diseaseType: 'ASTHMA' }
   }
 
-  // STEP 4 — RED (sustained physiology / symptoms, 2 consecutive days)
   const yesterdaySpO2 = (t as any).yesterdaySpO2 as number | undefined
   const yesterdayMrc = (t as any).yesterdayMrc as number | undefined
   const yesterdayCough = (t as any).yesterdayCoughVas as number | undefined
@@ -315,7 +300,6 @@ export function asthmaAlertEngine(input: AsthmaLogInput): AlertOutput {
     return { level: 'RED', reason_text: 'Action recommended: Temperature ≥100.4°F with cough VAS ≥8 and worsened ≥4 from baseline (2 days).', triggers: ['Fever + cough worsening'], timestamp: new Date().toISOString(), patientId: t.patientId, diseaseType: 'ASTHMA' }
   }
 
-  // STEP 5 — YELLOW scoring
   let score = 0
   if (t.spo2Rest >= 89 && t.spo2Rest <= 91) score += 2
   if (t.baselineMrc != null && (t.mMrcToday - t.baselineMrc) >= 2) score += 2
@@ -325,19 +309,15 @@ export function asthmaAlertEngine(input: AsthmaLogInput): AlertOutput {
   if (t.asthmaControlToday === 'partly-controlled') score += 1
   if (t.asthmaControlToday === 'poorly-controlled') score += 2
   if (!t.controllerTaken) score += 2
-  // Any side effect (simplified: pass from caller if needed)
-  // if (sideEffectReported) score += 1
 
   if (score >= 3) {
     const reason = 'Review suggested: ' + (t.rescuePuffsToday > 6 ? 'Increased rescue inhaler use. ' : '') + (t.asthmaControlToday === 'partly-controlled' ? 'Partly controlled asthma.' : t.asthmaControlToday === 'poorly-controlled' ? 'Poorly controlled asthma (1 day).' : '')
     return { level: 'YELLOW', reason_text: reason.trim() || 'Review suggested: Score ≥3.', triggers: [`Yellow score ${score}`], timestamp: new Date().toISOString(), patientId: t.patientId, diseaseType: 'ASTHMA' }
   }
 
-  // STEP 6 — GREEN
   return { level: 'GREEN', reason_text: 'Asthma stable and well controlled.', triggers: [], timestamp: new Date().toISOString(), patientId: t.patientId, diseaseType: 'ASTHMA' }
 }
 
-// --- COPD ALERT ENGINE
 export function copdAlertEngine(input: COPDLogInput): AlertOutput {
   const t = input
 
@@ -402,7 +382,6 @@ export function copdAlertEngine(input: COPDLogInput): AlertOutput {
   return { level: 'GREEN', reason_text: 'COPD symptoms stable.', triggers: [], timestamp: new Date().toISOString(), patientId: t.patientId, diseaseType: 'COPD' }
 }
 
-// --- BRONCHIECTASIS / POST ICU ALERT ENGINE
 export function bronchiectasisAlertEngine(input: BronchiectasisLogInput): AlertOutput {
   const t = input
 
@@ -466,7 +445,6 @@ export function bronchiectasisAlertEngine(input: BronchiectasisLogInput): AlertO
   return { level: 'GREEN', reason_text: 'Stable. Continue airway clearance and maintenance therapy.', triggers: [], timestamp: new Date().toISOString(), patientId: t.patientId, diseaseType: 'BRONCHIECTASIS' }
 }
 
-// --- ILD ALERT ENGINE
 export function ildAlertEngine(input: ILDLogInput): AlertOutput {
   const t = input
 
@@ -507,7 +485,7 @@ export function ildAlertEngine(input: ILDLogInput): AlertOutput {
   if (t.baselineMrc != null && (t.mMrcToday - t.baselineMrc) >= 2) score += 1
   const anyVas57 = [t.breathlessnessVas ?? 0, t.coughVas, t.fatigueVas ?? 0].some(v => v >= 5 && v <= 7)
   if (anyVas57) score += 1
-  // KBILD drop ≥10% vs last entry
+
   if (t.kbildToday != null && (t as any).lastKbild != null && ((t as any).lastKbild - t.kbildToday) / (t as any).lastKbild >= 0.1) score += 1
   if (t.medTakenToday === false) score += 1
   if (t.newRash || t.diarrhea) score += 1

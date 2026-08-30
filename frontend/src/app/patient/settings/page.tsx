@@ -50,7 +50,7 @@ export default function PatientSettingsPage() {
                 if (sessionProfile) {
                     setProfile({
                         ...(dbData || {} as any),
-                        full_name: sessionProfile.full_name || dbData?.full_name || authState.profile?.full_name,
+                        fullName: sessionProfile.fullName || dbData?.fullName || authState.profile?.fullName,
                         email: sessionProfile.email || dbData?.email || authState.profile?.email
                     })
                 } else if (dbData) {
@@ -75,7 +75,7 @@ export default function PatientSettingsPage() {
 
     if (loading || authState.loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 font-['Matter_Regular',sans-serif]">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
                 <div className="w-16 h-16 bg-slate-50 flex items-center justify-center rounded-[2rem] border border-slate-100 shadow-sm">
                     <Loader2 className="w-8 h-8 animate-spin text-slate-200" />
                 </div>
@@ -85,8 +85,8 @@ export default function PatientSettingsPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-12 font-['Matter_Regular',sans-serif] animate-in fade-in duration-1000">
-            {/* Page Header */}
+        <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-1000">
+            {}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 border-b border-slate-50 pb-12">
                 <div className="space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[9px] font-black uppercase tracking-widest border border-slate-100/50">
@@ -99,8 +99,8 @@ export default function PatientSettingsPage() {
                 <Button
                     variant={isEditing ? "ghost" : "default"}
                     className={`h-14 px-8 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all duration-500 ${
-                        isEditing 
-                        ? "bg-slate-50 text-slate-400 hover:text-slate-950 border border-slate-100/50" 
+                        isEditing
+                        ? "bg-slate-50 text-slate-400 hover:text-slate-950 border border-slate-100/50"
                         : "bg-slate-950 text-white shadow-2xl shadow-slate-100 hover:bg-slate-800"
                     }`}
                     onClick={() => isEditing ? setIsEditing(false) : setIsEditing(true)}
@@ -110,22 +110,22 @@ export default function PatientSettingsPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                {/* Profile Profile Surface */}
+                {}
                 <div className="lg:col-span-4 space-y-8">
                     <Card className="p-10 border-none bg-white rounded-[3.5rem] shadow-sm border border-slate-50 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-slate-950 opacity-[0.02] rounded-full -translate-y-16 translate-x-16 transition-all duration-700 group-hover:scale-150" />
-                        
+
                         <div className="flex flex-col items-center text-center space-y-6 relative z-10">
                             <div className="w-32 h-32 bg-slate-50 rounded-[3rem] flex items-center justify-center border-4 border-white shadow-xl group-hover:scale-105 transition-all duration-500 overflow-hidden">
-                                <img 
-                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.full_name || 'Patient'}`} 
+                                <img
+                                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.fullName || 'Patient'}`}
                                     className="w-24 h-24 object-contain"
                                     alt="Avatar"
                                 />
                             </div>
                             <div className="space-y-2">
                                 <h2 className="text-2xl font-black text-slate-950 tracking-tighter leading-none">
-                                    {profile?.full_name || authState.profile?.full_name}
+                                    {profile?.fullName || authState.profile?.fullName}
                                 </h2>
                                 <Badge className="bg-emerald-50 text-emerald-500 border-none font-black text-[8px] uppercase tracking-[0.3em] px-4 py-1.5 rounded-full">
                                     Verified Subject
@@ -149,7 +149,7 @@ export default function PatientSettingsPage() {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1.5">Metric Age</p>
-                                    <p className="text-sm font-bold text-slate-950">{profile?.patient_data?.age || 'Unset'} Cycles</p>
+                                    <p className="text-sm font-bold text-slate-950">{(profile as any)?.age || 'Unset'} Cycles</p>
                                 </div>
                             </div>
                         </div>
@@ -165,7 +165,7 @@ export default function PatientSettingsPage() {
                     </Card>
                 </div>
 
-                {/* Form Surface */}
+                {}
                 <div className="lg:col-span-8 space-y-8">
                     <Card className="p-10 border-none bg-white rounded-[3.5rem] shadow-sm border border-slate-50 space-y-10 hover:shadow-xl transition-all duration-700">
                         <div className="flex items-center gap-4 border-b border-slate-50 pb-8">
@@ -180,7 +180,7 @@ export default function PatientSettingsPage() {
                                 <Label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Legal Full Identity</Label>
                                 <Input
                                     id="fullName"
-                                    defaultValue={profile?.full_name || authState.profile?.full_name}
+                                    defaultValue={profile?.fullName || authState.profile?.fullName}
                                     disabled={!isEditing}
                                     className="h-14 bg-slate-50 border-none rounded-2xl px-6 font-bold text-sm text-slate-950 focus-visible:ring-slate-100 disabled:opacity-50 transition-all"
                                 />
@@ -215,8 +215,8 @@ export default function PatientSettingsPage() {
                                     key={lang.id}
                                     onClick={() => setLanguage(lang.id as any)}
                                     className={`flex-1 min-w-[200px] h-20 rounded-[1.75rem] border transition-all duration-500 flex flex-col items-center justify-center gap-1.5 group ${
-                                        language === lang.id 
-                                        ? 'bg-slate-950 text-white border-slate-950 shadow-2xl shadow-slate-100' 
+                                        language === lang.id
+                                        ? 'bg-slate-950 text-white border-slate-950 shadow-2xl shadow-slate-100'
                                         : 'bg-slate-50 border-slate-50 text-slate-400 hover:border-slate-200'
                                     }`}
                                 >
@@ -256,8 +256,8 @@ export default function PatientSettingsPage() {
 
                     {isEditing && (
                         <div className="flex justify-end pt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                            <Button 
-                                className="h-16 px-12 rounded-[1.5rem] bg-slate-950 text-white font-black text-sm tracking-tight hover:bg-slate-800 transition-all shadow-2xl shadow-slate-200 flex items-center gap-4 group" 
+                            <Button
+                                className="h-16 px-12 rounded-[1.5rem] bg-slate-950 text-white font-black text-sm tracking-tight hover:bg-slate-800 transition-all shadow-2xl shadow-slate-200 flex items-center gap-4 group"
                                 onClick={handleSave}
                             >
                                 <Save className="w-5 h-5 group-hover:scale-110 transition-transform" />

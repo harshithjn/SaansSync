@@ -95,7 +95,6 @@ export default function EditPatientPage({
         ...editedData
       }
 
-      // Update patient in database
       try {
         await api.put(`/patient/${patientId}`, {
           full_name: updatedData.fullName,
@@ -119,7 +118,7 @@ export default function EditPatientPage({
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading patient data...</p>
         </div>
       </div>
@@ -143,7 +142,7 @@ export default function EditPatientPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href={`/doctor/dashboard/${doctorId}/patient/${patientId}`}>
@@ -175,10 +174,10 @@ export default function EditPatientPage({
         </div>
       </div>
 
-      {/* Basic Information */}
+      {}
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-4">
-          <User className="w-5 h-5 text-purple-600" />
+          <User className="w-5 h-5 text-teal-600" />
           <h3 className="text-lg font-semibold">Basic Information</h3>
         </div>
 
@@ -230,7 +229,7 @@ export default function EditPatientPage({
         </div>
       </Card>
 
-      {/* Contact Information */}
+      {}
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-4">
           <Mail className="w-5 h-5 text-green-600" />
@@ -251,10 +250,10 @@ export default function EditPatientPage({
         </div>
       </Card>
 
-      {/* Medical Information */}
+      {}
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-4">
-          <Stethoscope className="w-5 h-5 text-purple-600" />
+          <Stethoscope className="w-5 h-5 text-teal-600" />
           <h3 className="text-lg font-semibold">Medical Information</h3>
         </div>
 
@@ -339,7 +338,7 @@ export default function EditPatientPage({
         </div>
       </Card>
 
-      {/* Save Actions */}
+      {}
       <div className="flex justify-end gap-3">
         <Link href={`/doctor/dashboard/${doctorId}/patient/${patientId}`}>
           <Button variant="outline">Cancel</Button>

@@ -122,9 +122,9 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
 
     if (authState.loading || isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 font-['Matter_Regular',sans-serif]">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
                 <div className="w-16 h-16 bg-slate-50 flex items-center justify-center rounded-[2rem] border border-slate-100 shadow-sm">
-                    <Loader2 className="w-8 h-8 animate-spin text-purple-500/20" />
+                    <Loader2 className="w-8 h-8 animate-spin text-teal-500/20" />
                 </div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest text-center">Loading your health data...</p>
             </div>
@@ -135,14 +135,13 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
         return null
     }
 
-    // Special handling for Modern Asthma Dashboard if preferred
-    if (diseaseType.toLowerCase().includes('asthma') && false) { // Set to false to use standardized layout
+    if (diseaseType.toLowerCase().includes('asthma') && false) {
         return (
             <LanguageProvider>
                 <div className="min-h-screen bg-white">
                     <ModernPatientDashboard
                         patientId={authState.profile.id}
-                        patientName={patientData?.fullName || authState.profile?.full_name}
+                        patientName={patientData?.fullName || authState.profile?.fullName}
                         diagnosis={patientData?.diagnosis?.primaryCategory || diseaseType}
                     />
                 </div>
@@ -153,21 +152,21 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
     return (
         <PatientDashboardLayout
             patientId={authState.profile.id}
-            patientName={patientData?.fullName || authState.profile?.full_name || 'Patient'}
-            diagnosis={patientData?.diagnosis?.primaryCategory || authState.profile?.patient_data?.diagnosis?.primaryCategory || 'Health Monitoring'}
+            patientName={patientData?.fullName || authState.profile?.fullName || 'Patient'}
+            diagnosis={patientData?.diagnosis?.primaryCategory || authState.profile?.patientData?.diagnosis?.primaryCategory || 'Health Monitoring'}
         >
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-10">
                 <div className="flex justify-center border-b border-slate-50 pb-6 sticky top-0 bg-white/80 backdrop-blur-md z-30 -mx-10 px-10">
                     <TabsList className="bg-slate-100/50 p-1 rounded-2xl border border-slate-100/50 h-14 w-full max-w-lg">
-                        <TabsTrigger value="entry" className="flex-1 rounded-xl data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-md font-bold text-[11px] uppercase tracking-widest gap-2.5 h-full transition-all duration-300">
+                        <TabsTrigger value="entry" className="flex-1 rounded-xl data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-md font-bold text-[11px] uppercase tracking-widest gap-2.5 h-full transition-all duration-300">
                             <Zap className="w-4 h-4" />
                             Log Entry
                         </TabsTrigger>
-                        <TabsTrigger value="history" className="flex-1 rounded-xl data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-md font-bold text-[11px] uppercase tracking-widest gap-2.5 h-full transition-all duration-300">
+                        <TabsTrigger value="history" className="flex-1 rounded-xl data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-md font-bold text-[11px] uppercase tracking-widest gap-2.5 h-full transition-all duration-300">
                             <History className="w-4 h-4" />
                             History
                         </TabsTrigger>
-                        <TabsTrigger value="trends" className="flex-1 rounded-xl data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-md font-bold text-[11px] uppercase tracking-widest gap-2.5 h-full transition-all duration-300">
+                        <TabsTrigger value="trends" className="flex-1 rounded-xl data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-md font-bold text-[11px] uppercase tracking-widest gap-2.5 h-full transition-all duration-300">
                             <TrendingUp className="w-4 h-4" />
                             Trends
                         </TabsTrigger>
@@ -206,20 +205,20 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
                                 {dailyLogs.slice(0, 10).map((log) => (
                                     <div key={log.id} className="bg-white rounded-[2rem] p-6 border border-slate-100 hover:shadow-xl hover:shadow-slate-100 transition-all duration-300 group flex flex-col md:flex-row md:items-center gap-8">
                                         <div className="flex items-center gap-5 shrink-0 md:w-44">
-                                            <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-purple-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                                            <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 group-hover:bg-teal-600 group-hover:text-white transition-all duration-300 shadow-sm">
                                                 <Calendar className="w-5 h-5" />
                                             </div>
                                             <div>
                                                 <div className="text-lg font-bold text-slate-900 tracking-tight leading-none mb-2">
-                                                    {formatDate(log.log_date)}
+                                                    {formatDate(log.logDate)}
                                                 </div>
                                                 <div className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
                                                     <Clock className="w-3 h-3" />
-                                                    {new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </div>
                                             </div>
                                         </div>
-                                        
+
                                         <div className="flex-1 grid grid-cols-2 lg:grid-cols-4 gap-4 bg-slate-50/50 p-5 rounded-2xl border border-slate-100/50">
                                             <div className="space-y-1">
                                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">SpO₂ Rest</p>
@@ -239,8 +238,8 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
                                             </div>
                                         </div>
 
-                                        <div className={`px-4 py-2 rounded-xl border text-[10px] font-bold uppercase tracking-widest md:w-40 text-center shrink-0 ${getRedFlagColor(log.red_flag_score)}`}>
-                                            {getRedFlagLabel(log.red_flag_score)}
+                                        <div className={`px-4 py-2 rounded-xl border text-[10px] font-bold uppercase tracking-widest md:w-40 text-center shrink-0 ${getRedFlagColor(log.redFlagScore)}`}>
+                                            {getRedFlagLabel(log.redFlagScore)}
                                         </div>
                                     </div>
                                 ))}
@@ -266,9 +265,9 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
                     <div className="max-w-5xl mx-auto space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                              <Card className="p-8 border-none bg-white shadow-sm border border-slate-100 rounded-[2.5rem] relative overflow-hidden group">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500 opacity-[0.02] rounded-full -translate-y-16 translate-x-16" />
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500 opacity-[0.02] rounded-full -translate-y-16 translate-x-16" />
                                 <div className="flex items-center gap-3 mb-8">
-                                    <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-500">
+                                    <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-500">
                                         <TrendingUp className="w-5 h-5" />
                                     </div>
                                     <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">SpO₂ Stability</h3>
@@ -282,7 +281,7 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 leading-none">Average</span>
                                         </div>
                                         <div className="h-3 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
-                                            <div className="h-full bg-purple-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.2)]" style={{ width: `${Math.round(dailyLogs.reduce((sum, log) => sum + (log.spo2_at_rest || 0), 0) / dailyLogs.length)}%` }} />
+                                            <div className="h-full bg-teal-500 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.2)]" style={{ width: `${Math.round(dailyLogs.reduce((sum, log) => sum + (log.spo2_at_rest || 0), 0) / dailyLogs.length)}%` }} />
                                         </div>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">Based on your last {dailyLogs.length} entries.</p>
                                     </div>
@@ -304,14 +303,14 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
                                 {dailyLogs.length > 0 ? (
                                     <div className="space-y-8">
                                         <div className="flex items-end gap-3">
-                                            <span className={`text-5xl font-bold tracking-tight leading-none ${dailyLogs[0]?.red_flag_score >= 7 ? 'text-rose-500' : 'text-emerald-500'}`}>
-                                                {dailyLogs[0]?.red_flag_score || 0}<span className="text-2xl text-slate-300">/10</span>
+                                            <span className={`text-5xl font-bold tracking-tight leading-none ${dailyLogs[0]?.redFlagScore >= 7 ? 'text-rose-500' : 'text-emerald-500'}`}>
+                                                {dailyLogs[0]?.redFlagScore || 0}<span className="text-2xl text-slate-300">/10</span>
                                             </span>
                                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 leading-none">Latest Status</span>
                                         </div>
                                         <div className="p-5 rounded-2xl bg-slate-50 border border-slate-100/50">
                                             <p className="text-[11px] text-slate-600 font-bold leading-relaxed">
-                                                Your current tracking indicates a {getRedFlagLabel(dailyLogs[0]?.red_flag_score || 0).toLowerCase()} status.
+                                                Your current tracking indicates a {getRedFlagLabel(dailyLogs[0]?.redFlagScore || 0).toLowerCase()} status.
                                             </p>
                                         </div>
                                     </div>
@@ -327,7 +326,7 @@ export default function PatientDashboardWrapper({ diseaseType }: PatientDashboar
                             <div className="absolute bottom-0 right-0 w-64 h-64 bg-slate-50 opacity-[0.02] rounded-full translate-y-32 translate-x-32" />
                             <div className="flex items-center justify-between mb-10">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-500">
+                                    <div className="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-500">
                                         <Pill className="w-5 h-5" />
                                     </div>
                                     <h3 className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">My Medications</h3>

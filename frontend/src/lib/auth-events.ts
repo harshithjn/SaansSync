@@ -1,5 +1,3 @@
-// Simple in-memory auth event bus (client-side only)
-
 export type AuthEventPayload = {
   user?: { id: string; email?: string | null } | null
   role?: 'doctor' | 'patient' | 'admin' | null

@@ -1,11 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
 import { insertAlert, getAlertsByPatient } from '../../src/services/alertsService';
 
-// Mock Prisma
 vi.mock('../../src/config/db', () => ({
   default: {
     alert: {
-      create: vi.fn().mockImplementation((args) => 
+      create: vi.fn().mockImplementation((args) =>
         Promise.resolve({
             id: 'test-alert-1',
             ...args.data,
@@ -40,7 +39,7 @@ describe('Alerts Service Unit Tests', () => {
             alert_data: { score: 6 }
         };
         const result = await insertAlert(payload);
-        
+
         expect(result.level).toBe('WARNING');
         expect(result.score).toBe(6);
         expect(result.patientId).toBe('pat-1');

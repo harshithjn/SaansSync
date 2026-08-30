@@ -20,6 +20,8 @@ router.post('/patient/verify-otp', authController.verifyPatientOtp)
 router.post('/patient/login', authController.patientLogin)
 router.post('/patient/signup', authController.patientSignup)
 
+router.post('/guest', authController.guestLogin)
+
 router.post('/admin/login', authController.adminLogin)
 
 router.post('/callback', authController.exchangeCallback)

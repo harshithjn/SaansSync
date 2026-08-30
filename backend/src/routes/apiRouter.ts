@@ -4,7 +4,7 @@ import alertsRouter from './alerts'
 import doctorRouter from './doctor'
 import exportsRouter from './exports'
 import logsRouter from './logs'
-import messageRouter from './messageRoutes'
+import messageRouter from './messages'
 import patientRouter from './patient'
 import prescriptionsRouter from './prescriptions'
 

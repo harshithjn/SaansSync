@@ -1,12 +1,7 @@
-// Professional Database-Driven Prescription Service - BFF only
 import api from './api'
 import { requireApprovedDoctor } from './session-manager'
 import { Prescription, PersonalizedAlert, PatientData } from './patient-types'
 import { formatDate } from './utils'
-
-// =====================================================
-// DATABASE-ONLY PRESCRIPTION MANAGEMENT
-// =====================================================
 
 export async function generatePrescription(
   patientData: PatientData,
@@ -52,7 +47,7 @@ export async function generatePrescription(
       doctorId,
       patientName: patientData.fullName,
       doctorName,
-      date: data.prescription_date,
+      date: data.date,
       medications: data.medications,
       personalizedAlerts,
       diagnosis: data.diagnosis,
@@ -91,20 +86,16 @@ export async function getDoctorPrescriptionsByDate(doctorId: string, startDate: 
   }
 }
 
-// =====================================================
-// HELPER FUNCTIONS
-// =====================================================
-
 function convertToLegacyFormat(dbPrescription: any): Prescription {
   const notes = dbPrescription.notes ? JSON.parse(dbPrescription.notes) : {}
 
   return {
     id: dbPrescription.id,
-    patientId: dbPrescription.patient_id,
-    doctorId: dbPrescription.doctor_id,
+    patientId: dbPrescription.patientId,
+    doctorId: dbPrescription.doctorId,
     patientName: notes.patientName || 'Unknown Patient',
     doctorName: notes.doctorName || 'Unknown Doctor',
-    date: dbPrescription.prescription_date,
+    date: dbPrescription.date,
     medications: dbPrescription.medications || [],
     personalizedAlerts: notes.personalizedAlerts || [],
     diagnosis: dbPrescription.diagnosis || '',

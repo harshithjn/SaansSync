@@ -37,7 +37,6 @@ interface CleanPostInfectionDashboardProps {
 export default function CleanPostInfectionDashboard({ patientId, patientName, diagnosis, headless = false }: CleanPostInfectionDashboardProps) {
     const { t } = useLanguage()
 
-    // State
     const [patientData, setPatientData] = useState<any>(null)
     const [aqiData, setAqiData] = useState<any>(null)
     const [aqiLoading, setAqiLoading] = useState(true)
@@ -45,7 +44,6 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [activeAlerts, setActiveAlerts] = useState<any[]>([])
 
-    // Form Data
     const [formData, setFormData] = useState({
         spo2AtRest: 96,
         spo2OnExertion: 92,
@@ -149,8 +147,8 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
     }
 
     return (
-        <div className="space-y-12 font-['Matter_Regular',sans-serif]">
-            {/* Recovery Alert Banner */}
+        <div className="space-y-12">
+            {}
             {formData.recoveryProgress === 'worsening' && (
                 <div className="bg-amber-500 rounded-[2.5rem] p-8 text-white flex items-center gap-6 shadow-xl shadow-amber-100/50 animate-pulse">
                     <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-xl shrink-0 border border-white/20">
@@ -163,7 +161,7 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                 </div>
             )}
 
-            {/* Environmental Header */}
+            {}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Card className="p-8 border-none bg-white rounded-[2.5rem] shadow-sm border border-slate-100 relative overflow-hidden">
                     <div className="flex justify-between items-start mb-6 relative z-10">
@@ -176,7 +174,7 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{aqiData?.location || 'Nearby'}</p>
                             </div>
                         </div>
-                        <button 
+                        <button
                             disabled={aqiLoading}
                             onClick={async () => {
                                 setAqiLoading(true)
@@ -199,7 +197,7 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                     </div>
                 </Card>
 
-                <Card className={`p-8 border-none rounded-[2.5rem] shadow-sm border flex flex-col justify-between transition-all duration-500 overflow-hidden relative ${canLog ? 'bg-purple-600 text-white shadow-xl shadow-purple-100' : 'bg-white border-slate-100'}`}>
+                <Card className={`p-8 border-none rounded-[2.5rem] shadow-sm border flex flex-col justify-between transition-all duration-500 overflow-hidden relative ${canLog ? 'bg-teal-600 text-white shadow-xl shadow-teal-100' : 'bg-white border-slate-100'}`}>
                     <div className="flex justify-between items-start mb-6 relative z-10">
                         <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${canLog ? 'bg-white/10 text-white' : 'bg-slate-50 text-slate-200'}`}>
                             <TrendingUp className="w-6 h-6" />
@@ -214,14 +212,14 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                         <h3 className={`text-2xl font-bold tracking-tight mb-1 ${canLog ? 'text-white' : 'text-slate-900'}`}>
                             {canLog ? 'Recovery Log' : 'Check-in Complete'}
                         </h3>
-                        <p className={`text-[10px] font-bold uppercase tracking-widest ${canLog ? 'text-purple-100' : 'text-slate-300'}`}>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest ${canLog ? 'text-teal-100' : 'text-slate-300'}`}>
                             {canLog ? 'How is your recovery going?' : 'Thank you for tracking today'}
                         </p>
                     </div>
                 </Card>
             </div>
 
-            {/* Entry Form */}
+            {}
             <div className="bg-white p-10 rounded-[3rem] shadow-sm border border-slate-100">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 border-b border-slate-50 pb-10">
                     <div>
@@ -242,10 +240,10 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-20">
                     <div className="space-y-10">
                         <div className="flex items-center gap-4 mb-2">
-                            <Activity className="w-5 h-5 text-purple-600" />
+                            <Activity className="w-5 h-5 text-teal-600" />
                             <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-900">Health Readings</h4>
                         </div>
-                        
+
                         <div className="space-y-10">
                             <div>
                                 <div className="flex items-center justify-between mb-6">
@@ -258,7 +256,7 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                                     value={[formData.spo2AtRest]}
                                     onValueChange={(v) => setFormData(prev => ({ ...prev, spo2AtRest: v[0] }))}
                                     max={100} min={80} step={1}
-                                    className="[&_[role=slider]]:h-7 [&_[role=slider]]:w-7 [&_[role=slider]]:bg-purple-600 [&_[role=track]]:h-2 [&_[role=track]]:bg-slate-100"
+                                    className="[&_[role=slider]]:h-7 [&_[role=slider]]:w-7 [&_[role=slider]]:bg-teal-600 [&_[role=track]]:h-2 [&_[role=track]]:bg-slate-100"
                                 />
                             </div>
 
@@ -273,7 +271,7 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                                     value={[formData.spo2OnExertion]}
                                     onValueChange={(v) => setFormData(prev => ({ ...prev, spo2OnExertion: v[0] }))}
                                     max={100} min={80} step={1}
-                                    className="[&_[role=slider]]:h-7 [&_[role=slider]]:w-7 [&_[role=slider]]:bg-purple-600 [&_[role=track]]:h-2 [&_[role=track]]:bg-slate-100"
+                                    className="[&_[role=slider]]:h-7 [&_[role=slider]]:w-7 [&_[role=slider]]:bg-teal-600 [&_[role=track]]:h-2 [&_[role=track]]:bg-slate-100"
                                 />
                             </div>
                         </div>
@@ -281,7 +279,7 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
 
                     <div className="space-y-10">
                         <div className="flex items-center gap-4 mb-2">
-                            <Thermometer className="w-5 h-5 text-purple-600" />
+                            <Thermometer className="w-5 h-5 text-teal-600" />
                             <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-900">Activity & Breathing</h4>
                         </div>
 
@@ -289,10 +287,10 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                             <div className="space-y-4">
                                 <label className="text-[11px] font-bold uppercase tracking-widest text-slate-400 block px-1">How is your breathing?</label>
                                 <Select value={formData.mMRCScale.toString()} onValueChange={(v) => setFormData(prev => ({ ...prev, mMRCScale: parseInt(v) }))}>
-                                    <SelectTrigger className="h-14 rounded-xl bg-slate-50 border border-slate-100 font-bold text-slate-900 px-6 text-sm hover:bg-slate-100 transition-all focus:ring-purple-100 shadow-none">
+                                    <SelectTrigger className="h-14 rounded-xl bg-slate-50 border border-slate-100 font-bold text-slate-900 px-6 text-sm hover:bg-slate-100 transition-all focus:ring-teal-100 shadow-none">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="rounded-2xl border-slate-100 shadow-xl p-2 font-['Matter_Regular',sans-serif]">
+                                    <SelectContent className="rounded-2xl border-slate-100 shadow-xl p-2">
                                         <SelectItem value="0" className="rounded-lg font-bold py-2.5">Normal breathing</SelectItem>
                                         <SelectItem value="1" className="rounded-lg font-bold py-2.5">Only during fast walks</SelectItem>
                                         <SelectItem value="2" className="rounded-lg font-bold py-2.5">Slower than others</SelectItem>
@@ -313,10 +311,10 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                     </div>
                 </div>
 
-                {/* Recovery Progress */}
+                {}
                 <div className="mt-16 pt-12 border-t border-slate-50">
                     <div className="flex items-center gap-4 mb-10">
-                        <TrendingUp className="w-5 h-5 text-purple-600" />
+                        <TrendingUp className="w-5 h-5 text-teal-600" />
                         <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-900">Recovery Progress</h4>
                     </div>
 
@@ -328,7 +326,7 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                                     <SelectTrigger className="h-14 rounded-xl bg-slate-50 border border-slate-100 font-bold text-slate-900 px-6 text-sm hover:bg-slate-100 shadow-none">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="rounded-2xl border-slate-100 shadow-xl p-2 font-['Matter_Regular',sans-serif]">
+                                    <SelectContent className="rounded-2xl border-slate-100 shadow-xl p-2">
                                         <SelectItem value="improving" className="rounded-lg font-bold text-emerald-600 py-2.5">Getting better steadily</SelectItem>
                                         <SelectItem value="static" className="rounded-lg font-bold text-slate-500 py-2.5">Staying about the same</SelectItem>
                                         <SelectItem value="worsening" className="rounded-lg font-bold text-rose-600 py-2.5">Feeling a bit worse</SelectItem>
@@ -342,7 +340,7 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                                     <SelectTrigger className="h-14 rounded-xl bg-slate-50 border border-slate-100 font-bold text-slate-900 px-6 text-sm hover:bg-slate-100 shadow-none">
                                         <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent className="rounded-2xl border-slate-100 shadow-xl p-2 font-['Matter_Regular',sans-serif]">
+                                    <SelectContent className="rounded-2xl border-slate-100 shadow-xl p-2">
                                         <SelectItem value="better" className="rounded-lg font-bold py-2.5">Easier to move around</SelectItem>
                                         <SelectItem value="same" className="rounded-lg font-bold py-2.5">About the same as usual</SelectItem>
                                         <SelectItem value="worse" className="rounded-lg font-bold py-2.5">Harder to move around</SelectItem>
@@ -366,14 +364,14 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                                     value={[formData.fatigueLevel]}
                                     onValueChange={(v) => setFormData(prev => ({ ...prev, fatigueLevel: v[0] }))}
                                     max={10} min={0} step={1}
-                                    className="[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:bg-purple-600 [&_[role=track]]:h-1.5 [&_[role=track]]:bg-slate-100"
+                                    className="[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:bg-teal-600 [&_[role=track]]:h-1.5 [&_[role=track]]:bg-slate-100"
                                 />
                             </div>
 
                              <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex items-center justify-between group cursor-pointer"
                                 onClick={() => setFormData(prev => ({ ...prev, persistentCough: !prev.persistentCough }))}>
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${formData.persistentCough ? 'bg-white text-purple-600 shadow-sm' : 'bg-white text-slate-200 border border-slate-100'}`}>
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${formData.persistentCough ? 'bg-white text-teal-600 shadow-sm' : 'bg-white text-slate-200 border border-slate-100'}`}>
                                         <Wind className="w-6 h-6" />
                                     </div>
                                     <div>
@@ -381,20 +379,20 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                                         <p className="text-sm font-bold text-slate-900 tracking-tight">Still have a cough?</p>
                                     </div>
                                 </div>
-                                <Checkbox 
+                                <Checkbox
                                     checked={formData.persistentCough}
                                     onCheckedChange={(c) => setFormData(prev => ({ ...prev, persistentCough: !!c }))}
-                                    className="w-7 h-7 rounded-lg border-2 border-slate-200 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
+                                    className="w-7 h-7 rounded-lg border-2 border-slate-200 data-[state=checked]:bg-teal-600 data-[state=checked]:border-teal-600"
                                 />
                              </div>
                         </div>
                     </div>
                 </div>
 
-                {/* How do you feel? */}
+                {}
                 <div className="mt-16 pt-12 border-t border-slate-50">
                     <div className="flex items-center gap-4 mb-10">
-                        <Activity className="w-5 h-5 text-purple-600" />
+                        <Activity className="w-5 h-5 text-teal-600" />
                         <h4 className="text-[11px] font-bold uppercase tracking-widest text-slate-900">How do you feel?</h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-20 gap-y-12">
@@ -418,19 +416,19 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                                     value={[formData[key as keyof typeof formData] as number]}
                                     onValueChange={(v) => setFormData(prev => ({ ...prev, [key]: v[0] }))}
                                     max={10} min={0} step={1}
-                                    className="[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:bg-purple-600 [&_[role=track]]:h-1.5 [&_[role=track]]:bg-slate-100"
+                                    className="[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:bg-teal-600 [&_[role=track]]:h-1.5 [&_[role=track]]:bg-slate-100"
                                 />
                             </div>
                         ))}
                     </div>
                 </div>
 
-                {/* Submission Control */}
+                {}
                 <div className="mt-20 pt-16 border-t border-slate-50 flex flex-col items-center">
                     <Button
                         disabled={!canLog || isSubmitting}
                         onClick={handleSubmit}
-                        className={`h-16 px-16 rounded-[1.5rem] font-bold text-xl tracking-tight transition-all duration-300 shadow-lg active:scale-[0.98] ${canLog ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-100' : 'bg-slate-50 text-slate-300 shadow-none cursor-not-allowed'}`}
+                        className={`h-16 px-16 rounded-[1.5rem] font-bold text-xl tracking-tight transition-all duration-300 shadow-lg active:scale-[0.98] ${canLog ? 'bg-teal-600 hover:bg-teal-700 text-white shadow-teal-100' : 'bg-slate-50 text-slate-300 shadow-none cursor-not-allowed'}`}
                     >
                         {isSubmitting ? (
                             <div className="flex items-center gap-4">
@@ -451,7 +449,7 @@ export default function CleanPostInfectionDashboard({ patientId, patientName, di
                         </p>
                     </div>
                     {!canLog && (
-                        <p className="mt-6 text-[10px] font-bold text-purple-600 bg-purple-50 px-6 py-2 rounded-full uppercase tracking-widest">
+                        <p className="mt-6 text-[10px] font-bold text-teal-600 bg-teal-50 px-6 py-2 rounded-full uppercase tracking-widest">
                            Next check-in available tomorrow
                         </p>
                     )}

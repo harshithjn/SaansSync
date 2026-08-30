@@ -1,3 +1,0 @@
-2026-02-05T17:46:51.268Z - Fetching logs for patient: 14f5a404-d8c1-4d3e-8d29-11b6dc648fa2
-2026-02-05T17:46:51.441Z - DB Error: {"code":"42703","details":null,"hint":null,"message":"column daily_logs.created_at does not exist"}
-2026-02-05T17:46:51.442Z - Catch Error: column daily_logs.created_at does not exist

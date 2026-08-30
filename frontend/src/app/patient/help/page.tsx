@@ -3,15 +3,15 @@
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/lib/toast"
-import { 
-    HelpCircle, 
-    Phone, 
-    Mail, 
-    AlertTriangle, 
-    Clock, 
-    ShieldCheck, 
-    MessageCircle, 
-    BookOpen, 
+import {
+    HelpCircle,
+    Phone,
+    Mail,
+    AlertTriangle,
+    Clock,
+    ShieldCheck,
+    MessageCircle,
+    BookOpen,
     Wrench,
     ArrowRight,
     Zap,
@@ -34,8 +34,8 @@ export default function PatientHelpPage() {
     }
 
     return (
-        <div className="space-y-16 font-['Matter_Regular',sans-serif] animate-in fade-in duration-1000 max-w-6xl mx-auto pb-24">
-            {/* Clinical Header */}
+        <div className="space-y-16 animate-in fade-in duration-1000 max-w-6xl mx-auto pb-24">
+            {}
             <div className="space-y-4 border-b border-slate-50 pb-12">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[9px] font-black uppercase tracking-widest border border-slate-100/50">
                     <LifeBuoy className="w-3 h-3" />
@@ -47,7 +47,7 @@ export default function PatientHelpPage() {
                 </p>
             </div>
 
-            {/* Emergency Critical Section */}
+            {}
             <Card className="p-12 border-none bg-rose-50 rounded-[4rem] relative overflow-hidden group shadow-2xl shadow-rose-100/50">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500 opacity-[0.03] rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-all duration-1000" />
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-10 relative z-10">
@@ -62,7 +62,7 @@ export default function PatientHelpPage() {
                             If you are experiencing a life-threatening medical emergency, call <span className="text-2xl font-black mx-1">911</span> immediately. Clinical portal latency should not delay acute intervention.
                         </p>
                     </div>
-                    <Button 
+                    <Button
                         onClick={() => window.location.href = 'tel:911'}
                         className="h-20 px-12 rounded-[2rem] bg-rose-600 hover:bg-rose-700 text-white font-black text-xl uppercase tracking-widest transition-all shadow-2xl shadow-rose-200 group"
                     >
@@ -72,10 +72,10 @@ export default function PatientHelpPage() {
             </Card>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Contact Infrastructure */}
+                {}
                 <Card className="p-12 border-none bg-white shadow-sm border border-slate-50 rounded-[3.5rem] relative overflow-hidden group">
                     <div className="flex items-center gap-4 mb-12">
-                        <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-500 shadow-sm border border-purple-100/50">
+                        <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center text-teal-500 shadow-sm border border-teal-100/50">
                             <Phone className="w-5 h-5" />
                         </div>
                         <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">Primary Clinical Uplink</h3>
@@ -88,7 +88,7 @@ export default function PatientHelpPage() {
                                 MON-FRI 08:00 - 17:00 • SAT 09:00 - 13:00
                             </p>
                         </div>
-                        <Button 
+                        <Button
                             onClick={() => handleContactClick('phone')}
                             className="w-full h-16 rounded-2xl bg-slate-950 hover:bg-slate-800 text-white font-black text-[10px] uppercase tracking-[0.3em] transition-all group shadow-xl"
                         >
@@ -98,7 +98,7 @@ export default function PatientHelpPage() {
                     </div>
                 </Card>
 
-                {/* Secure Messaging */}
+                {}
                 <Card className="p-12 border-none bg-white shadow-sm border border-slate-50 rounded-[3.5rem] relative overflow-hidden group">
                     <div className="flex items-center gap-4 mb-12">
                         <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500 shadow-sm border border-emerald-100/50">
@@ -114,8 +114,8 @@ export default function PatientHelpPage() {
                                 24-48H RECOVERY WINDOW • NON-URGENT ONLY
                             </p>
                         </div>
-                        <Button 
-                            variant="ghost" 
+                        <Button
+                            variant="ghost"
                             onClick={() => handleContactClick('email')}
                             className="w-full h-16 rounded-2xl border border-slate-100 font-black text-[10px] uppercase tracking-[0.3em] text-slate-400 hover:text-slate-950 hover:bg-slate-50 transition-all"
                         >
@@ -125,7 +125,7 @@ export default function PatientHelpPage() {
                 </Card>
             </div>
 
-            {/* Support Matrix */}
+            {}
             <div className="space-y-8">
                 <div className="flex items-center gap-4 mb-4">
                     <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center">
@@ -133,7 +133,7 @@ export default function PatientHelpPage() {
                     </div>
                     <h2 className="text-xl font-black text-slate-950 tracking-tight uppercase tracking-widest text-xs">Knowledge Repository</h2>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                     {[
                         { title: "Refill Protocols", desc: "Guidelines for requesting therapeutic replenishment 48h prior to expiration." },
@@ -152,14 +152,14 @@ export default function PatientHelpPage() {
                 </div>
             </div>
 
-            {/* Technical Ops Section */}
+            {}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-12">
                 <div className="md:col-span-2">
                     <Card className="p-12 border-none bg-slate-950 text-white rounded-[3.5rem] relative overflow-hidden group h-full">
-                        <div className="absolute inset-0 bg-purple-500 opacity-0 group-hover:opacity-[0.03] transition-opacity" />
+                        <div className="absolute inset-0 bg-teal-500 opacity-0 group-hover:opacity-[0.03] transition-opacity" />
                         <div className="flex items-center gap-4 mb-12">
                             <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
-                                <Wrench className="w-5 h-5 text-purple-400" />
+                                <Wrench className="w-5 h-5 text-teal-400" />
                             </div>
                             <h3 className="text-xs font-black text-white uppercase tracking-[0.2em]">Technical Operations</h3>
                         </div>
@@ -194,7 +194,7 @@ export default function PatientHelpPage() {
                 </Card>
             </div>
 
-            {/* Protocol Footer */}
+            {}
             <div className="flex items-center justify-center gap-8 pt-12 opacity-20 hover:opacity-100 transition-opacity">
                  <p className="text-[7px] font-black text-slate-400 uppercase tracking-[0.4em] flex items-center gap-3">
                     <ShieldCheck className="w-3 h-3" /> VERIFIED PATIENT PORTAL V3.0.4

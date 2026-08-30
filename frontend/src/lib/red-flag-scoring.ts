@@ -1,4 +1,3 @@
-// Red Flag Scoring Algorithm Implementation - Exact Formula as Specified
 import { DiseaseType, RedFlagScore, AlertLevel, CommonPatientData, AsthmaData, COPDData, BronchiectasisData, ILDData, PostInfectionData } from './monitoring-types'
 
 interface PatientScoringData {
@@ -12,7 +11,7 @@ interface PatientScoringData {
     medCompliance: boolean
     vasSymptomScore: number
     aqi: number
-    // Disease-specific data
+
     diseaseData: AsthmaData | COPDData | BronchiectasisData | ILDData | PostInfectionData
 }
 
@@ -21,7 +20,6 @@ export function calculateRedFlagScore(patientData: PatientScoringData): RedFlagS
     const factors: string[] = []
     const { diagnosis, spo2, hasHemoptysis, respiratoryRate = 0 } = patientData
 
-    // STEP 1: IMMEDIATE CRITICAL TRIGGERS (Auto-10)
     if (spo2 < 85) {
         return {
             patientId: patientData.patientId,
@@ -55,7 +53,6 @@ export function calculateRedFlagScore(patientData: PatientScoringData): RedFlagS
         }
     }
 
-    // STEP 2: COMMON METRICS
     if (spo2 >= 89 && spo2 <= 91) {
         points += 4
         factors.push('SpO2 89-91%')
@@ -84,12 +81,10 @@ export function calculateRedFlagScore(patientData: PatientScoringData): RedFlagS
         factors.push('Poor air quality (AQI >200)')
     }
 
-    // STEP 3: DISEASE-SPECIFIC WEIGHTING
     const diseaseFactors = calculateDiseaseSpecificPoints(diagnosis, patientData.diseaseData)
     points += diseaseFactors.points
     factors.push(...diseaseFactors.factors)
 
-    // STEP 4: CAP AND DETERMINE LEVEL - EXACT FORMULA: 1 + points, max 10
     const finalScore = Math.min(1 + points, 10)
     const level = determineAlertLevel(finalScore)
 
@@ -122,18 +117,15 @@ function calculateDiseaseSpecificPoints(diagnosis: DiseaseType, diseaseData: any
                 controlLevel: asthmaData.controlLevel
             }
 
-            // Peak Flow < 60% = Auto Score 9
             if (asthmaData.peakFlowPercent && asthmaData.peakFlowPercent < 60) {
-                return { points: 8, factors: ['Peak flow <60% of personal best (Auto-9)'], specificData } // 8 points + 1 base = 9
+                return { points: 8, factors: ['Peak flow <60% of personal best (Auto-9)'], specificData }
             }
-            
-            // Night Waking = +3
+
             if (asthmaData.nightWaking) {
                 points += 3
                 factors.push('Night waking due to symptoms (+3)')
             }
-            
-            // Rescue Use > 4 puffs = +3
+
             if (asthmaData.rescueInhalerPuffs > 4) {
                 points += 3
                 factors.push('Excessive rescue inhaler use >4 puffs (+3)')
@@ -149,25 +141,21 @@ function calculateDiseaseSpecificPoints(diagnosis: DiseaseType, diseaseData: any
                 chestHeaviness: copdData.chestHeaviness
             }
 
-            // Sputum Purulence (Yellow/Green) = +3
             if (copdData.sputumColor === 'dark-green' || copdData.sputumColor === 'yellow') {
                 points += 3
                 factors.push('Purulent sputum (infection signs) (+3)')
             }
-            
-            // Fever >38°C = +4
+
             if (copdData.fever) {
                 points += 4
                 factors.push('Fever >38°C (+4)')
             }
-            
-            // Sputum Volume Increase = +2
+
             if (copdData.sputumVolume === 'large') {
                 points += 2
                 factors.push('Increased sputum volume (+2)')
             }
-            
-            // Chest Tightness VAS > 7 = +2
+
             if (copdData.chestHeaviness > 7) {
                 points += 2
                 factors.push('Severe chest heaviness >7 (+2)')
@@ -183,19 +171,16 @@ function calculateDiseaseSpecificPoints(diagnosis: DiseaseType, diseaseData: any
                 fever: bronchData.fever
             }
 
-            // Green/Purulent Sputum = +4
             if (bronchData.sputumColor === 'dark-green') {
                 points += 4
                 factors.push('Green/purulent sputum (+4)')
             }
-            
-            // Malaise/Flu-like = +2
+
             if (bronchData.malaise) {
                 points += 2
                 factors.push('Flu-like symptoms/malaise (+2)')
             }
-            
-            // Large Sputum Volume = +2
+
             if (bronchData.sputumVolume === 'large') {
                 points += 2
                 factors.push('Large sputum volume (+2)')
@@ -211,19 +196,16 @@ function calculateDiseaseSpecificPoints(diagnosis: DiseaseType, diseaseData: any
                 newChestPain: ildData.newChestPain
             }
 
-            // SpO2 Drop ≥4% from baseline = +5
             if (ildData.spo2BaselineDrop >= 4) {
                 points += 5
                 factors.push('SpO2 drop ≥4% from baseline (+5)')
             }
-            
-            // Sudden increase in dry cough = +3
+
             if (ildData.dryCoughSeverity > 7) {
                 points += 3
                 factors.push('Severe dry cough increase (+3)')
             }
-            
-            // Unable to walk across room = +4
+
             if (ildData.breathlessnessChange === 'worse') {
                 points += 4
                 factors.push('Worsening breathlessness at rest (+4)')
@@ -238,12 +220,10 @@ function calculateDiseaseSpecificPoints(diagnosis: DiseaseType, diseaseData: any
                 sputumColor: postInfData.sputumColor
             }
 
-            // Use Bronchiectasis logic plus recovery-specific factors
             const bronchResult = calculateDiseaseSpecificPoints('Bronchiectasis', postInfData)
             points += bronchResult.points
             factors.push(...bronchResult.factors)
 
-            // Persistent cough >3 weeks = +2
             if (postInfData.persistentCough) {
                 points += 2
                 factors.push('Persistent cough >3 weeks (+2)')
@@ -274,7 +254,6 @@ export function getScoreDescription(score: number): string {
     return 'Low Risk - Routine monitoring'
 }
 
-// Helper function to calculate Asthma Control Level
 export function calculateAsthmaControl(data: AsthmaData): 'well-controlled' | 'partly-controlled' | 'uncontrolled' {
     let yesCount = 0
     if (data.daytimeSymptoms) yesCount++

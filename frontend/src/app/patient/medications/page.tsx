@@ -6,12 +6,12 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { usePatientAuth } from '@/lib/auth-guard'
 import { formatDate } from '@/lib/utils'
-import { 
-    Pill, 
-    ShieldCheck, 
-    AlertCircle, 
-    Clock, 
-    Info, 
+import {
+    Pill,
+    ShieldCheck,
+    AlertCircle,
+    Clock,
+    Info,
     ArrowLeft,
     CheckCircle2,
     History,
@@ -46,7 +46,6 @@ export default function PatientMedicationsPage() {
                 return
             }
 
-            // Mock data for premium presentation
             const mockMedications: Medication[] = [
                 {
                     id: "med-001",
@@ -101,7 +100,7 @@ export default function PatientMedicationsPage() {
 
     if (authState.loading || isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 font-['Matter_Regular',sans-serif]">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
                 <div className="w-16 h-16 bg-slate-50 flex items-center justify-center rounded-[2rem] border border-slate-100 shadow-sm">
                     <Loader2 className="w-8 h-8 animate-spin text-slate-200" />
                 </div>
@@ -111,8 +110,8 @@ export default function PatientMedicationsPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-12 font-['Matter_Regular',sans-serif] animate-in fade-in duration-1000">
-            {/* Clinical Header */}
+        <div className="max-w-6xl mx-auto space-y-12 animate-in fade-in duration-1000">
+            {}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 border-b border-slate-50 pb-12">
                 <div className="space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[9px] font-black uppercase tracking-widest border border-slate-100/50">
@@ -122,8 +121,8 @@ export default function PatientMedicationsPage() {
                     <h1 className="text-5xl font-black text-slate-950 tracking-tighter leading-none">Medication</h1>
                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Active surveillance of prescribed pharmacological agents</p>
                 </div>
-                <Button 
-                    variant="ghost" 
+                <Button
+                    variant="ghost"
                     onClick={() => router.back()}
                     className="h-14 px-8 rounded-2xl bg-slate-50 border border-slate-100/50 font-black text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-950 hover:bg-white hover:shadow-xl transition-all gap-3"
                 >
@@ -133,7 +132,7 @@ export default function PatientMedicationsPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-                {/* Protocol Feed */}
+                {}
                 <div className="lg:col-span-8 space-y-12">
                     <div className="space-y-6">
                         <div className="flex items-center justify-between">
@@ -147,7 +146,7 @@ export default function PatientMedicationsPage() {
                             {activeMedications.map((med) => (
                                 <div key={med.id} className="bg-white rounded-[2.5rem] p-10 border border-slate-50 hover:shadow-2xl hover:shadow-slate-100 transition-all duration-700 group relative overflow-hidden">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-slate-950 opacity-[0.02] -translate-y-16 translate-x-16 rounded-full group-hover:scale-150 transition-transform duration-1000" />
-                                    
+
                                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-8 mb-10">
                                         <div className="flex items-center gap-6">
                                             <div className="w-16 h-16 bg-slate-50 rounded-[1.25rem] flex items-center justify-center text-slate-300 group-hover:bg-slate-950 group-hover:text-white transition-all duration-500 shadow-sm border border-slate-100/50">
@@ -156,7 +155,7 @@ export default function PatientMedicationsPage() {
                                             <div className="space-y-1.5">
                                                 <h3 className="text-2xl font-black text-slate-950 tracking-tight leading-none uppercase">{med.drugName}</h3>
                                                 <div className="flex items-center gap-3">
-                                                    <span className="text-[10px] font-black text-purple-500 uppercase tracking-widest">{med.category}</span>
+                                                    <span className="text-[10px] font-black text-teal-500 uppercase tracking-widest">{med.category}</span>
                                                     <div className="w-1 h-1 bg-slate-100 rounded-full" />
                                                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Protocol V1.2.0</span>
                                                 </div>
@@ -170,11 +169,11 @@ export default function PatientMedicationsPage() {
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="p-6 rounded-[1.5rem] bg-slate-50 border border-slate-100/50 space-y-3 group/info">
-                                            <div className="flex items-center gap-2 text-purple-500">
+                                            <div className="flex items-center gap-2 text-teal-500">
                                                 <Zap className="w-3.5 h-3.5" />
                                                 <span className="text-[9px] font-black uppercase tracking-widest">Clinical Instruction</span>
                                             </div>
-                                            <p className="text-[11px] font-bold text-slate-600 leading-relaxed font-['Matter_Regular'] italic">
+                                            <p className="text-[11px] font-bold text-slate-600 leading-relaxed italic">
                                                 "{med.instructions}"
                                             </p>
                                         </div>
@@ -231,13 +230,13 @@ export default function PatientMedicationsPage() {
                     )}
                 </div>
 
-                {/* Technical Support Column */}
+                {}
                 <div className="lg:col-span-4 space-y-8">
                     <Card className="p-10 border-none bg-slate-950 rounded-[3rem] shadow-2xl shadow-slate-100 text-white relative overflow-hidden group">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 blur-3xl rounded-full group-hover:scale-150 transition-all duration-1000" />
                         <div className="relative z-10 space-y-8">
                             <div className="flex items-center gap-4">
-                                <Info className="w-5 h-5 text-purple-400" />
+                                <Info className="w-5 h-5 text-teal-400" />
                                 <h3 className="text-xs font-black uppercase tracking-[0.3em]">Protocol Hygiene</h3>
                             </div>
                             <div className="space-y-6">
@@ -248,7 +247,7 @@ export default function PatientMedicationsPage() {
                                     'Maintain Bio-Feedback Loops'
                                 ].map((tip, i) => (
                                     <div key={i} className="flex items-center gap-4 group/item">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-purple-500/50 group-hover/item:bg-purple-400 transition-colors" />
+                                        <div className="w-1.5 h-1.5 rounded-full bg-teal-500/50 group-hover/item:bg-teal-400 transition-colors" />
                                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover/item:text-white transition-colorsLeading-relaxed">{tip}</p>
                                     </div>
                                 ))}

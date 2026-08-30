@@ -1,8 +1,8 @@
-// Frontend API client (BFF only)
-
 export type ApiResponse<T> = T
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'
+const API_ORIGIN = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001').replace(/\/api\/?$/, '')
+const API_BASE = `${API_ORIGIN}/api`
+const AUTH_BASE = `${API_ORIGIN}/auth`
 
 async function parseJsonSafely(response: Response) {
   const text = await response.text()
@@ -14,7 +14,7 @@ async function parseJsonSafely(response: Response) {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(base: string, path: string, init?: RequestInit): Promise<T> {
   let token = '';
   try {
     if (typeof window !== 'undefined') {
@@ -25,14 +25,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = { ...init?.headers } as any;
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetch(`${base}${path}`, {
     ...init,
     headers,
   })
-
-  if (res.status === 401 && typeof window !== 'undefined' && (window as any).Clerk) {
-    // Optional: handle auth failure
-  }
 
   const data = await parseJsonSafely(res)
 
@@ -45,23 +41,32 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path, { method: 'GET' }),
-  post: <T>(path: string, body?: unknown) => request<T>(path, {
+  get: <T>(path: string) => request<T>(API_BASE, path, { method: 'GET' }),
+  post: <T>(path: string, body?: unknown) => request<T>(API_BASE, path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined
   }),
-  put: <T>(path: string, body?: unknown) => request<T>(path, {
+  put: <T>(path: string, body?: unknown) => request<T>(API_BASE, path, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined
   }),
-  patch: <T>(path: string, body?: unknown) => request<T>(path, {
+  patch: <T>(path: string, body?: unknown) => request<T>(API_BASE, path, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined
   }),
-  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' })
+  delete: <T>(path: string) => request<T>(API_BASE, path, { method: 'DELETE' })
+}
+
+export const authApi = {
+  get: <T>(path: string) => request<T>(AUTH_BASE, path, { method: 'GET' }),
+  post: <T>(path: string, body?: unknown) => request<T>(AUTH_BASE, path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  })
 }
 
 export default api

@@ -1,4 +1,3 @@
-// Production Authentication Types
 export interface AuthSession {
     userId: string
     email?: string
@@ -10,20 +9,20 @@ export interface AuthSession {
 export interface DoctorProfile {
     id: string
     email: string
-    full_name: string
-    approval_status: 'pending' | 'approved' | 'rejected'
-    created_at: string
-    updated_at: string
+    fullName: string
+    approvalStatus: 'pending' | 'approved' | 'rejected'
+    createdAt: string
+    updatedAt: string
 }
 
 export interface PatientProfile {
     id: string
-    auth_user_id: string
+    authUserId: string
     email?: string
-    full_name?: string
-    patient_data: PatientData
-    created_at: string
-    updated_at: string
+    fullName?: string
+    patientData: PatientData
+    createdAt: string
+    updatedAt: string
 }
 
 export interface PatientData {
@@ -71,7 +70,6 @@ export interface PatientData {
     }
 }
 
-// Disease-specific routing map
 export const DISEASE_DASHBOARD_ROUTES = {
     "Interstitial Lung Disease (ILD)": "/patient/dashboard/ild",
     "Bronchial Asthma": "/patient/dashboard/asthma",
@@ -83,15 +81,13 @@ export const DISEASE_DASHBOARD_ROUTES = {
 
 export type DiagnosisCategory = keyof typeof DISEASE_DASHBOARD_ROUTES
 
-// Helper function to get dashboard route from diagnosis
 export function getDashboardRoute(diagnosis?: string): string {
-    if (!diagnosis) return "/patient/dashboard/ild" // Default
-    
+    if (!diagnosis) return "/patient/dashboard/ild"
+
     const route = DISEASE_DASHBOARD_ROUTES[diagnosis as DiagnosisCategory]
-    return route || "/patient/dashboard/ild" // Default fallback
+    return route || "/patient/dashboard/ild"
 }
 
-// OTP verification response
 export interface OTPVerificationResponse {
     success: boolean
     error?: string
@@ -99,14 +95,12 @@ export interface OTPVerificationResponse {
     profile?: DoctorProfile | PatientProfile
 }
 
-// Login response for patient login
 export interface LoginResponse {
     success: boolean
     error?: string
     session?: AuthSession
 }
 
-// Auth state for components
 export interface AuthContextType {
     user: any | null
     loading: boolean

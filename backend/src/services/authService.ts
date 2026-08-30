@@ -20,21 +20,20 @@ export function createToken(userId: string, email: string, role: string) {
   return jwt.sign({ id: userId, email, role }, JWT_SECRET, { expiresIn: '7d' })
 }
 
-// Clerk handles all auth flows, these function stubs return errors to force usage of Clerk.
 export async function startDoctorRegistration(..._args: any[]) { return { success: false, error: 'Use simplified signup' } }
 export async function completeDoctorRegistration(..._args: any[]) { return { success: false, error: 'Use simplified signup' } }
 
 export async function doctorLoginWithPassword(email: string, password?: string) {
   const doctor = await prisma.doctor.findUnique({ where: { email } })
   if (!doctor) return { success: false, error: 'Doctor not found' }
-  
+
   if (doctor.password && password) {
     const valid = await bcrypt.compare(password, doctor.password)
     if (!valid) return { success: false, error: 'Invalid password' }
   } else if (doctor.password && !password) {
     return { success: false, error: 'Password required' }
   }
-  
+
   const token = createToken(doctor.id, doctor.email, 'doctor')
   return { success: true, token, doctorProfile: doctor }
 }
@@ -49,26 +48,63 @@ export async function verifyPatientOtp(..._args: any[]) { return { success: fals
 export async function patientLoginWithPassword(email: string, password?: string) {
   const patient = await prisma.patient.findUnique({ where: { email } })
   if (!patient) return { success: false, error: 'Patient not found' }
-  
+
   if (patient.password && password) {
     const valid = await bcrypt.compare(password, patient.password)
     if (!valid) return { success: false, error: 'Invalid password' }
   } else if (patient.password && !password) {
     return { success: false, error: 'Password required' }
   }
-  
+
+  const token = createToken(patient.id, patient.email, 'patient')
+  return { success: true, token, patientProfile: patient }
+}
+
+const GUEST_DOCTOR_EMAIL = 'guest.doctor@saanssync.com'
+const GUEST_PATIENT_EMAIL = 'guest.patient@saanssync.com'
+
+export async function guestDoctorLogin() {
+  const doctor = await prisma.doctor.upsert({
+    where: { email: GUEST_DOCTOR_EMAIL },
+    update: {},
+    create: {
+      email: GUEST_DOCTOR_EMAIL,
+      fullName: 'Guest Doctor',
+      approvalStatus: 'approved'
+    }
+  })
+
+  const token = createToken(doctor.id, doctor.email, 'doctor')
+  return { success: true, token, doctorProfile: doctor }
+}
+
+export async function guestPatientLogin() {
+  const patient = await prisma.patient.upsert({
+    where: { email: GUEST_PATIENT_EMAIL },
+    update: {},
+    create: {
+      email: GUEST_PATIENT_EMAIL,
+      fullName: 'Guest Patient',
+      diseaseType: 'Asthma',
+      patientData: {
+        fullName: 'Guest Patient',
+        diagnosis: { primaryCategory: 'Bronchial Asthma', diagnosisDate: new Date().toISOString().split('T')[0] }
+      }
+    }
+  })
+
   const token = createToken(patient.id, patient.email, 'patient')
   return { success: true, token, patientProfile: patient }
 }
 
 export async function adminLogin(email: string, password?: string) {
   if (!isAdminEmail(email)) return { success: false, error: 'Not an admin email' }
-  
+
   const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'saanssync_admin'
   if (password !== ADMIN_PASSWORD) {
     return { success: false, error: 'Invalid admin password' }
   }
-  
+
   const token = createToken('admin', email, 'admin')
   return { success: true, token }
 }
@@ -76,21 +112,21 @@ export async function adminLogin(email: string, password?: string) {
 export async function doctorSignup(email: string, fullName: string, password?: string) {
   const existing = await prisma.doctor.findUnique({ where: { email } })
   if (existing) return { success: false, error: 'Email already exists' }
-  
+
   let hashedPassword = null
   if (password) {
     hashedPassword = await bcrypt.hash(password, SALT_ROUNDS)
   }
 
   const doctor = await prisma.doctor.create({
-    data: { 
-      email, 
-      fullName, 
+    data: {
+      email,
+      fullName,
       approvalStatus: 'approved',
       password: hashedPassword
     }
   })
-  
+
   const token = createToken(doctor.id, doctor.email, 'doctor')
   return { success: true, token, doctorProfile: doctor }
 }
@@ -98,19 +134,19 @@ export async function doctorSignup(email: string, fullName: string, password?: s
 export async function patientSignup(email: string, fullName: string, password?: string) {
   const existing = await prisma.patient.findUnique({ where: { email } })
   if (existing) return { success: false, error: 'Email already exists' }
-  
+
   let hashedPassword = null
   if (password) {
     hashedPassword = await bcrypt.hash(password, SALT_ROUNDS)
   }
 
   const patient = await prisma.patient.create({
-    data: { 
-      email, 
+    data: {
+      email,
       fullName,
       password: hashedPassword,
       registrationDate: new Date(),
-      diagnosis: { 
+      diagnosis: {
         primaryCategory: 'ILD',
         isAsthmatic: false
       },
@@ -118,7 +154,7 @@ export async function patientSignup(email: string, fullName: string, password?: 
       medications: []
     } as any
   })
-  
+
   const token = createToken(patient.id, patient.email, 'patient')
   return { success: true, token, patientProfile: patient }
 }

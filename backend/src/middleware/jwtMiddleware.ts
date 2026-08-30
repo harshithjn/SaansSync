@@ -20,7 +20,7 @@ export async function requireAuth(req: AuthedRequest, res: Response, next: NextF
     console.log('--- Auth Debug ---')
     console.log('Path:', req.path)
     console.log('Authorization Header:', authHeader)
-    
+
     const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null
 
     if (!token) {
@@ -68,7 +68,7 @@ export async function optionalAuth(req: AuthedRequest, _res: Response, next: Nex
       }
     }
   } catch {
-    // ignore
+
   }
   return next()
 }

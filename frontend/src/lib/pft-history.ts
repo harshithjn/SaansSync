@@ -1,11 +1,9 @@
-// PFT (Pulmonary Function Test) History Management
 export interface PFTRecord {
     id: string
     patientId: string
     testDate: string
     testType: 'Spirometry' | 'DLCO' | '6MWT' | 'Complete PFT'
-    
-    // Spirometry values
+
     fvc?: {
         predicted: number
         actual: number
@@ -19,8 +17,7 @@ export interface PFTRecord {
         lowerLimit: number
     }
     fev1_fvc_ratio?: number
-    
-    // DLCO values
+
     dlco?: {
         predicted: number
         actual: number
@@ -32,10 +29,9 @@ export interface PFTRecord {
         actual: number
         percentage: number
     }
-    
-    // 6-Minute Walk Test
+
     sixMWT?: {
-        distance: number // meters
+        distance: number
         predictedDistance: number
         percentage: number
         initialSpO2: number
@@ -44,40 +40,35 @@ export interface PFTRecord {
         initialHR: number
         finalHR: number
         maxHR: number
-        borgScale: number // 0-10
+        borgScale: number
         oxygenUsed: boolean
-        oxygenFlow?: number // L/min
+        oxygenFlow?: number
     }
-    
-    // Additional measurements
-    peakFlow?: number // L/min
-    personalBest?: number // L/min for asthma patients
-    
-    // Clinical notes
+
+    peakFlow?: number
+    personalBest?: number
+
     technician: string
     clinicalNotes?: string
     qualityGrade: 'A' | 'B' | 'C' | 'D' | 'F'
-    
-    // Interpretation
+
     interpretation: 'Normal' | 'Mild' | 'Moderate' | 'Severe' | 'Very Severe'
     pattern: 'Normal' | 'Obstructive' | 'Restrictive' | 'Mixed' | 'Indeterminate'
-    
-    // Comparison with previous
+
     changeFromPrevious?: {
-        fvcChange: number // percentage change
+        fvcChange: number
         fev1Change: number
         dlcoChange?: number
         sixMWTChange?: number
         trend: 'Improved' | 'Stable' | 'Declined'
     }
-    
+
     createdAt: string
     updatedAt: string
 }
 
 const PFT_STORAGE_KEY = 'pft_records'
 
-// Add new PFT record
 export function addPFTRecord(record: Omit<PFTRecord, 'id' | 'createdAt' | 'updatedAt'>): PFTRecord {
     const newRecord: PFTRecord = {
         ...record,
@@ -85,19 +76,17 @@ export function addPFTRecord(record: Omit<PFTRecord, 'id' | 'createdAt' | 'updat
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
     }
-    
-    // Calculate change from previous if available
+
     const previousRecords = getPatientPFTHistory(record.patientId)
     if (previousRecords.length > 0) {
         const lastRecord = previousRecords[previousRecords.length - 1]
         newRecord.changeFromPrevious = calculatePFTChanges(lastRecord, newRecord)
     }
-    
+
     storePFTRecord(newRecord)
     return newRecord
 }
 
-// Store PFT record
 function storePFTRecord(record: PFTRecord): void {
     if (typeof window === 'undefined') return
 
@@ -111,7 +100,6 @@ function storePFTRecord(record: PFTRecord): void {
     }
 }
 
-// Get PFT history for a patient
 export function getPatientPFTHistory(patientId: string): PFTRecord[] {
     if (typeof window === 'undefined') return []
 
@@ -127,13 +115,11 @@ export function getPatientPFTHistory(patientId: string): PFTRecord[] {
     }
 }
 
-// Get latest PFT record for a patient
 export function getLatestPFTRecord(patientId: string): PFTRecord | null {
     const history = getPatientPFTHistory(patientId)
     return history.length > 0 ? history[history.length - 1] : null
 }
 
-// Calculate changes between PFT records
 function calculatePFTChanges(previous: PFTRecord, current: PFTRecord): PFTRecord['changeFromPrevious'] {
     const changes: PFTRecord['changeFromPrevious'] = {
         fvcChange: 0,
@@ -141,27 +127,22 @@ function calculatePFTChanges(previous: PFTRecord, current: PFTRecord): PFTRecord
         trend: 'Stable'
     }
 
-    // Calculate FVC change
     if (previous.fvc && current.fvc) {
         changes.fvcChange = ((current.fvc.percentage - previous.fvc.percentage) / previous.fvc.percentage) * 100
     }
 
-    // Calculate FEV1 change
     if (previous.fev1 && current.fev1) {
         changes.fev1Change = ((current.fev1.percentage - previous.fev1.percentage) / previous.fev1.percentage) * 100
     }
 
-    // Calculate DLCO change
     if (previous.dlco && current.dlco) {
         changes.dlcoChange = ((current.dlco.percentage - previous.dlco.percentage) / previous.dlco.percentage) * 100
     }
 
-    // Calculate 6MWT change
     if (previous.sixMWT && current.sixMWT) {
         changes.sixMWTChange = ((current.sixMWT.distance - previous.sixMWT.distance) / previous.sixMWT.distance) * 100
     }
 
-    // Determine overall trend
     const significantChanges = []
     if (Math.abs(changes.fvcChange) >= 10) significantChanges.push(changes.fvcChange)
     if (Math.abs(changes.fev1Change) >= 10) significantChanges.push(changes.fev1Change)
@@ -175,7 +156,6 @@ function calculatePFTChanges(previous: PFTRecord, current: PFTRecord): PFTRecord
     return changes
 }
 
-// Interpret PFT results
 export function interpretPFTResults(record: PFTRecord): {
     severity: string
     pattern: string
@@ -185,7 +165,6 @@ export function interpretPFTResults(record: PFTRecord): {
     let severity = 'Normal'
     let pattern = 'Normal'
 
-    // Determine severity based on FEV1
     if (record.fev1) {
         const fev1Percent = record.fev1.percentage
         if (fev1Percent >= 80) {
@@ -201,7 +180,6 @@ export function interpretPFTResults(record: PFTRecord): {
         }
     }
 
-    // Determine pattern
     if (record.fev1 && record.fvc && record.fev1_fvc_ratio) {
         const fev1Percent = record.fev1.percentage
         const fvcPercent = record.fvc.percentage
@@ -221,12 +199,10 @@ export function interpretPFTResults(record: PFTRecord): {
         }
     }
 
-    // DLCO-specific recommendations
     if (record.dlco && record.dlco.percentage < 80) {
         recommendations.push('Reduced gas transfer - consider evaluation for ILD or pulmonary vascular disease')
     }
 
-    // 6MWT-specific recommendations
     if (record.sixMWT) {
         if (record.sixMWT.percentage < 80) {
             recommendations.push('Reduced exercise capacity - consider pulmonary rehabilitation')
@@ -236,7 +212,6 @@ export function interpretPFTResults(record: PFTRecord): {
         }
     }
 
-    // Trend-based recommendations
     if (record.changeFromPrevious?.trend === 'Declined') {
         recommendations.push('Declining lung function - consider treatment optimization')
         recommendations.push('More frequent monitoring may be needed')
@@ -245,7 +220,6 @@ export function interpretPFTResults(record: PFTRecord): {
     return { severity, pattern, recommendations }
 }
 
-// Generate PFT trend data for charts
 export function generatePFTTrendData(patientId: string): {
     dates: string[]
     fvc: number[]
@@ -254,7 +228,7 @@ export function generatePFTTrendData(patientId: string): {
     sixMWT: number[]
 } {
     const history = getPatientPFTHistory(patientId)
-    
+
     return {
         dates: history.map(record => record.testDate),
         fvc: history.map(record => record.fvc?.percentage || 0),
@@ -264,10 +238,9 @@ export function generatePFTTrendData(patientId: string): {
     }
 }
 
-// Calculate predicted values based on demographics
 export function calculatePredictedValues(
     age: number,
-    height: number, // cm
+    height: number,
     gender: 'male' | 'female',
     ethnicity: 'caucasian' | 'african-american' | 'hispanic' | 'asian' = 'caucasian'
 ): {
@@ -276,11 +249,11 @@ export function calculatePredictedValues(
     dlco: number
     sixMWT: number
 } {
-    // Simplified prediction equations (in practice, use GLI-2012 equations)
+
     const heightM = height / 100
-    
+
     let fvc, fev1, dlco, sixMWT
-    
+
     if (gender === 'male') {
         fvc = (5.76 * heightM) - (0.026 * age) - 4.34
         fev1 = (4.30 * heightM) - (0.029 * age) - 2.49
@@ -292,8 +265,7 @@ export function calculatePredictedValues(
         dlco = (6.14 * heightM) - (0.178 * age) + 0.39
         sixMWT = 1017 - (6.24 * age) + (2.11 * height)
     }
-    
-    // Apply ethnicity corrections
+
     if (ethnicity === 'african-american') {
         fvc *= 0.88
         fev1 *= 0.88
@@ -303,23 +275,22 @@ export function calculatePredictedValues(
         fev1 *= 0.93
         dlco *= 0.93
     }
-    
+
     return {
-        fvc: Math.round(fvc * 1000) / 1000, // L
-        fev1: Math.round(fev1 * 1000) / 1000, // L
-        dlco: Math.round(dlco * 100) / 100, // mmol/min/kPa
-        sixMWT: Math.round(sixMWT) // meters
+        fvc: Math.round(fvc * 1000) / 1000,
+        fev1: Math.round(fev1 * 1000) / 1000,
+        dlco: Math.round(dlco * 100) / 100,
+        sixMWT: Math.round(sixMWT)
     }
 }
 
-// Update PFT record
 export function updatePFTRecord(recordId: string, updates: Partial<PFTRecord>): boolean {
     if (typeof window === 'undefined') return false
 
     try {
         const stored = localStorage.getItem(PFT_STORAGE_KEY)
         const records: PFTRecord[] = stored ? JSON.parse(stored) : []
-        
+
         const recordIndex = records.findIndex(record => record.id === recordId)
         if (recordIndex >= 0) {
             records[recordIndex] = {
@@ -337,14 +308,13 @@ export function updatePFTRecord(recordId: string, updates: Partial<PFTRecord>): 
     }
 }
 
-// Delete PFT record
 export function deletePFTRecord(recordId: string): boolean {
     if (typeof window === 'undefined') return false
 
     try {
         const stored = localStorage.getItem(PFT_STORAGE_KEY)
         const records: PFTRecord[] = stored ? JSON.parse(stored) : []
-        
+
         const filteredRecords = records.filter(record => record.id !== recordId)
         localStorage.setItem(PFT_STORAGE_KEY, JSON.stringify(filteredRecords))
         return true
@@ -354,21 +324,19 @@ export function deletePFTRecord(recordId: string): boolean {
     }
 }
 
-// Export PFT data
 export function exportPFTData(patientId: string, format: 'csv' | 'json' = 'csv'): string {
     const history = getPatientPFTHistory(patientId)
-    
+
     if (format === 'json') {
         return JSON.stringify(history, null, 2)
     }
-    
-    // CSV format
+
     const headers = [
-        'Test Date', 'Test Type', 'FVC %', 'FEV1 %', 'FEV1/FVC Ratio', 
+        'Test Date', 'Test Type', 'FVC %', 'FEV1 %', 'FEV1/FVC Ratio',
         'DLCO %', '6MWT Distance', '6MWT %', 'Interpretation', 'Pattern',
         'Quality Grade', 'Technician', 'Clinical Notes'
     ]
-    
+
     const rows = history.map(record => [
         record.testDate,
         record.testType,
@@ -384,7 +352,7 @@ export function exportPFTData(patientId: string, format: 'csv' | 'json' = 'csv')
         record.technician,
         record.clinicalNotes || ''
     ])
-    
+
     return [headers, ...rows]
         .map(row => row.map(cell => `"${cell}"`).join(','))
         .join('\n')

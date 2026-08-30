@@ -81,6 +81,18 @@ export async function patientLogin(req: Request, res: Response) {
   return res.status(result.success ? 200 : 401).json(result)
 }
 
+export async function guestLogin(req: Request, res: Response) {
+  const role = req.body?.role === 'patient' ? 'patient' : 'doctor'
+  try {
+    const result = role === 'doctor'
+      ? await authService.guestDoctorLogin()
+      : await authService.guestPatientLogin()
+    return res.status(result.success ? 200 : 400).json(result)
+  } catch (error: any) {
+    return res.status(500).json({ success: false, error: 'Guest login failed' })
+  }
+}
+
 export async function adminLogin(req: Request, res: Response) {
   const { email, password } = req.body
   if (!email || !password) return res.status(400).json({ success: false, error: 'email and password required' })
@@ -118,10 +130,10 @@ export async function exchangeCallback(req: Request, res: Response) {
 
 export async function authMe(req: AuthedRequest, res: Response) {
   if (!req.user?.id) return res.status(401).json({ user: null })
-  const data = await authService.getAuthProfile({ 
-    id: req.user.id, 
+  const data = await authService.getAuthProfile({
+    id: req.user.id,
     email: req.user.email,
-    role: req.user.role 
+    role: req.user.role
   })
   return res.json(data)
 }

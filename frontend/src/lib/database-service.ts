@@ -1,10 +1,8 @@
-// Database Service - BFF backed (no direct Supabase)
-import api from './api'
+import api, { authApi } from './api'
 import { LoginResponse } from './auth-types'
 import { getDoctorAlertCounts, searchPatients } from "./doctor-patient-mapping"
 import { DiseaseType, PatientFolder } from './monitoring-types'
 
-// Map frontend disease categories to database disease types
 const mapDiseaseTypeToDatabase = (frontendCategory: string): string => {
   const mapping: { [key: string]: string } = {
     'Interstitial Lung Disease (ILD)': 'ILD',
@@ -15,10 +13,6 @@ const mapDiseaseTypeToDatabase = (frontendCategory: string): string => {
   }
   return mapping[frontendCategory] || frontendCategory
 }
-
-// =====================================================
-// DOCTOR FUNCTIONS
-// =====================================================
 
 export async function createDoctorProfile(
   fullName: string,
@@ -64,22 +58,14 @@ export async function createPatientAccount(
   }
 }
 
-// =====================================================
-// AUTHENTICATION FUNCTIONS
-// =====================================================
-
 export async function loginPatient(email: string, password: string): Promise<LoginResponse> {
   try {
-    const data = await api.post<LoginResponse>('/auth/patient/login', { email, password })
+    const data = await authApi.post<LoginResponse>('/patient/login', { email, password })
     return data
   } catch (error) {
     return { success: false, error: (error as Error).message }
   }
 }
-
-// =====================================================
-// DAILY LOGGING FUNCTIONS
-// =====================================================
 
 export async function canLogToday(patientId: string): Promise<boolean> {
   try {
@@ -108,10 +94,6 @@ export async function createDailyLog(
     return { success: false, error: (error as Error).message }
   }
 }
-
-// =====================================================
-// ALERT FUNCTIONS
-// =====================================================
 
 export async function getPatientAlerts(patientId: string) {
   try {
@@ -166,10 +148,6 @@ export async function getDoctorProfile(doctorId: string) {
     return null
   }
 }
-
-// =====================================================
-// UTILITY FUNCTIONS
-// =====================================================
 
 export async function getPatientDailyLogs(patientId: string) {
   try {

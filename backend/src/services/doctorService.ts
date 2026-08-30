@@ -77,25 +77,26 @@ export async function getDoctorAlerts(doctorId: string) {
 
   const alerts = await prisma.alert.findMany({
     where: { OR: [{ doctorId: doctorPK }, { doctorId }] },
+    include: { patient: { select: { fullName: true } } },
     orderBy: { createdAt: 'desc' }
   });
 
   return alerts.map(alert => {
     let type = 'pending-review';
-    let red_flag_score = 1;
+    let redFlagScore = 1;
 
     if (alert.level === 'RED') {
       type = 'critical';
-      red_flag_score = 10;
+      redFlagScore = 10;
     } else if (alert.level === 'ORANGE') {
       type = 'high-risk';
-      red_flag_score = 8;
+      redFlagScore = 8;
     } else if (alert.level === 'YELLOW') {
       type = 'high-risk';
-      red_flag_score = 4;
+      redFlagScore = 4;
     }
 
-    return { ...alert, type, red_flag_score };
+    return { ...alert, patientName: alert.patient?.fullName, type, redFlagScore };
   });
 }
 

@@ -1,7 +1,7 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
-import * as alertsService from '../services/alertsService' // DAO
-import * as alertEvaluationService from '../services/alertService' // Complex Logic
+import * as alertsService from '../services/alertsService'
+import * as alertEvaluationService from '../services/alertService'
 import prisma from '../config/db'
 
 const alertSchema = z.object({
@@ -15,7 +15,7 @@ const alertSchema = z.object({
 
 const evaluateSchema = z.object({
   diseaseType: z.string(),
-  submission: z.any() // Full Log object
+  submission: z.any()
 })
 
 export async function createAlert(req: Request, res: Response) {
@@ -35,7 +35,6 @@ export async function evaluateAlert(req: Request, res: Response) {
     const patientId = req.params.patientId;
     const { diseaseType, submission } = evaluateSchema.parse(req.body);
 
-    // Ensure patientId in submission matches params
     submission.patientId = patientId;
     submission.diseaseType = diseaseType;
 
@@ -73,10 +72,7 @@ export async function getAlerts(req: Request, res: Response) {
 export async function acknowledgeAlert(req: Request, res: Response) {
   try {
     const alertId = req.params.alertId
-    // Using service for consistency or direct DB
-    // Simple enough for direct DB or service call? 
-    // Let's use service if available, but alertsService doesn't have it explicitly yet?
-    // The previous file content had logic inline. Let's keep it but clean import.
+
     await prisma.alert.update({
       where: { id: alertId },
       data: {

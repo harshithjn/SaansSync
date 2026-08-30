@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${requestUrl.origin}/login?error=verification_failed`)
     }
 
-    // Set HttpOnly session cookies (BFF pattern)
     const cookieStore = await cookies()
     cookieStore.set('saanssync_access', data.access_token, {
       httpOnly: true,

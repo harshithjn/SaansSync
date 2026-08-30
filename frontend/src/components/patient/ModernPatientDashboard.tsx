@@ -91,7 +91,6 @@ interface ModernPatientDashboardProps {
 export default function ModernPatientDashboard({ patientId, patientName, diagnosis }: ModernPatientDashboardProps) {
     const { t } = useLanguage()
 
-    // --- State ---
     const [activeTab, setActiveTab] = useState("overview")
     const [isLogModalOpen, setIsLogModalOpen] = useState(false)
     const [patientData, setPatientData] = useState<any>(null)
@@ -102,7 +101,6 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [activeAlerts, setActiveAlerts] = useState<any[]>([])
 
-    // Form State
     const [formData, setFormData] = useState({
         spo2AtRest: 98,
         spo2OnExertion: 95,
@@ -244,8 +242,8 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
     }
 
     return (
-        <div className="min-h-screen bg-[#FAFAFA] pb-24 font-['Matter_Regular',sans-serif]">
-            {/* Minimal Header */}
+        <div className="min-h-screen bg-[#FAFAFA] pb-24">
+            {}
             <div className="bg-white/80 backdrop-blur-xl border-b border-slate-100 sticky top-0 z-40 px-8 py-4">
                 <div className="max-w-6xl mx-auto flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -269,7 +267,7 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
             </div>
 
             <div className="max-w-6xl mx-auto px-8 py-10 space-y-12">
-                {/* Notification Area */}
+                {}
                 {activeAlerts.length > 0 && (
                     <div className="space-y-3">
                         {activeAlerts.map((alert) => (
@@ -291,16 +289,16 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
                     </div>
                 )}
 
-                {/* Status Cards */}
+                {}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <Card className="md:col-span-2 p-10 bg-purple-600 text-white rounded-[3rem] border-none shadow-xl shadow-purple-100 flex flex-col justify-between min-h-[320px] relative overflow-hidden group">
+                    <Card className="md:col-span-2 p-10 bg-teal-600 text-white rounded-[3rem] border-none shadow-xl shadow-teal-100 flex flex-col justify-between min-h-[320px] relative overflow-hidden group">
                         <div className="relative z-10">
                             <h2 className="text-4xl font-bold tracking-tight mb-4">Hello, {patientData?.fullName?.split(' ')[0] || 'there'}.</h2>
-                            <p className="text-purple-100 font-medium text-lg leading-relaxed max-w-sm mb-8">
+                            <p className="text-teal-100 font-medium text-lg leading-relaxed max-w-sm mb-8">
                                 {canLog ? "How are you feeling today? Tap below to record your daily health update." : "Great job! You've already checked in today. Rest well."}
                             </p>
                             {canLog ? (
-                                <Button onClick={() => setIsLogModalOpen(true)} className="h-16 px-10 rounded-2xl bg-white text-purple-600 hover:bg-purple-50 font-bold text-lg transition-all shadow-lg active:scale-95">
+                                <Button onClick={() => setIsLogModalOpen(true)} className="h-16 px-10 rounded-2xl bg-white text-teal-600 hover:bg-teal-50 font-bold text-lg transition-all shadow-lg active:scale-95">
                                     <Plus className="w-6 h-6 mr-3" />
                                     Daily Check-in
                                 </Button>
@@ -315,12 +313,12 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
 
                     <Card className="p-10 bg-white rounded-[3rem] border-none shadow-sm flex flex-col justify-between border border-slate-50 group">
                         <div className="flex justify-between items-start">
-                            <div className="w-12 h-12 bg-purple-50 rounded-xl flex items-center justify-center text-purple-500">
+                            <div className="w-12 h-12 bg-teal-50 rounded-xl flex items-center justify-center text-teal-500">
                                 <Wind className="w-6 h-6" />
                             </div>
-                            <button 
+                            <button
                                 onClick={handleRefreshAQI}
-                                className={`text-slate-200 hover:text-purple-500 transition-colors ${loadingAqi ? 'animate-spin' : ''}`}>
+                                className={`text-slate-200 hover:text-teal-500 transition-colors ${loadingAqi ? 'animate-spin' : ''}`}>
                                 <RefreshCw className="w-4 h-4" />
                             </button>
                         </div>
@@ -342,7 +340,7 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
                     </Card>
                 </div>
 
-                {/* Analytics */}
+                {}
                 <div className="space-y-6">
                     <div className="flex items-center justify-between px-2">
                         <div className="flex items-center gap-3">
@@ -362,8 +360,8 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
                     <Card className="p-8 bg-white rounded-[2.5rem] border-none shadow-sm border border-slate-100">
                         <Tabs defaultValue="spo2" className="w-full space-y-8">
                             <TabsList className="bg-slate-50 p-1 rounded-xl w-fit h-12 border border-slate-100">
-                                <TabsTrigger value="spo2" className="rounded-lg px-8 data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm font-bold text-xs tracking-tight h-full">Oxygen level</TabsTrigger>
-                                <TabsTrigger value="pefr" className="rounded-lg px-8 data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-sm font-bold text-xs tracking-tight h-full">Breathing strength</TabsTrigger>
+                                <TabsTrigger value="spo2" className="rounded-lg px-8 data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm font-bold text-xs tracking-tight h-full">Oxygen level</TabsTrigger>
+                                <TabsTrigger value="pefr" className="rounded-lg px-8 data-[state=active]:bg-white data-[state=active]:text-teal-600 data-[state=active]:shadow-sm font-bold text-xs tracking-tight h-full">Breathing strength</TabsTrigger>
                             </TabsList>
 
                             <TabsContent value="spo2" className="h-[320px] outline-none">
@@ -378,7 +376,7 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
                                         <CartesianGrid strokeDasharray="6 6" vertical={false} stroke="#F8FAFC" />
                                         <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94A3B8' }} dy={10} />
                                         <YAxis domain={[85, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#94A3B8' }} dx={-10} />
-                                        <Tooltip 
+                                        <Tooltip
                                             contentStyle={{ borderRadius: '16px', border: '1px solid #F1F5F9', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05)', fontWeight: 700, fontSize: '11px' }}
                                         />
                                         <ReferenceLine y={92} stroke="#FDA4AF" strokeDasharray="3 3" />
@@ -408,16 +406,16 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
                     </Card>
                 </div>
 
-                {/* Log Entry Dialog */}
+                {}
                 <Dialog open={isLogModalOpen} onOpenChange={setIsLogModalOpen}>
-                    <DialogContent className="max-w-xl rounded-[2.5rem] p-10 border-none shadow-2xl overflow-y-auto max-h-[90vh] font-['Matter_Regular',sans-serif]">
+                    <DialogContent className="max-w-xl rounded-[2.5rem] p-10 border-none shadow-2xl overflow-y-auto max-h-[90vh]">
                         <DialogHeader className="mb-8">
                             <DialogTitle className="text-2xl font-bold tracking-tight text-slate-900">Daily Check-in</DialogTitle>
                             <DialogDescription className="text-slate-400 font-bold uppercase tracking-widest text-[10px] mt-1">How are you feeling today?</DialogDescription>
                         </DialogHeader>
 
                         <div className="space-y-12">
-                            {/* Sliders */}
+                            {}
                             <div className="space-y-10">
                                 <div>
                                     <div className="flex items-center justify-between mb-4">
@@ -428,7 +426,7 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
                                         value={[formData.spo2AtRest]}
                                         onValueChange={(v) => setFormData(prev => ({ ...prev, spo2AtRest: v[0] }))}
                                         max={100} min={80} step={1}
-                                        className="[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:bg-purple-600 [&_[role=track]]:bg-slate-100"
+                                        className="[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:bg-teal-600 [&_[role=track]]:bg-slate-100"
                                     />
                                 </div>
                                 <div>
@@ -440,34 +438,34 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
                                         value={[formData.peakFlowPercent]}
                                         onValueChange={(v) => setFormData(prev => ({ ...prev, peakFlowPercent: v[0] }))}
                                         max={100} min={40} step={1}
-                                        className="[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:bg-purple-600 [&_[role=track]]:bg-slate-100"
+                                        className="[&_[role=slider]]:h-6 [&_[role=slider]]:w-6 [&_[role=slider]]:bg-teal-600 [&_[role=track]]:bg-slate-100"
                                     />
                                 </div>
                             </div>
 
-                            {/* Checkboxes */}
+                            {}
                             <div className="grid grid-cols-2 gap-4">
                                 {[
                                     { key: 'nightWaking', label: 'Woke up at night' },
                                     { key: 'daytimeSymptoms', label: 'Symptoms today' },
                                     { key: 'relieverUse', label: 'Used rescue inhaler' }
                                 ].map(({ key, label }) => (
-                                    <div key={key} 
+                                    <div key={key}
                                         onClick={() => setFormData(prev => ({ ...prev, [key]: !prev[key as keyof typeof formData] }))}
-                                        className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${formData[key as keyof typeof formData] ? 'bg-purple-50 border-purple-100' : 'bg-slate-50 border-slate-100'}`}>
-                                        <span className={`text-[10px] font-bold uppercase tracking-widest ${formData[key as keyof typeof formData] ? 'text-purple-700' : 'text-slate-500'}`}>{label}</span>
-                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData[key as keyof typeof formData] ? 'bg-purple-600 border-purple-600' : 'bg-white border-slate-200'}`}>
+                                        className={`p-4 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${formData[key as keyof typeof formData] ? 'bg-teal-50 border-teal-100' : 'bg-slate-50 border-slate-100'}`}>
+                                        <span className={`text-[10px] font-bold uppercase tracking-widest ${formData[key as keyof typeof formData] ? 'text-teal-700' : 'text-slate-500'}`}>{label}</span>
+                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData[key as keyof typeof formData] ? 'bg-teal-600 border-teal-600' : 'bg-white border-slate-200'}`}>
                                             {formData[key as keyof typeof formData] && <CheckCircle2 className="w-3 h-3 text-white" />}
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* Meds */}
+                            {}
                             <div className="space-y-4">
                                 <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 block">Medications taken</label>
                                 {formData.medications.map((med, i) => (
-                                    <div key={i} 
+                                    <div key={i}
                                         onClick={() => {
                                             const newMeds = [...formData.medications]
                                             newMeds[i].taken = !newMeds[i].taken
@@ -493,7 +491,7 @@ export default function ModernPatientDashboard({ patientId, patientName, diagnos
 
                         <DialogFooter className="mt-10 pt-8 border-t border-slate-50">
                             <Button variant="ghost" onClick={() => setIsLogModalOpen(false)} className="h-12 px-6 rounded-xl font-bold text-slate-300 hover:text-slate-900">Cancel</Button>
-                            <Button onClick={handleSubmitLog} disabled={isSubmitting} className="h-12 px-8 rounded-xl bg-purple-600 text-white hover:bg-purple-700 font-bold text-sm uppercase tracking-widest flex-1 shadow-lg shadow-purple-100">
+                            <Button onClick={handleSubmitLog} disabled={isSubmitting} className="h-12 px-8 rounded-xl bg-teal-600 text-white hover:bg-teal-700 font-bold text-sm uppercase tracking-widest flex-1 shadow-lg shadow-teal-100">
                                 {isSubmitting ? "Saving..." : "Save today's log"}
                             </Button>
                         </DialogFooter>

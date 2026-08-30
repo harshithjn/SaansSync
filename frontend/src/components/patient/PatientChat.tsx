@@ -11,12 +11,12 @@ import { api } from "@/lib/api"
 
 interface Message {
     id: string
-    patient_id: string
-    doctor_id?: string
-    sender_role: 'patient' | 'doctor'
+    patientId: string
+    doctorId?: string
+    senderRole: 'patient' | 'doctor'
     content: string
-    created_at: string
-    is_read: boolean
+    createdAt: string
+    isRead: boolean
 }
 
 export default function PatientChat() {
@@ -76,14 +76,14 @@ export default function PatientChat() {
     }
 
     return (
-        <Card className="flex flex-col h-[calc(100vh-250px)] bg-white border-none shadow-sm rounded-[3rem] overflow-hidden border border-slate-50 relative font-['Matter_Regular',sans-serif]">
+        <Card className="flex flex-col h-[calc(100vh-250px)] bg-white border-none shadow-sm rounded-[3rem] overflow-hidden border border-slate-50 relative">
             {/* Communication Header */}
             <div className="px-10 py-8 border-b border-slate-50 flex items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
                 <div className="flex items-center gap-5">
                     <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 shadow-sm overflow-hidden group">
-                        <img 
-                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=Doctor`} 
-                            alt="Doctor" 
+                        <img
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=Doctor`}
+                            alt="Doctor"
                             className="w-10 h-10 object-contain group-hover:scale-110 transition-transform"
                         />
                     </div>
@@ -103,7 +103,7 @@ export default function PatientChat() {
                 </div>
             </div>
 
-            {/* Transmission Field */}
+            {}
             <ScrollArea className="flex-1 p-10 bg-slate-50/30" ref={scrollRef}>
                 <div className="space-y-10 max-w-4xl mx-auto">
                     {isLoading ? (
@@ -123,13 +123,13 @@ export default function PatientChat() {
                         messages.map((msg) => (
                             <div
                                 key={msg.id}
-                                className={`flex ${msg.sender_role === 'patient' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-700`}
+                                className={`flex ${msg.senderRole === 'patient' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-700`}
                             >
-                                <div className={`flex flex-col ${msg.sender_role === 'patient' ? 'items-end' : 'items-start'} max-w-[85%]`}>
+                                <div className={`flex flex-col ${msg.senderRole === 'patient' ? 'items-end' : 'items-start'} max-w-[85%]`}>
                                     <div
                                         className={`
                                             rounded-[2rem] px-8 py-5 shadow-sm transition-all hover:shadow-xl
-                                            ${msg.sender_role === 'patient'
+                                            ${msg.senderRole === 'patient'
                                                 ? 'bg-slate-950 text-white rounded-br-none shadow-slate-200'
                                                 : 'bg-white text-slate-900 border border-slate-100 rounded-bl-none'
                                             }
@@ -139,10 +139,10 @@ export default function PatientChat() {
                                     </div>
                                     <div className="flex items-center gap-2 mt-3 px-3">
                                         <Clock className="w-2.5 h-2.5 text-slate-300" />
-                                        <span className={`text-[8px] font-black uppercase tracking-widest ${msg.sender_role === 'patient' ? 'text-slate-300' : 'text-slate-400'}`}>
-                                            {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        <span className={`text-[8px] font-black uppercase tracking-widest ${msg.senderRole === 'patient' ? 'text-slate-300' : 'text-slate-400'}`}>
+                                            {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
-                                        {msg.sender_role === 'patient' && <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />}
+                                        {msg.senderRole === 'patient' && <ShieldCheck className="w-2.5 h-2.5 text-emerald-400" />}
                                     </div>
                                 </div>
                             </div>
@@ -151,7 +151,7 @@ export default function PatientChat() {
                 </div>
             </ScrollArea>
 
-            {/* Input Surface */}
+            {}
             <div className="p-10 bg-white border-t border-slate-50 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.03)]">
                 <form
                     onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}

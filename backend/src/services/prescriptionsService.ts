@@ -14,7 +14,7 @@ export async function insertPrescription(payload: any) {
         date: payload.prescription_date ? new Date(payload.prescription_date) : new Date(),
         medications: payload.medications || [],
         instructions: payload.instructions || null,
-        // diagnosis is not in the Prisma schema because it was not in saanssync_final_schema.sql explicitly for prescriptions
+
     }
   });
 

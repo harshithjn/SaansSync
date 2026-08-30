@@ -24,7 +24,7 @@ export const getPatientMessages = async (req: Request, res: Response) => {
 
 export const getDoctorThreads = async (req: Request, res: Response) => {
     try {
-        // In a real app, we get doctor ID from auth token
+
         const doctorId = req.query.doctorId as string;
         const threads = await messageService.getDoctorConversations(doctorId);
         res.json(threads);

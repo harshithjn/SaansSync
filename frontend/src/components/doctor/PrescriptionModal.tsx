@@ -156,7 +156,7 @@ export default function PrescriptionModal({
                     </div>
 
                     <div className="space-y-6">
-                        {/* Patient Info */}
+                        {}
                         <Card className="p-4">
                             <h3 className="font-medium mb-2">Patient Information</h3>
                             <div className="grid grid-cols-2 gap-2 text-sm">
@@ -167,7 +167,7 @@ export default function PrescriptionModal({
                             </div>
                         </Card>
 
-                        {/* Personalized Alerts */}
+                        {}
                         <Card className="p-4">
                             <div className="flex justify-between items-center mb-4">
                                 <h3 className="font-medium">Personalized Alerts</h3>
@@ -280,7 +280,7 @@ export default function PrescriptionModal({
                             ))}
                         </Card>
 
-                        {/* Additional Instructions */}
+                        {}
                         <Card className="p-4">
                             <h3 className="font-medium mb-2">Additional Instructions</h3>
                             <textarea
@@ -292,7 +292,7 @@ export default function PrescriptionModal({
                             />
                         </Card>
 
-                        {/* Generated Prescription Preview */}
+                        {}
                         {generatedPrescription && (
                             <Card className="p-4">
                                 <div className="flex justify-between items-center mb-4">
@@ -314,7 +314,7 @@ export default function PrescriptionModal({
                             </Card>
                         )}
 
-                        {/* Action Buttons */}
+                        {}
                         <div className="flex justify-end space-x-2">
                             <Button variant="outline" onClick={onClose}>
                                 Cancel
@@ -322,7 +322,7 @@ export default function PrescriptionModal({
                             <Button
                                 onClick={handleGeneratePrescription}
                                 disabled={isGenerating}
-                                className="bg-purple-600 hover:bg-purple-700"
+                                className="bg-teal-600 hover:bg-teal-700"
                             >
                                 {isGenerating ? "Generating..." : "Generate Prescription"}
                             </Button>

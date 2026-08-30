@@ -1,6 +1,0 @@
-
-// Force creation of debug file
-console.log('Test debug file');
-2026-02-04T18:21:42.795Z - Patient Create Error: {"code":"PGRST204","details":null,"hint":null,"message":"Could not find the 'default_password' column of 'patients' in the schema cache"}
-2026-02-04T18:25:06.826Z - Patient Create Error: {"code":"23503","details":"Key (doctor_id)=(c4bf3095-e68b-46c7-9866-1f4934ceccd0) is not present in table \"users\".","hint":null,"message":"insert or update on table \"patients\" violates foreign key constraint \"patients_doctor_id_fkey\""}
-2026-02-04T18:39:46.845Z - Patient Create Error: {"code":"23505","details":"Key (phone)=(9370778994) already exists.","hint":null,"message":"duplicate key value violates unique constraint \"idx_patients_phone\""}

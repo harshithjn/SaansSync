@@ -7,27 +7,27 @@ import { Button } from '@/components/ui/button'
 
 export default function AboutPage() {
     return (
-        <div className="min-h-screen bg-[#fafafa] font-['Matter_Regular',sans-serif]">
+        <div className="min-h-screen bg-[#fafafa]">
             <Header currentPage="about" />
 
             <main className="container mx-auto px-8 py-32">
-                {/* Hero Section */}
+                {}
                 <div className="max-w-5xl mb-40 relative">
                     <div className="absolute -top-20 -left-20 w-64 h-64 bg-slate-100 rounded-full blur-3xl opacity-50 pointer-events-none" />
-                    <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-purple-50 text-purple-600 text-[10px] font-bold uppercase tracking-widest mb-10 border border-purple-100 shadow-sm relative z-10">
+                    <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-teal-50 text-teal-600 text-[10px] font-bold uppercase tracking-widest mb-10 border border-teal-100 shadow-sm relative z-10">
                         <Activity className="w-3.5 h-3.5" />
                         Our Mission
                     </div>
                     <h1 className="text-6xl md:text-8xl font-bold text-slate-900 tracking-tight mb-10 leading-[0.9] relative z-10">
                         Precision Care<br />
-                        <span className="text-purple-600/20">Synchronized.</span>
+                        <span className="text-teal-600/20">Synchronized.</span>
                     </h1>
                     <p className="text-xl md:text-2xl text-slate-500 font-medium leading-relaxed max-w-3xl relative z-10">
                         SaansSync is a smart platform dedicated to improving respiratory health through real-time monitoring and helpful insights for both patients and doctors.
                     </p>
                 </div>
 
-                {/* Core Pillars */}
+                {}
                 <div className="grid md:grid-cols-3 gap-12 mb-48">
                     {[
                         {
@@ -50,7 +50,7 @@ export default function AboutPage() {
                         }
                     ].map((pillar, i) => (
                         <div key={i} className={`p-8 rounded-[2.5rem] space-y-6 flex flex-col justify-between transition-all hover:translate-y-[-4px] duration-300 ${pillar.color}`}>
-                            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-50 text-purple-600">
+                            <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-teal-50 text-teal-600">
                                 <pillar.icon className="w-6 h-6" />
                             </div>
                             <div>
@@ -63,9 +63,7 @@ export default function AboutPage() {
                     ))}
                 </div>
 
-
-
-                {/* Call to Action */}
+                {}
                 <div className="p-16 md:p-32 rounded-[4rem] bg-slate-950 text-white relative overflow-hidden shadow-[0_50px_100px_-20px_rgba(0,0,0,0.3)] group cursor-default">
                     <div className="absolute top-0 right-0 w-1/2 h-full opacity-[0.03] pointer-events-none group-hover:scale-110 transition-all duration-[2000ms]">
                         <Wind className="w-full h-full text-white rotate-12" />
@@ -77,7 +75,7 @@ export default function AboutPage() {
                         <h2 className="text-4xl md:text-6xl font-bold mb-10 tracking-tight leading-tight text-white">Ready to improve<br />your health journey?</h2>
                         <div className="flex flex-col sm:flex-row gap-5">
                             <Link href="/sign-up">
-                                <Button className="h-16 px-10 bg-white text-slate-950 rounded-2xl font-bold text-lg tracking-tight hover:bg-purple-50 active:scale-[0.98] transition-all shadow-xl">
+                                <Button className="h-16 px-10 bg-white text-slate-950 rounded-2xl font-bold text-lg tracking-tight hover:bg-teal-50 active:scale-[0.98] transition-all shadow-xl">
                                     Get Started
                                     <ArrowRight className="w-5 h-5 ml-3" />
                                 </Button>

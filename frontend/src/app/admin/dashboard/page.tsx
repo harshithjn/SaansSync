@@ -16,9 +16,9 @@ import {
     LogOut
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { 
+import {
     getAllDoctors,
-    approveDoctorAccount, 
+    approveDoctorAccount,
     rejectDoctorAccount,
     fixApprovedDoctors
 } from '@/lib/auth-service'
@@ -26,7 +26,7 @@ import { formatDate } from '@/lib/utils'
 import {
     getCurrentUserProfile,
     signOut,
-    type DoctorProfile 
+    type DoctorProfile
 } from '@/lib/auth-service'
 import { toast } from '@/lib/toast'
 
@@ -75,9 +75,9 @@ export default function AdminDashboard() {
             console.log('👨‍💼 Loading doctors for admin dashboard...')
 
             const allDoctors = await getAllDoctors()
-            
+
             console.log('📊 Loaded doctors:', allDoctors.length)
-            
+
             if (allDoctors.length === 0) {
                 console.log('ℹ️ No doctors found - normal if no registrations yet')
                 toast.success('Admin dashboard loaded (no doctors registered yet)')
@@ -86,12 +86,11 @@ export default function AdminDashboard() {
             }
 
             setDoctors(allDoctors)
-            
-            // Calculate stats
-            const pending = allDoctors.filter(d => d.approval_status === 'pending').length
-            const approved = allDoctors.filter(d => d.approval_status === 'approved').length
-            const rejected = allDoctors.filter(d => d.approval_status === 'rejected').length
-            
+
+            const pending = allDoctors.filter(d => d.approvalStatus === 'pending').length
+            const approved = allDoctors.filter(d => d.approvalStatus === 'approved').length
+            const rejected = allDoctors.filter(d => d.approvalStatus === 'rejected').length
+
             setStats({
                 pending,
                 approved,
@@ -101,15 +100,10 @@ export default function AdminDashboard() {
 
         } catch (error) {
             console.error('❌ Error loading doctors:', error)
-            
-            // Check if this is a service role key issue
+
             if (error && typeof error === 'object' && 'message' in error) {
                 const errorMessage = (error as any).message
-                if (errorMessage.includes('Service role key not configured')) {
-                    toast.error('Admin functions require server service role configuration. Please set SUPABASE_SERVICE_ROLE_KEY on the backend.')
-                } else {
-                    toast.error(`Failed to load doctors: ${errorMessage}`)
-                }
+                toast.error(`Failed to load doctors: ${errorMessage}`)
             } else {
                 toast.error('Failed to load doctor data. Check console for details.')
             }
@@ -163,7 +157,7 @@ export default function AdminDashboard() {
             const result = await fixApprovedDoctors()
             if (result.success) {
                 toast.success(`Fixed ${result.fixed} approved doctors`)
-                await loadDoctors() // Reload the list
+                await loadDoctors()
             } else {
                 toast.error(result.error || 'Failed to fix approved doctors')
             }
@@ -187,13 +181,13 @@ export default function AdminDashboard() {
         }
     }
 
-    const filteredDoctors = doctors.filter(doctor => doctor.approval_status === selectedTab)
+    const filteredDoctors = doctors.filter(doctor => doctor.approvalStatus === selectedTab)
 
     if (checkingAuth) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-4"></div>
                     <p className="text-gray-600">Checking admin authentication...</p>
                 </div>
             </div>
@@ -201,7 +195,7 @@ export default function AdminDashboard() {
     }
 
     if (!isAuthenticated) {
-        return null // Will redirect to login
+        return null
     }
 
     return (
@@ -209,12 +203,12 @@ export default function AdminDashboard() {
             <Header currentPage="admin" />
 
             <div className="container mx-auto px-4 py-8">
-                {/* Header */}
+                {}
                 <div className="mb-8">
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                                <Shield className="w-6 h-6 text-purple-600" />
+                            <div className="w-12 h-12 rounded-xl bg-teal-100 flex items-center justify-center">
+                                <Shield className="w-6 h-6 text-teal-600" />
                             </div>
                             <div>
                                 <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
@@ -235,7 +229,7 @@ export default function AdminDashboard() {
                                 onClick={handleFixApprovedDoctors}
                                 disabled={loading}
                                 variant="outline"
-                                className="gap-2 bg-purple-50 border-purple-300 text-purple-600 hover:bg-purple-100"
+                                className="gap-2 bg-teal-50 border-teal-300 text-teal-600 hover:bg-teal-100"
                             >
                                 <RefreshCw className="w-4 h-4" />
                                 Fix Approved Doctors
@@ -252,7 +246,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* Stats Cards */}
+                {}
                 <div className="grid md:grid-cols-4 gap-6 mb-8">
                     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
                         <div className="flex items-center gap-3">
@@ -292,8 +286,8 @@ export default function AdminDashboard() {
 
                     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                                <Users className="w-5 h-5 text-purple-600" />
+                            <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center">
+                                <Users className="w-5 h-5 text-teal-600" />
                             </div>
                             <div>
                                 <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
@@ -303,7 +297,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* Tabs */}
+                {}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200">
                     <div className="border-b border-gray-200">
                         <div className="flex">
@@ -337,7 +331,7 @@ export default function AdminDashboard() {
                         </div>
                     </div>
 
-                    {/* Doctor Cards */}
+                    {}
                     <div className="p-6">
                         {filteredDoctors.length === 0 ? (
                             <div className="text-center py-12">
@@ -362,7 +356,7 @@ export default function AdminDashboard() {
                                         <div className="flex justify-between items-start mb-4">
                                             <div>
                                                 <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                                                    {doctor.full_name}
+                                                    {doctor.fullName}
                                                 </h3>
                                                 <div className="flex items-center gap-4 text-sm text-gray-600">
                                                     <div className="flex items-center gap-1">
@@ -371,20 +365,20 @@ export default function AdminDashboard() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className={`px-3 py-1 rounded-full text-xs font-medium ${doctor.approval_status === 'pending'
+                                            <div className={`px-3 py-1 rounded-full text-xs font-medium ${doctor.approvalStatus === 'pending'
                                                 ? 'bg-orange-100 text-orange-700'
-                                                : doctor.approval_status === 'approved'
+                                                : doctor.approvalStatus === 'approved'
                                                     ? 'bg-green-100 text-green-700'
                                                     : 'bg-red-100 text-red-700'
                                                 }`}>
-                                                {doctor.approval_status.charAt(0).toUpperCase() + doctor.approval_status.slice(1)}
+                                                {doctor.approvalStatus.charAt(0).toUpperCase() + doctor.approvalStatus.slice(1)}
                                             </div>
                                         </div>
 
                                         <div className="grid md:grid-cols-2 gap-4 mb-4">
                                             <div className="flex items-center gap-2 text-sm text-gray-600">
                                                 <Calendar className="w-4 h-4" />
-                                                <span>Registered: {formatDate(doctor.created_at)}</span>
+                                                <span>Registered: {formatDate(doctor.createdAt)}</span>
                                             </div>
                                             <div className="flex items-center gap-2 text-sm text-gray-600">
                                                 <Users className="w-4 h-4" />
@@ -392,15 +386,15 @@ export default function AdminDashboard() {
                                             </div>
                                         </div>
 
-                                        {doctor.updated_at !== doctor.created_at && (
+                                        {doctor.updatedAt !== doctor.createdAt && (
                                             <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                                                 <p className="text-sm text-gray-600">
-                                                    <strong>Last Updated:</strong> {formatDate(doctor.updated_at)}
+                                                    <strong>Last Updated:</strong> {formatDate(doctor.updatedAt)}
                                                 </p>
                                             </div>
                                         )}
 
-                                        {doctor.approval_status === 'pending' && (
+                                        {doctor.approvalStatus === 'pending' && (
                                             <div className="flex gap-3">
                                                 <Button
                                                     onClick={() => handleApprove(doctor.id)}
@@ -422,7 +416,7 @@ export default function AdminDashboard() {
                                             </div>
                                         )}
 
-                                        {doctor.approval_status === 'approved' && (
+                                        {doctor.approvalStatus === 'approved' && (
                                             <div className="p-3 bg-green-50 rounded-lg">
                                                 <p className="text-sm text-green-700">
                                                     ✅ <strong>Account Active:</strong> Doctor can login with their email and password
@@ -433,7 +427,7 @@ export default function AdminDashboard() {
                                             </div>
                                         )}
 
-                                        {doctor.approval_status === 'rejected' && (
+                                        {doctor.approvalStatus === 'rejected' && (
                                             <div className="p-3 bg-red-50 rounded-lg">
                                                 <p className="text-sm text-red-700">
                                                     ❌ <strong>Account Rejected:</strong> Doctor cannot access the system

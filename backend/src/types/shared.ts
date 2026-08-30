@@ -1,15 +1,9 @@
-// ============================================================
-// SHARED TYPES FOR BACKEND (Daily Logs, Scoring, Alerts)
-// ============================================================
-// These types are duplicated from frontend to maintain separation of concerns
-// and allow backend to compile independently
-
 export interface DailyLogCommon {
-    logDate: string; // ISO Date
+    logDate: string;
     aqi: {
         pm25: number;
         pm10: number;
-        status: string; // 'Good' | 'Poor' | 'Hazardous' etc
+        status: string;
     };
     spo2: {
         atRest: number;
@@ -17,27 +11,25 @@ export interface DailyLogCommon {
     };
     oxygenRequirement: {
         status: 'Static' | 'Increased' | 'Decreased';
-        delta?: number; // Litres
+        delta?: number;
     };
-    mMRCScore: string | number; // 0-4
+    mMRCScore: string | number;
     medicationAdherence: {
-        medicationId: string; // ID from PatientData.medications
+        medicationId: string;
         taken: boolean;
-        name?: string; // Optional for display
+        name?: string;
     }[];
     sideEffects: {
         type: string;
         description?: string;
     }[];
     symptoms: {
-        vasScore: number; // 0-10
+        vasScore: number;
         previousVasScore?: number;
         hasPedalEdema: boolean;
         others?: string;
     };
 }
-
-// Disease Specific Logs
 
 export type AsthmaControlStatus = 'Well controlled' | 'Partly controlled' | 'Poorly controlled';
 
@@ -47,7 +39,7 @@ export interface AsthmaSpecificLog {
         nightWaking: boolean;
         relieverUse: boolean;
         activityLimitation: boolean;
-        classification?: AsthmaControlStatus; // Computed
+        classification?: AsthmaControlStatus;
     };
     daily: {
         rescuePuffs: number;
@@ -57,14 +49,14 @@ export interface AsthmaSpecificLog {
 
 export interface COPDSpecificLog {
     symptoms: {
-        coughFrequency: number; // 0-4
-        phlegmProduction: number; // 0-4
-        exerciseTolerance: boolean; // Yes/No (Limited?)
-        sleepDisturbance: boolean; // Yes/No
+        coughFrequency: number;
+        phlegmProduction: number;
+        exerciseTolerance: boolean;
+        sleepDisturbance: boolean;
     };
     daily: {
-        energyVas: number; // 0-10
-        chestTightnessVas: number; // 0-10
+        energyVas: number;
+        chestTightnessVas: number;
         stepCount?: number;
     };
 }
@@ -74,31 +66,28 @@ export interface BronchiectasisSpecificLog {
         volume: 'None' | 'Small' | 'Moderate' | 'Large';
         color: 'White' | 'Pale Yellow' | 'Green' | 'Red/Rusty';
     };
-    clearanceEase: number; // 1-5
+    clearanceEase: number;
     infectionScreen: {
         fever: boolean;
         malaise: boolean;
     };
 }
 
-// Post-ICU reuses Bronchiectasis structure as per requirements
 export type PostICUSpecificLog = BronchiectasisSpecificLog;
 
 export interface ILDSpecificLog {
-    dryCoughFrequencyChange: number; // 0-4 or scale
-    breathlessnessAtRest: number; // VAS or scale? Assuming similar to mMRC or VAS
+    dryCoughFrequencyChange: number;
+    breathlessnessAtRest: number;
     kbildScore?: number;
-    // SpO2 trends are derived from common section
+
 }
 
 export interface DailyLogSubmission {
     patientId: string;
-    diseaseType: string; // "Bronchial Asthma", "COPD", etc.
+    diseaseType: string;
     common: DailyLogCommon;
     specific: AsthmaSpecificLog | COPDSpecificLog | BronchiectasisSpecificLog | ILDSpecificLog;
 }
-
-// Alerts
 
 export type AlertLevel = 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED';
 
@@ -106,8 +95,8 @@ export interface Alert {
     id: string;
     patientId: string;
     doctorId?: string;
-    date: string; // ISO
-    score: number; // 0-10
+    date: string;
+    score: number;
     level: AlertLevel;
     drivers: string[];
     diseaseType: string;

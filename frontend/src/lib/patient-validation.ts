@@ -7,8 +7,6 @@ export const validateStep1 = (data: PatientData): StepValidation => {
         errors.push({ field: 'fullName', message: 'Full name is required' })
     }
 
-
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!data.emailId.trim()) {
         errors.push({ field: 'emailId', message: 'Email ID is required' })
@@ -42,22 +40,18 @@ export const validateStep2 = (data: PatientData): StepValidation => {
         errors.push({ field: 'subtype', message: 'Diagnosis subtype is required' })
     }
 
-    // Conditional validation for CTD-ILD
     if (data.diagnosis.subtype === 'CTD-ILD' && !data.diagnosis.ctdType) {
         errors.push({ field: 'ctdType', message: 'CTD type is required when subtype is CTD-ILD' })
     }
 
-    // Conditional validation for Sarcoidosis
     if (data.diagnosis.subtype === 'Sarcoidosis' && !data.diagnosis.sarcoidosisStage) {
         errors.push({ field: 'sarcoidosisStage', message: 'Sarcoidosis stage is required when subtype is Sarcoidosis' })
     }
 
-    // Conditional validation for ILD Fibrotic field
     if (data.diagnosis.primaryCategory === 'Interstitial Lung Disease (ILD)' && !data.diagnosis.fibroticiLD) {
         errors.push({ field: 'fibroticiLD', message: 'Fibrotic ILD status is required for ILD diagnosis' })
     }
 
-    // Conditional validation for custom subtype
     if (data.diagnosis.subtype === 'Others' && (!data.diagnosis.customSubtype || !data.diagnosis.customSubtype.trim())) {
         errors.push({ field: 'customSubtype', message: 'Custom subtype is required when "Others" is selected' })
     }
@@ -85,7 +79,7 @@ export const validateMedications = (medications: Medication[]): ValidationError[
         if (!med.drugName) {
             errors.push({ field: `medication-${index}-drugName`, message: `Medication ${index + 1}: Drug name is required` })
         }
-        // Validate custom drug name when "Other" is selected
+
         if (med.drugName === "Other" && (!med.customDrugName || !med.customDrugName.trim())) {
             errors.push({ field: `medication-${index}-customDrugName`, message: `Medication ${index + 1}: Custom drug name is required when "Other" is selected` })
         }
@@ -110,7 +104,7 @@ export const validateMedications = (medications: Medication[]): ValidationError[
 }
 
 export const validateStep3 = (data: PatientData): StepValidation => {
-    // Medications are optional - if no medications are added, validation passes
+
     if (data.medications.length === 0) {
         return {
             isValid: true,
@@ -129,7 +123,6 @@ export const validateStep3 = (data: PatientData): StepValidation => {
 export const validatePFTRecord = (record: PFTRecord, index: number): ValidationError[] => {
     const errors: ValidationError[] = []
 
-    // Validate numeric ranges for entered values
     Object.entries(PFT_RANGES).forEach(([key, range]) => {
         const fieldMap: { [key: string]: string } = {
             'FVC': record.fvc,
@@ -201,7 +194,6 @@ export const isValueAbnormal = (key: string, value: string): boolean => {
 
     return numValue < range.min || numValue > range.max
 }
-
 
 export const extractDigits = (input: string): string => {
     return input.replace(/\D/g, '')

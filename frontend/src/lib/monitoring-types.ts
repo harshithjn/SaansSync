@@ -1,10 +1,8 @@
-// Core Monitoring Platform Types
 export type DiseaseType = 'Asthma' | 'COPD' | 'ILD' | 'Bronchiectasis' | 'Post-Infection'
 
 export type AlertLevel = 'low' | 'moderate' | 'high' | 'critical'
 export type FolderColor = 'green' | 'yellow' | 'orange' | 'red'
 
-// Doctor-Patient Mapping
 export interface DoctorPatientMapping {
     doctorId: string
     patientId: string
@@ -12,17 +10,15 @@ export interface DoctorPatientMapping {
     diseaseType: DiseaseType
 }
 
-// Red Flag Scoring System
 export interface RedFlagScore {
     patientId: string
-    score: number // 1-10
+    score: number
     level: AlertLevel
     factors: string[]
     calculatedAt: string
     diseaseSpecificFactors: any
 }
 
-// Common Patient Dashboard Data
 export interface CommonPatientData {
     patientId: string
     firstLogDate: string
@@ -44,14 +40,13 @@ export interface CommonPatientData {
         hasImprovement: boolean
         oxygenChange: number
     }
-    mMRCScale: number // 0-4
+    mMRCScale: number
     medications: PatientMedicationLog[]
     sideEffects: string[]
     customSideEffect?: string
     symptoms: SymptomVAS[]
 }
 
-// Medication Logging
 export interface PatientMedicationLog {
     medicationId: string
     drugName: string
@@ -62,43 +57,41 @@ export interface PatientMedicationLog {
     sideEffects?: string[]
 }
 
-// VAS Symptoms
 export interface SymptomVAS {
     id: string
     name: string
-    score: number // 1-10
+    score: number
     previousScore?: number
     loggedAt: string
 }
 
-// Disease-Specific Dashboard Data
 export interface AsthmaData {
     patientId: string
     logDate: string
-    // Asthma Control (Last 4 Weeks)
-    daytimeSymptoms: boolean // >2/week
+
+    daytimeSymptoms: boolean
     nightWaking: boolean
-    relieverUse: boolean // >2/week
+    relieverUse: boolean
     activityLimitation: boolean
     controlLevel: 'well-controlled' | 'partly-controlled' | 'uncontrolled'
-    // Daily Tracking
+
     rescueInhalerPuffs: number
-    peakFlow: number // PEFR L/min
-    peakFlowPercent?: number // % of personal best
+    peakFlow: number
+    peakFlowPercent?: number
 }
 
 export interface COPDData {
     patientId: string
     logDate: string
-    // COPD Impact (Weekly)
-    coughFrequency: number // 0-4
-    phlegmProduction: number // 0-4
+
+    coughFrequency: number
+    phlegmProduction: number
     exerciseTolerance: boolean
     sleepDisturbed: boolean
-    // Exacerbation Risk (Daily)
-    energyLevel: number // VAS 0-10
-    chestHeaviness: number // VAS 0-10
-    // Ancillary Data
+
+    energyLevel: number
+    chestHeaviness: number
+
     dailyStepCount?: number
     sputumVolume: 'none' | 'small' | 'moderate' | 'large'
     sputumColor: string
@@ -108,12 +101,12 @@ export interface COPDData {
 export interface BronchiectasisData {
     patientId: string
     logDate: string
-    // Sputum Tracker
+
     sputumVolume: 'none' | 'small' | 'moderate' | 'large'
     sputumColor: 'white' | 'pale-yellow' | 'dark-green' | 'blood-streaked'
-    easeOfClearance: number // 1-5
-    // Infection Screen
-    fever: boolean // >38°C
+    easeOfClearance: number
+
+    fever: boolean
     malaise: boolean
     hasHemoptysis: boolean
 }
@@ -121,31 +114,30 @@ export interface BronchiectasisData {
 export interface ILDData {
     patientId: string
     logDate: string
-    // Fibrosis & Progression Monitor
+
     breathlessnessChange: 'better' | 'same' | 'worse'
-    dryCoughSeverity: number // VAS 0-10
-    fatigueLevel: number // VAS 0-10
-    // Oxygen Dependency
-    restOxygen: number // L/min
-    exertionalOxygen: number // L/min
+    dryCoughSeverity: number
+    fatigueLevel: number
+
+    restOxygen: number
+    exertionalOxygen: number
     oxygenIncrease: boolean
-    // Red Flags
+
     newChestPain: boolean
-    suddenSpo2Drop: boolean // >4%
+    suddenSpo2Drop: boolean
     spo2BaselineDrop: number
 }
 
 export interface PostInfectionData extends BronchiectasisData {
-    // Recovery Tracking
+
     exerciseToleranceImprovement: boolean
     appetite: 'poor' | 'fair' | 'good'
-    weightChange: number // ± kg
-    // Post-Infection Complications
-    persistentCough: boolean // >3 weeks
+    weightChange: number
+
+    persistentCough: boolean
     hemoptysis: boolean
 }
 
-// Alert System
 export interface Alert {
     id: string
     patientId: string
@@ -153,17 +145,14 @@ export interface Alert {
     type?: 'critical' | 'high-risk' | 'pending-review'
     level?: 'RED' | 'YELLOW' | 'low' | 'moderate' | 'high' | 'critical'
     message: string
-    reason_text?: string
+    reasonText?: string
     factors?: string[]
     redFlagScore?: number
     createdAt?: string
-    created_at?: string
     acknowledged: boolean
     diseaseType?: DiseaseType
-    disease_type?: string
 }
 
-// Patient Folder Display
 export interface PatientFolder {
     patientId: string
     fullName: string
@@ -176,7 +165,6 @@ export interface PatientFolder {
     doctorId: string
 }
 
-// Export Data Options
 export interface ExportOptions {
     patientIds: string[]
     diseaseSpecific: boolean
@@ -189,7 +177,6 @@ export interface ExportOptions {
     includeGraphs: boolean
 }
 
-// AQI Data
 export interface AQIData {
     aqi: number
     pm25: number
@@ -201,7 +188,6 @@ export interface AQIData {
     coordinates?: [number, number]
 }
 
-// Medication Types for Prescription
 export type MedicationType = 'Injection' | 'Tablet' | 'Capsule' | 'Nebulisation' | 'Inhaler' | 'Nasal Spray'
 
 export interface PrescribedMedication {
@@ -217,23 +203,21 @@ export interface PrescribedMedication {
     isActive: boolean
 }
 
-// Doctor Profile
 export interface DoctorProfile {
     id: string
-    full_name: string
+    fullName: string
     email: string
     specialization?: string
-    hospital_affiliation?: string
-    license_number?: string
-    approval_status: 'pending' | 'approved' | 'rejected'
+    hospitalAffiliation?: string
+    licenseNumber?: string
+    approvalStatus: 'pending' | 'approved' | 'rejected'
 }
 
-// Patient Profile for Settings
 export interface PatientProfile {
     id: string
-    full_name: string
+    fullName: string
     email: string
-    patient_data?: {
+    patientData?: {
         age?: number
         diagnosis?: {
             primaryCategory?: string
@@ -241,7 +225,6 @@ export interface PatientProfile {
     }
 }
 
-// Doctor Instructions
 export interface DoctorInstruction {
     id: string
     patientId: string

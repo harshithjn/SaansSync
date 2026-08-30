@@ -25,3 +25,19 @@ Most remote respiratory monitoring tools rely on isolated or noisy data points, 
 ## SaansSync Solution
 
 SaansSync integrates physiological data, symptoms, and adherence signals into a **unified, full-stack signal-stabilisation and trend-analysis engine**. Its **scalable backend, secure APIs, and responsive front-end dashboards** allow clinicians to identify meaningful changes in patient condition earlier and with greater confidence—whether monitoring a single patient or thousands concurrently.
+
+## Deployment
+
+- **Database**: [Neon](https://neon.tech) (managed Postgres). Create a project, copy the direct (non-pooled) connection string into `DATABASE_URL`.
+- **Backend**: [Render](https://render.com), deployed from `render.yaml` at the repo root (Docker runtime, builds `backend/Dockerfile`, health check at `/health`). See `backend/.env.example` for required environment variables.
+- **Frontend**: [Vercel](https://vercel.com). Set the project's Root Directory to `frontend`. See `frontend/.env.example` for required environment variables.
+
+First-time database setup, run locally against your Neon connection string:
+
+```bash
+cd backend
+npx prisma migrate dev --name init
+npx prisma db seed
+```
+
+In production, Render should run `npx prisma migrate deploy` before each release (configurable as a Render pre-deploy command) to apply new migrations without resetting data.

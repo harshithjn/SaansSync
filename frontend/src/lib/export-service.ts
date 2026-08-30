@@ -1,11 +1,9 @@
-// Export Data Service
 import api from './api'
 import { formatDate } from './utils'
 import { ExportOptions, PatientFolder, CommonPatientData, AsthmaData, COPDData, BronchiectasisData, ILDData, PostInfectionData } from './monitoring-types'
 import { getDoctorPatientFolders } from './doctor-patient-mapping'
 import { getPatientAlerts } from './alert-system'
 
-// Export patient data in various formats
 export function exportPatientData(
     doctorId: string,
     options: ExportOptions
@@ -41,7 +39,6 @@ export function exportPatientData(
     }
 }
 
-// Generate export data structure
 function generateExportData(patients: PatientFolder[], options: ExportOptions) {
     const startDate = new Date(options.dateRange.start)
     const endDate = new Date(options.dateRange.end)
@@ -65,7 +62,6 @@ function generateExportData(patients: PatientFolder[], options: ExportOptions) {
     })
 }
 
-// Get common patient data from localStorage
 function getCommonPatientData(patientId: string): CommonPatientData | null {
     if (typeof window === 'undefined') return null
 
@@ -78,7 +74,6 @@ function getCommonPatientData(patientId: string): CommonPatientData | null {
     }
 }
 
-// Get disease-specific data from localStorage
 function getDiseaseSpecificData(patientId: string, diseaseType: string): any {
     if (typeof window === 'undefined') return null
 
@@ -92,7 +87,6 @@ function getDiseaseSpecificData(patientId: string, diseaseType: string): any {
     }
 }
 
-// Generate patient summary
 function generatePatientSummary(
     patient: PatientFolder,
     commonData: CommonPatientData | null,
@@ -115,7 +109,6 @@ function generatePatientSummary(
     }
 }
 
-// Generate CSV format
 function generateCSV(exportData: any[], options: ExportOptions): string {
     const headers = [
         'Patient ID',
@@ -134,7 +127,7 @@ function generateCSV(exportData: any[], options: ExportOptions): string {
     ]
 
     if (options.diseaseSpecific) {
-        // Add disease-specific headers based on the first patient's disease type
+
         if (exportData.length > 0) {
             const diseaseType = exportData[0].patient.diseaseType
             headers.push(...getDiseaseSpecificHeaders(diseaseType))
@@ -170,7 +163,6 @@ function generateCSV(exportData: any[], options: ExportOptions): string {
         .join('\n')
 }
 
-// Get disease-specific CSV headers
 function getDiseaseSpecificHeaders(diseaseType: string): string[] {
     switch (diseaseType) {
         case 'Asthma':
@@ -222,7 +214,6 @@ function getDiseaseSpecificHeaders(diseaseType: string): string[] {
     }
 }
 
-// Get disease-specific CSV values
 function getDiseaseSpecificValues(diseaseType: string, diseaseData: any): string[] {
     switch (diseaseType) {
         case 'Asthma':
@@ -279,17 +270,13 @@ function getDiseaseSpecificValues(diseaseType: string, diseaseData: any): string
     }
 }
 
-// Generate Excel data (simplified - would need a library like xlsx for full implementation)
 function generateExcelData(exportData: any[], options: ExportOptions): string {
-    // For now, return CSV format with Excel MIME type
-    // In a real implementation, you'd use a library like xlsx to generate proper Excel files
+
     return generateCSV(exportData, options)
 }
 
-// Generate PDF data (simplified - would need a library like jsPDF for full implementation)
 function generatePDFData(exportData: any[], options: ExportOptions): string {
-    // For now, return a formatted text report
-    // In a real implementation, you'd use a library like jsPDF to generate proper PDFs
+
     let report = `PATIENT MONITORING REPORT\n`
     report += `Generated: ${new Date().toLocaleString()}\n`
     report += `Date Range: ${options.dateRange.start} to ${options.dateRange.end}\n\n`
@@ -307,7 +294,6 @@ function generatePDFData(exportData: any[], options: ExportOptions): string {
     return report
 }
 
-// Download file helper
 export function downloadFile(data: string, filename: string, mimeType: string): void {
     if (typeof window === 'undefined') return
 
@@ -322,7 +308,6 @@ export function downloadFile(data: string, filename: string, mimeType: string): 
     window.URL.revokeObjectURL(url)
 }
 
-// Generate summary statistics for export
 export function generateExportSummary(doctorId: string): {
     totalPatients: number
     byDisease: Record<string, number>
@@ -344,16 +329,14 @@ export function generateExportSummary(doctorId: string): {
     let criticalAlerts = 0
 
     patients.forEach(patient => {
-        // Count by disease
+
         byDisease[patient.diseaseType] = (byDisease[patient.diseaseType] || 0) + 1
 
-        // Count by risk level
         const riskLevel = patient.redFlagScore >= 9 ? 'Critical' :
             patient.redFlagScore >= 7 ? 'High' :
                 patient.redFlagScore >= 4 ? 'Moderate' : 'Low'
         byRiskLevel[riskLevel]++
 
-        // Count alerts
         const alerts = getPatientAlerts(patient.patientId)
         totalAlerts += alerts.length
         criticalAlerts += alerts.filter(a => a.type === 'critical').length

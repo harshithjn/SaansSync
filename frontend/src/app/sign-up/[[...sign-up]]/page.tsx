@@ -43,13 +43,13 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-white font-['Matter_Regular',sans-serif]">
-      {/* Visual Context - Left Side */}
+    <div className="flex min-h-screen bg-white">
+      {}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-950 p-20 flex-col justify-between relative overflow-hidden">
         <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
             <Sparkles className="w-[120%] h-[120%] -translate-x-1/4 -translate-y-1/4 text-white rotate-12" />
         </div>
-        
+
         <div className="relative z-10">
           <Link href="/" className="flex items-center gap-4 text-white mb-32 group">
             <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center p-2.5 group-hover:scale-110 transition-all duration-500 shadow-2xl">
@@ -60,12 +60,12 @@ export default function SignUpPage() {
                 <span className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1.5">Smart Care v3.4</span>
             </div>
           </Link>
-          
+
           <div className="max-w-lg space-y-10">
             <h1 className="text-6xl font-bold text-white tracking-tight leading-[0.9]">
               Start Your<br />
               Health<br />
-              <span className="text-purple-500/40">Journey.</span>
+              <span className="text-teal-500/40">Journey.</span>
             </h1>
             <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-sm">
               Create your account to stay connected and manage your health with ease.
@@ -76,7 +76,7 @@ export default function SignUpPage() {
         <div className="relative z-10 space-y-8">
             <div className="flex items-center gap-6 p-8 bg-white/5 rounded-[2.5rem] border border-white/5 backdrop-blur-xl max-w-md group">
                 <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-slate-400 border border-white/10">
-                    <Users className="w-7 h-7 text-purple-400" />
+                    <Users className="w-7 h-7 text-teal-400" />
                 </div>
                 <div>
                     <p className="text-white font-bold text-sm tracking-tight uppercase">Better Connection</p>
@@ -85,7 +85,7 @@ export default function SignUpPage() {
             </div>
             <div className="flex items-center gap-6 p-8 bg-white/5 rounded-[2.5rem] border border-white/5 backdrop-blur-xl max-w-md group">
                 <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center text-slate-400 border border-white/10">
-                    <CheckCircle2 className="w-7 h-7 text-purple-400" />
+                    <CheckCircle2 className="w-7 h-7 text-teal-400" />
                 </div>
                 <div>
                     <p className="text-white font-bold text-sm tracking-tight uppercase">Friendly Design</p>
@@ -95,7 +95,7 @@ export default function SignUpPage() {
         </div>
       </div>
 
-      {/* Auth Interface - Right Side */}
+      {}
       <div className="w-full lg:w-1/2 flex flex-col p-12 lg:p-24 relative bg-white overflow-y-auto">
         <div className="md:absolute md:top-12 md:left-12 mb-12 md:mb-0">
           <Link href="/" className="inline-flex items-center gap-3 text-slate-400 hover:text-slate-900 transition-all font-bold text-[10px] uppercase tracking-widest group">
@@ -115,14 +115,14 @@ export default function SignUpPage() {
           <div className="flex gap-2 p-1 bg-slate-50 rounded-2xl mb-10 border border-slate-100">
             <button
               type="button"
-              className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all duration-300 ${role === "doctor" ? "bg-white shadow-sm text-purple-600" : "text-slate-400 hover:text-slate-600"}`}
+              className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all duration-300 ${role === "doctor" ? "bg-white shadow-sm text-teal-600" : "text-slate-400 hover:text-slate-600"}`}
               onClick={() => setRole("doctor")}
             >
               Doctor
             </button>
             <button
               type="button"
-              className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all duration-300 ${role === "patient" ? "bg-white shadow-sm text-purple-600" : "text-slate-400 hover:text-slate-600"}`}
+              className={`flex-1 py-3 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all duration-300 ${role === "patient" ? "bg-white shadow-sm text-teal-600" : "text-slate-400 hover:text-slate-600"}`}
               onClick={() => setRole("patient")}
             >
               Patient
@@ -189,13 +189,13 @@ export default function SignUpPage() {
 
             <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
               Already have an account?{" "}
-              <Link href="/sign-in" className="text-purple-600 hover:underline underline-offset-4">
+              <Link href="/sign-in" className="text-teal-600 hover:underline underline-offset-4">
                 Login
               </Link>
             </p>
           </form>
         </div>
-        
+
         <div className="mt-12 text-center lg:text-left">
             <div className="flex items-center justify-center lg:justify-start gap-4 mb-3">
                 <ShieldCheck className="w-4 h-4 text-slate-500" />

@@ -183,8 +183,8 @@ export default function PatientDetailView({
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-16 font-['Matter_Regular',sans-serif]">
-      {/* Dynamic Action Header */}
+    <div className="max-w-7xl mx-auto space-y-16">
+      {}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 border-b border-slate-50 pb-12">
         <div className="flex items-center gap-8">
             <button onClick={() => router.back()} className="w-14 h-14 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-950 hover:shadow-xl transition-all duration-500 active:scale-95 group">
@@ -216,15 +216,15 @@ export default function PatientDetailView({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
-        {/* Core Profile Statistics */}
+        {}
         <div className="lg:col-span-1 space-y-8">
             <Card className="p-10 border-none bg-white rounded-[3rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.03)] border border-slate-50 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -translate-y-16 translate-x-16 opacity-50 group-hover:scale-110 transition-transform duration-700" />
                 <div className="relative z-10 flex flex-col items-center text-center">
                     <div className="w-28 h-28 bg-white rounded-[2.5rem] flex items-center justify-center border-2 border-slate-50 shadow-xl mb-8 relative overflow-hidden">
-                        <img 
-                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${patientData.fullName}`} 
-                            alt="Avatar" 
+                        <img
+                            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${patientData.fullName}`}
+                            alt="Avatar"
                             className="w-20 h-20 object-contain"
                         />
                     </div>
@@ -242,7 +242,7 @@ export default function PatientDetailView({
                         ].map((item, i) => (
                             <div key={i} className="space-y-2 group/item cursor-default">
                                 <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.3em] flex items-center gap-3 group-hover/item:text-slate-950 transition-colors">
-                                    <item.icon className="w-3.5 h-3.5" /> 
+                                    <item.icon className="w-3.5 h-3.5" />
                                     {item.label}
                                 </p>
                                 <p className="text-sm font-bold text-slate-950 tracking-tight leading-none pl-6.5">{item.value}</p>
@@ -276,9 +276,9 @@ export default function PatientDetailView({
                         { value: 'medications', label: 'Medications', icon: Pill },
                         { value: 'instructions', label: 'Instructions', icon: FileText }
                     ].map((tab) => (
-                        <TabsTrigger 
+                        <TabsTrigger
                             key={tab.value}
-                            value={tab.value} 
+                            value={tab.value}
                             className="flex-1 rounded-2xl px-6 font-bold text-[10px] uppercase tracking-[0.2em] data-[state=active]:bg-slate-950 data-[state=active]:text-white data-[state=active]:shadow-2xl data-[state=active]:shadow-slate-200 transition-all duration-500 flex items-center justify-center gap-3 group"
                         >
                             <tab.icon className={`w-4 h-4 transition-colors ${tab.count ? 'text-rose-500' : 'text-slate-200 group-data-[state=active]:text-white'}`} />
@@ -292,7 +292,7 @@ export default function PatientDetailView({
                     ))}
                 </TabsList>
 
-                {/* Telemetry Content */}
+                {}
                 <TabsContent value="vitals" className="mt-12 space-y-12 outline-none animate-in fade-in duration-700">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50 hover:shadow-2xl transition-all duration-700 group relative overflow-hidden">
@@ -310,7 +310,7 @@ export default function PatientDetailView({
                             </div>
                         </Card>
                         <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50 hover:shadow-2xl transition-all duration-700 group relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-50 rounded-full -translate-y-16 translate-x-16 opacity-0 group-hover:opacity-100 transition-all duration-700" />
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-full -translate-y-16 translate-x-16 opacity-0 group-hover:opacity-100 transition-all duration-700" />
                             <div className="flex justify-between items-start mb-8 relative z-10">
                                 <div className="w-14 h-14 bg-slate-50 text-slate-400 rounded-2xl flex items-center justify-center group-hover:bg-slate-950 group-hover:text-white transition-all duration-500 shadow-sm">
                                     <Activity className="w-7 h-7" />
@@ -320,7 +320,7 @@ export default function PatientDetailView({
                             <h4 className="text-[10px] font-bold uppercase tracking-[0.3em] text-slate-400 mb-3 ml-1">Breathlessness (mMRC)</h4>
                             <div className="flex items-baseline gap-4 relative z-10">
                                 <span className="text-6xl font-bold text-slate-950 tracking-tighter">1.2<span className="text-slate-200 text-3xl">/4</span></span>
-                                <Badge className="bg-purple-500/10 text-purple-600 border-none font-bold text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-full">NORMAL</Badge>
+                                <Badge className="bg-teal-500/10 text-teal-600 border-none font-bold text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-full">NORMAL</Badge>
                             </div>
                         </Card>
                     </div>
@@ -369,7 +369,7 @@ export default function PatientDetailView({
                     </Card>
                 </TabsContent>
 
-                {/* Alerts Content */}
+                {}
                 <TabsContent value="alerts" className="mt-12 space-y-8 outline-none animate-in slide-in-from-bottom-4 duration-700">
                     <div className="flex items-center justify-between mb-2 px-2">
                         <h3 className="text-3xl font-bold text-slate-950 tracking-tighter">Patient Alerts</h3>
@@ -394,17 +394,17 @@ export default function PatientDetailView({
                                             </div>
                                             <div>
                                                 <div className="flex items-center gap-4 mb-3">
-                                                    <h4 className="text-xl font-bold text-slate-950 tracking-tight leading-none">{alert.reason_text || alert.message}</h4>
+                                                    <h4 className="text-xl font-bold text-slate-950 tracking-tight leading-none">{alert.reasonText}</h4>
                                                     {!alert.acknowledged && <Badge className="bg-rose-500 text-white text-[9px] uppercase font-bold tracking-[0.2em] px-3 py-1 rounded-lg">High Severity</Badge>}
                                                 </div>
                                                 <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest flex items-center gap-2">
                                                     <Clock className="w-3.5 h-3.5" />
-                                                    Time: {formatDate(alert.created_at)}
+                                                    Time: {formatDate(alert.createdAt)}
                                                 </p>
                                             </div>
                                         </div>
                                         {!alert.acknowledged && (
-                                            <Button 
+                                            <Button
                                                 onClick={() => handleAcknowledgeAlert(alert.id)}
                                                 className="h-16 px-10 rounded-[1.5rem] bg-slate-950 text-white font-bold text-[10px] uppercase tracking-widest shadow-2xl shadow-slate-200 hover:bg-slate-800 transition-all active:scale-95"
                                             >
@@ -424,14 +424,14 @@ export default function PatientDetailView({
                     )}
                 </TabsContent>
 
-                {/* Medications Content */}
+                {}
                 <TabsContent value="medications" className="mt-12 space-y-12 outline-none animate-in fade-in duration-700">
                     <div className="flex items-center justify-between px-2">
                         <div className="space-y-1">
                             <h3 className="text-3xl font-bold text-slate-950 tracking-tighter">Medications</h3>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Active treatment plan</p>
                         </div>
-                        <Button 
+                        <Button
                             onClick={() => setShowPrescriptionModal(true)}
                             className="bg-slate-950 hover:bg-slate-800 text-white rounded-[1.8rem] h-16 px-10 font-bold text-[10px] uppercase tracking-widest shadow-2xl shadow-slate-200 transition-all active:scale-95 flex items-center gap-4"
                         >
@@ -489,14 +489,14 @@ export default function PatientDetailView({
                     )}
                 </TabsContent>
 
-                {/* Instructions Content */}
+                {}
                 <TabsContent value="instructions" className="mt-12 space-y-12 outline-none animate-in fade-in duration-700">
                     <div className="flex items-center justify-between px-2">
                          <div className="space-y-1">
                             <h3 className="text-3xl font-bold text-slate-950 tracking-tighter">Instructions</h3>
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Guidance for the patient</p>
                         </div>
-                        <Button 
+                        <Button
                             onClick={handleAddInstruction}
                             className="bg-slate-950 hover:bg-slate-800 text-white rounded-[1.8rem] h-16 px-10 font-bold text-[10px] uppercase tracking-widest shadow-2xl shadow-slate-200 transition-all active:scale-95 flex items-center gap-4"
                         >
@@ -547,14 +547,14 @@ export default function PatientDetailView({
             </Tabs>
         </div>
 
-        {/* Prescription Modal Integration */}
+        {}
         {showPrescriptionModal && (
             <PrescriptionModal
                 isOpen={showPrescriptionModal}
                 patientData={patientData}
                 patientId={patientId}
                 doctorId={doctorId}
-                doctorName={authState?.profile?.full_name || "Clinical Lead"}
+                doctorName={authState?.profile?.fullName || "Clinical Lead"}
                 onClose={() => setShowPrescriptionModal(false)}
             />
         )}

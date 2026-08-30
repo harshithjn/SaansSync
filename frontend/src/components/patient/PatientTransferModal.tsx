@@ -5,11 +5,11 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { 
-    initiatePatientTransfer, 
-    getTransferStatus, 
+import {
+    initiatePatientTransfer,
+    getTransferStatus,
     cancelPendingTransfer,
-    formatTimeRemaining 
+    formatTimeRemaining
 } from "@/lib/patient-transfer"
 import { UserX, Clock, ShieldCheck, AlertTriangle, Copy, CheckCircle2, Loader2, ArrowRight, Zap, ShieldAlert } from "lucide-react"
 
@@ -19,10 +19,10 @@ interface PatientTransferModalProps {
     onClose: () => void
 }
 
-export default function PatientTransferModal({ 
-    patientId, 
-    isOpen, 
-    onClose 
+export default function PatientTransferModal({
+    patientId,
+    isOpen,
+    onClose
 }: PatientTransferModalProps) {
     const [step, setStep] = useState<'confirm' | 'generating' | 'otp-display' | 'success'>('confirm')
     const [otp, setOtp] = useState<string>('')
@@ -39,7 +39,7 @@ export default function PatientTransferModal({
 
     useEffect(() => {
         let interval: NodeJS.Timeout
-        
+
         if (step === 'otp-display' && timeRemaining > 0) {
             interval = setInterval(() => {
                 setTimeRemaining(prev => {
@@ -52,7 +52,7 @@ export default function PatientTransferModal({
                 })
             }, 1000)
         }
-        
+
         return () => {
             if (interval) clearInterval(interval)
         }
@@ -71,10 +71,10 @@ export default function PatientTransferModal({
     const handleInitiateTransfer = async () => {
         setStep('generating')
         setError('')
-        
+
         try {
             const result = await initiatePatientTransfer(patientId)
-            
+
             if (result.success && result.otp) {
                 setOtp(result.otp)
                 setExpiresAt(result.expiresAt || '')
@@ -116,10 +116,10 @@ export default function PatientTransferModal({
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50 p-6 animate-in fade-in duration-500 font-['Matter_Regular',sans-serif]">
+        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50 p-6 animate-in fade-in duration-500">
             <Card className="w-full max-w-xl bg-white p-12 space-y-12 rounded-[4rem] shadow-2xl border-none relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-full blur-3xl opacity-50 -z-10 -translate-y-32 translate-x-32" />
-                
+
                 {step === 'confirm' && (
                     <>
                         <div className="flex flex-col items-center text-center space-y-6">
@@ -212,8 +212,8 @@ export default function PatientTransferModal({
                            <div className="text-5xl font-black text-white mb-6 tracking-[0.25em] font-mono leading-none">
                                 {otp || '••••••'}
                             </div>
-                            <Button 
-                                variant="ghost" 
+                            <Button
+                                variant="ghost"
                                 onClick={handleCopyOTP}
                                 className="h-10 px-6 rounded-xl bg-white/10 hover:bg-white text-white hover:text-slate-950 font-black text-[9px] uppercase tracking-widest transition-all gap-2 border-none"
                             >
@@ -241,7 +241,7 @@ export default function PatientTransferModal({
                                     {formatTimeRemaining(timeRemaining)}
                                 </div>
                             </div>
-                            
+
                             <div className="bg-slate-50 p-6 rounded-3xl border border-slate-100 flex flex-col justify-center gap-2">
                                 <div className="flex items-center gap-2">
                                     <Zap className="w-3.5 h-3.5 text-amber-500" />
@@ -261,7 +261,7 @@ export default function PatientTransferModal({
                                 Protocol Complete
                             </Button>
                         </div>
-                        
+
                         <div className="text-center pt-2">
                             <p className="text-[8px] font-bold text-slate-300 uppercase tracking-[0.2em] flex items-center justify-center gap-2">
                                 <ShieldCheck className="w-3 h-3" /> Secure End-to-End Handshake Active

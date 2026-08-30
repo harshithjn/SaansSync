@@ -1,4 +1,3 @@
-// Enhanced Alert System for ILD and Asthma with Rule-based + Score-based Logic
 import { PatientData } from './patient-types'
 
 export type AlertLevel = 'RED' | 'ORANGE' | 'YELLOW' | 'GREEN'
@@ -9,12 +8,10 @@ export interface PatientLogData {
     logDate: string
     diseaseType: DiseaseType
 
-    // Vitals
     spo2AtRest: number
     spo2OnExertion: number
     mMRCScale: number
 
-    // Symptoms (VAS 0-10)
     breathlessness: number
     dryCough?: number
     cough: number
@@ -24,7 +21,6 @@ export interface PatientLogData {
     wheezing: number
     fatigue?: number
 
-    // Disease-specific
     hemoptysis?: boolean
     oxygenRequirement?: number
     baselineOxygen?: number
@@ -32,7 +28,6 @@ export interface PatientLogData {
     baselineKBILD?: number
     peakFlowPercent?: number
 
-    // Asthma-specific
     rescueInhalerPuffs?: number
     nightWaking?: boolean
     daytimeSymptoms?: boolean
@@ -40,7 +35,6 @@ export interface PatientLogData {
     relieverUse?: boolean
     controlLevel?: 'well-controlled' | 'partly-controlled' | 'poorly-controlled'
 
-    // COPD-specific
     energyLevel?: number
     chestHeaviness?: number
     sputumVolume?: 'none' | 'small' | 'moderate' | 'large'
@@ -48,24 +42,19 @@ export interface PatientLogData {
     sleepDisturbed?: boolean
     exerciseTolerance?: boolean
 
-    // Bronchiectasis/Post-ICU specific
     malaise?: boolean
 
-    // Medications
     antiFibroticsTaken?: boolean
     medicationCompliance: boolean
     inhalersTaken?: boolean
 
-    // Side Effects
     newRash?: boolean
     severeDiarrhea?: boolean
     hasSideEffects?: boolean
 
-    // Baseline comparisons
     baselineSpO2?: number
     baselinemMRC?: number
 
-    // Subjective assessment
     breathlessnessComparison?: 'better' | 'same' | 'worse'
 }
 
@@ -86,20 +75,17 @@ export interface HistoricalScore {
     level: AlertLevel
 }
 
-// Storage keys
 const ALERT_HISTORY_KEY = 'patient_alert_history'
 const PATIENT_BASELINES_KEY = 'patient_baselines'
 const ASTHMA_CONTROL_HISTORY_KEY = 'asthma_control_history'
 const RESCUE_INHALER_HISTORY_KEY = 'rescue_inhaler_history'
 
-// Track asthma control history for consecutive days logic
 export function storeAsthmaControlHistory(patientId: string, controlLevel: string, rescueInhalerPuffs: number): void {
     if (typeof window === 'undefined') return
 
     try {
         const today = new Date().toISOString().split('T')[0]
 
-        // Store control history
         const controlStored = localStorage.getItem(ASTHMA_CONTROL_HISTORY_KEY)
         const controlHistory: { [patientId: string]: { date: string, controlLevel: string }[] } = controlStored ? JSON.parse(controlStored) : {}
 
@@ -107,18 +93,15 @@ export function storeAsthmaControlHistory(patientId: string, controlLevel: strin
             controlHistory[patientId] = []
         }
 
-        // Remove today's entry if it exists, then add new one
         controlHistory[patientId] = controlHistory[patientId].filter(entry => entry.date !== today)
         controlHistory[patientId].push({ date: today, controlLevel })
 
-        // Keep only last 30 days
         const thirtyDaysAgo = new Date()
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
         controlHistory[patientId] = controlHistory[patientId].filter(entry => new Date(entry.date) >= thirtyDaysAgo)
 
         localStorage.setItem(ASTHMA_CONTROL_HISTORY_KEY, JSON.stringify(controlHistory))
 
-        // Store rescue inhaler history
         const inhalerStored = localStorage.getItem(RESCUE_INHALER_HISTORY_KEY)
         const inhalerHistory: { [patientId: string]: { date: string, puffs: number }[] } = inhalerStored ? JSON.parse(inhalerStored) : {}
 
@@ -126,11 +109,9 @@ export function storeAsthmaControlHistory(patientId: string, controlLevel: strin
             inhalerHistory[patientId] = []
         }
 
-        // Remove today's entry if it exists, then add new one
         inhalerHistory[patientId] = inhalerHistory[patientId].filter(entry => entry.date !== today)
         inhalerHistory[patientId].push({ date: today, puffs: rescueInhalerPuffs })
 
-        // Keep only last 30 days
         inhalerHistory[patientId] = inhalerHistory[patientId].filter(entry => new Date(entry.date) >= thirtyDaysAgo)
 
         localStorage.setItem(RESCUE_INHALER_HISTORY_KEY, JSON.stringify(inhalerHistory))
@@ -139,7 +120,6 @@ export function storeAsthmaControlHistory(patientId: string, controlLevel: strin
     }
 }
 
-// Check for consecutive days of poor control
 export function hasConsecutivePoorControl(patientId: string, days: number = 2): boolean {
     if (typeof window === 'undefined') return false
 
@@ -151,10 +131,8 @@ export function hasConsecutivePoorControl(patientId: string, days: number = 2): 
             return false
         }
 
-        // Sort by date descending (most recent first)
         const sortedHistory = history[patientId].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-        // Check if the last 'days' entries are all poorly controlled
         for (let i = 0; i < days && i < sortedHistory.length; i++) {
             if (sortedHistory[i].controlLevel !== 'poorly-controlled') {
                 return false
@@ -168,7 +146,6 @@ export function hasConsecutivePoorControl(patientId: string, days: number = 2): 
     }
 }
 
-// Check rescue inhaler usage patterns
 export function checkRescueInhalerPattern(patientId: string): { moreThan4For2Days: boolean, moreThan6Today: boolean } {
     if (typeof window === 'undefined') return { moreThan4For2Days: false, moreThan6Today: false }
 
@@ -180,13 +157,10 @@ export function checkRescueInhalerPattern(patientId: string): { moreThan4For2Day
             return { moreThan4For2Days: false, moreThan6Today: false }
         }
 
-        // Sort by date descending (most recent first)
         const sortedHistory = history[patientId].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
-        // Check if >6 puffs today
         const moreThan6Today = sortedHistory.length > 0 && sortedHistory[0].puffs > 6
 
-        // Check if >4 puffs for 2+ consecutive days
         let moreThan4For2Days = false
         if (sortedHistory.length >= 2) {
             moreThan4For2Days = sortedHistory[0].puffs > 4 && sortedHistory[1].puffs > 4
@@ -199,7 +173,6 @@ export function checkRescueInhalerPattern(patientId: string): { moreThan4For2Day
     }
 }
 
-// Store alert history
 export function storeAlertHistory(patientId: string, alertResult: AlertResult): void {
     if (typeof window === 'undefined') return
 
@@ -217,7 +190,6 @@ export function storeAlertHistory(patientId: string, alertResult: AlertResult): 
             level: alertResult.level
         })
 
-        // Keep only last 30 days
         const thirtyDaysAgo = new Date()
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
@@ -231,7 +203,6 @@ export function storeAlertHistory(patientId: string, alertResult: AlertResult): 
     }
 }
 
-// Get alert history
 export function getAlertHistory(patientId: string): HistoricalScore[] {
     if (typeof window === 'undefined') return []
 
@@ -245,7 +216,6 @@ export function getAlertHistory(patientId: string): HistoricalScore[] {
     }
 }
 
-// Calculate 3-day weighted moving average
 export function calculateWeightedScore(patientId: string, todayScore: number): number {
     const history = getAlertHistory(patientId)
 
@@ -253,28 +223,23 @@ export function calculateWeightedScore(patientId: string, todayScore: number): n
         return todayScore
     }
 
-    // Get last 2 days (excluding today)
     const sortedHistory = history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
     const yesterday = sortedHistory[0]?.score || todayScore
     const dayBefore = sortedHistory[1]?.score || todayScore
 
-    // Weighted average: Today × 0.5 + Yesterday × 0.3 + DayBefore × 0.2
     const finalScore = (todayScore * 0.5) + (yesterday * 0.3) + (dayBefore * 0.2)
 
-    return Math.round(finalScore * 10) / 10 // Round to 1 decimal place
+    return Math.round(finalScore * 10) / 10
 }
 
-// ILD Alert System
 export function calculateILDAlert(logData: PatientLogData): AlertResult {
     const triggers: string[] = []
     const recommendations: string[] = []
     let score = 0
 
-    // RED ALERT - Immediate Triggers
     let isRedAlert = false
 
-    // Immediate Triggers
     if (logData.hemoptysis) {
         isRedAlert = true
         triggers.push('Hemoptysis (Blood in sputum) detected')
@@ -293,7 +258,6 @@ export function calculateILDAlert(logData: PatientLogData): AlertResult {
         recommendations.push('Immediate medical assessment for possible infection')
     }
 
-    // Vitals Gate
     if (logData.spo2AtRest < 88) {
         isRedAlert = true
         triggers.push('SpO₂ at rest < 88%')
@@ -321,7 +285,6 @@ export function calculateILDAlert(logData: PatientLogData): AlertResult {
         recommendations.push('Significant breathlessness - immediate medical attention')
     }
 
-    // Symptom Gate
     const highSymptoms = []
     if (logData.breathlessness > 8) highSymptoms.push('Breathlessness')
     if (logData.dryCough && logData.dryCough > 8) highSymptoms.push('Dry Cough')
@@ -351,23 +314,18 @@ export function calculateILDAlert(logData: PatientLogData): AlertResult {
         return result
     }
 
-    // YELLOW ALERT - Weighted Score System
-
-    // SpO₂ 89-91%
     if (logData.spo2AtRest >= 89 && logData.spo2AtRest <= 91) {
         score += 3
         triggers.push('SpO₂ at rest 89-91%')
         recommendations.push('Monitor oxygen saturation closely')
     }
 
-    // mMRC increase of +1
     if (logData.baselinemMRC && (logData.mMRCScale - logData.baselinemMRC) === 1) {
         score += 2
         triggers.push('mMRC increased by 1 from baseline')
         recommendations.push('Breathlessness worsening - consider medication review')
     }
 
-    // Symptoms VAS 5-7
     const moderateSymptoms = []
     if (logData.breathlessness >= 5 && logData.breathlessness <= 7) moderateSymptoms.push('Breathlessness')
     if (logData.cough >= 5 && logData.cough <= 7) moderateSymptoms.push('Cough')
@@ -379,7 +337,6 @@ export function calculateILDAlert(logData: PatientLogData): AlertResult {
         recommendations.push('Symptom monitoring and possible medication adjustment')
     }
 
-    // KBILD score drop >10%
     if (logData.kbildScore && logData.baselineKBILD &&
         ((logData.baselineKBILD - logData.kbildScore) / logData.baselineKBILD) > 0.1) {
         score += 3
@@ -387,14 +344,12 @@ export function calculateILDAlert(logData: PatientLogData): AlertResult {
         recommendations.push('Quality of life declining - comprehensive review needed')
     }
 
-    // Anti-fibrotics not taken
     if (logData.antiFibroticsTaken === false) {
         score += 1
         triggers.push('Anti-fibrotic medication not taken')
         recommendations.push('Ensure medication compliance for disease progression control')
     }
 
-    // Side effects
     if (logData.newRash || logData.severeDiarrhea) {
         score += 2
         const sideEffects = []
@@ -404,17 +359,14 @@ export function calculateILDAlert(logData: PatientLogData): AlertResult {
         recommendations.push('Contact doctor regarding medication side effects')
     }
 
-    // Calculate final weighted score
     const finalScore = calculateWeightedScore(logData.patientId, score)
 
-    // Determine alert level
     let level: AlertLevel = 'GREEN'
 
     if (finalScore > 3) {
         level = 'YELLOW'
     }
 
-    // GREEN ALERT conditions
     if (level === 'GREEN') {
         if (logData.spo2AtRest >= 92) {
             recommendations.push('Oxygen saturation is stable')
@@ -446,7 +398,6 @@ export function calculateILDAlert(logData: PatientLogData): AlertResult {
     return result
 }
 
-// Store and retrieve patient baselines
 export function storePatientBaseline(patientId: string, baseline: Partial<PatientLogData>): void {
     if (typeof window === 'undefined') return
 
@@ -474,16 +425,14 @@ export function getPatientBaseline(patientId: string): Partial<PatientLogData> |
     }
 }
 
-// Initialize baseline from patient data
 export function initializePatientBaseline(patientId: string, patientData: PatientData): void {
     const baseline: Partial<PatientLogData> = {
-        baselineSpO2: 98, // Default, should be set from initial assessment
-        baselinemMRC: 0,  // Default, should be set from initial assessment
-        baselineOxygen: 0, // Room air
-        baselineKBILD: 100 // Default good quality of life score
+        baselineSpO2: 98,
+        baselinemMRC: 0,
+        baselineOxygen: 0,
+        baselineKBILD: 100
     }
 
-    // Set baseline oxygen from respiratory support data
     if (patientData.ltot?.enabled && patientData.ltot.oxygenLitres) {
         baseline.baselineOxygen = parseFloat(patientData.ltot.oxygenLitres)
     }
@@ -491,7 +440,6 @@ export function initializePatientBaseline(patientId: string, patientData: Patien
     storePatientBaseline(patientId, baseline)
 }
 
-// Get alert color for UI
 export function getAlertColor(level: AlertLevel): string {
     switch (level) {
         case 'RED': return '#dc2626'
@@ -502,49 +450,41 @@ export function getAlertColor(level: AlertLevel): string {
     }
 }
 
-// Asthma Alert System - Updated to match exact specifications
 export function calculateAsthmaAlert(logData: PatientLogData): AlertResult {
     const triggers: string[] = []
     const recommendations: string[] = []
     let score = 0
 
-    // Store control and inhaler history for consecutive day tracking
     if (logData.controlLevel && logData.rescueInhalerPuffs !== undefined) {
         storeAsthmaControlHistory(logData.patientId, logData.controlLevel, logData.rescueInhalerPuffs)
     }
 
-    // RED ALERT - Immediate Triggers
     let isRedAlert = false
 
-    // 1. Hemoptysis = Yes
     if (logData.hemoptysis) {
         isRedAlert = true
         triggers.push('Hemoptysis (Blood in sputum) detected')
         recommendations.push('Seek immediate medical attention')
     }
 
-    // 2. Severe chest pain (VAS > 8)
     if (logData.chestPain > 8) {
         isRedAlert = true
         triggers.push('Severe chest pain (VAS > 8)')
         recommendations.push('Emergency medical evaluation required')
     }
 
-    // 3. Fever (VAS > 8) + New cough (VAS > 8)
     if (logData.fever > 8 && logData.cough > 8) {
         isRedAlert = true
         triggers.push('High fever (VAS > 8) with severe cough (VAS > 8)')
         recommendations.push('Immediate medical assessment for possible infection')
     }
 
-    // 4. Poorly controlled asthma for ≥ 2 consecutive days
     if (hasConsecutivePoorControl(logData.patientId, 2)) {
         isRedAlert = true
         triggers.push('Poorly controlled asthma for ≥ 2 consecutive days')
         recommendations.push('Urgent medical review - asthma control deteriorating')
     }
 
-    // 5. Rescue inhaler: 4 puffs/day for >2 days OR >6 puffs in a single day
     const inhalerPattern = checkRescueInhalerPattern(logData.patientId)
     if (inhalerPattern.moreThan4For2Days) {
         isRedAlert = true
@@ -557,7 +497,6 @@ export function calculateAsthmaAlert(logData: PatientLogData): AlertResult {
         recommendations.push('Severe asthma exacerbation - seek emergency care immediately')
     }
 
-    // 6. SpO₂ < 88% for >3 hours or oxygen increase ≥ 3L
     if (logData.spo2AtRest < 88) {
         isRedAlert = true
         triggers.push('SpO₂ < 88% for >3 hours')
@@ -571,7 +510,6 @@ export function calculateAsthmaAlert(logData: PatientLogData): AlertResult {
         recommendations.push('Urgent medical evaluation for respiratory failure')
     }
 
-    // 7. SpO₂ drop on exertion >10%
     if (logData.baselineSpO2 && logData.spo2OnExertion &&
         (logData.baselineSpO2 - logData.spo2OnExertion) > 10) {
         isRedAlert = true
@@ -579,7 +517,6 @@ export function calculateAsthmaAlert(logData: PatientLogData): AlertResult {
         recommendations.push('Severe exercise intolerance - immediate medical consultation')
     }
 
-    // 8. mMRC ≥ 3 or increase of +2
     if (logData.mMRCScale >= 3) {
         isRedAlert = true
         triggers.push('mMRC breathlessness scale ≥ 3')
@@ -608,23 +545,18 @@ export function calculateAsthmaAlert(logData: PatientLogData): AlertResult {
         return result
     }
 
-    // YELLOW ALERT - Weighted Score System
-
-    // 1. SpO₂ 89–91%
     if (logData.spo2AtRest >= 89 && logData.spo2AtRest <= 91) {
         score += 3
         triggers.push('SpO₂ 89-91% - monitor closely')
         recommendations.push('Oxygen saturation borderline - monitor and consider medical review')
     }
 
-    // 2. mMRC +1
     if (logData.baselinemMRC && (logData.mMRCScale - logData.baselinemMRC) === 1) {
         score += 2
         triggers.push('mMRC increased by +1 from baseline')
         recommendations.push('Breathlessness worsening - consider medication adjustment')
     }
 
-    // 3. Any symptom VAS 5–7
     const moderateSymptoms = []
     if (logData.breathlessness >= 5 && logData.breathlessness <= 7) moderateSymptoms.push('Breathlessness')
     if (logData.cough >= 5 && logData.cough <= 7) moderateSymptoms.push('Cough')
@@ -638,14 +570,12 @@ export function calculateAsthmaAlert(logData: PatientLogData): AlertResult {
         recommendations.push('Moderate symptoms present - monitor and consider treatment adjustment')
     }
 
-    // 4. Rescue inhaler >4 in one day
     if (logData.rescueInhalerPuffs && logData.rescueInhalerPuffs > 4) {
         score += 2
         triggers.push('Rescue inhaler >4 puffs in one day')
         recommendations.push('Increased rescue medication use indicates declining control')
     }
 
-    // 5. Partly controlled asthma OR poorly controlled for 1 day
     if (logData.controlLevel === 'partly-controlled') {
         score += 2
         triggers.push('Asthma partly controlled')
@@ -658,31 +588,26 @@ export function calculateAsthmaAlert(logData: PatientLogData): AlertResult {
         recommendations.push('Poor asthma control - urgent medical review recommended')
     }
 
-    // 6. Inhalers marked "Not Taken"
     if (logData.inhalersTaken === false) {
         score += 2
         triggers.push('Controller inhalers not taken')
         recommendations.push('Medication non-compliance detected - ensure regular inhaler use')
     }
 
-    // 7. Any reported side effect
     if (logData.hasSideEffects) {
         score += 1
         triggers.push('Medication side effects reported')
         recommendations.push('Discuss side effects with healthcare provider')
     }
 
-    // Calculate final weighted score
     const finalScore = calculateWeightedScore(logData.patientId, score)
 
-    // Determine alert level
     let level: AlertLevel = 'GREEN'
 
     if (finalScore > 0) {
         level = 'YELLOW'
     }
 
-    // GREEN ALERT conditions - override if all conditions are met
     const isGreenAlert = (
         logData.spo2AtRest > 91 &&
         logData.breathlessness <= 4 &&
@@ -696,9 +621,9 @@ export function calculateAsthmaAlert(logData: PatientLogData): AlertResult {
 
     if (isGreenAlert) {
         level = 'GREEN'
-        triggers.length = 0 // Clear any triggers
+        triggers.length = 0
         triggers.push('All asthma parameters within optimal range')
-        recommendations.length = 0 // Clear any recommendations
+        recommendations.length = 0
         recommendations.push('Excellent asthma control - continue current treatment plan')
         recommendations.push('SpO₂ >91% - oxygen saturation excellent')
         recommendations.push('Symptoms well controlled (VAS 0-4)')
@@ -721,71 +646,59 @@ export function calculateAsthmaAlert(logData: PatientLogData): AlertResult {
     return result
 }
 
-// COPD Alert System - Point-based scoring with cumulative scoring and UI status mapping
 export function calculateCOPDAlert(logData: PatientLogData): AlertResult {
     const triggers: string[] = []
     const recommendations: string[] = []
     let score = 0
 
-    // COPD SCORING METRICS
-
-    // Specific - Sputum Color
     if (logData.sputumColor === 'yellow' || logData.sputumColor === 'dark-green') {
         score += 4
         triggers.push(`Purulent sputum (${logData.sputumColor})`)
         recommendations.push('Purulent sputum may indicate bacterial infection - consider antibiotic treatment')
     }
 
-    // Specific - Sputum Volume
     if (logData.sputumVolume === 'large') {
         score += 2
         triggers.push('Large amount of sputum production')
         recommendations.push('Increased sputum production - ensure adequate airway clearance')
     }
 
-    // Specific - Energy Level
     if (logData.energyLevel && logData.energyLevel < 4) {
         score += 2
         triggers.push('Low energy level (<4/10)')
         recommendations.push('Reduced energy levels - consider rest and energy conservation techniques')
     }
 
-    // Specific - Chest Heaviness
     if (logData.chestHeaviness && logData.chestHeaviness > 7) {
         score += 2
         triggers.push('Severe chest heaviness (>7/10)')
         recommendations.push('Significant chest discomfort - bronchodilator therapy may help')
     }
 
-    // Specific - Sleep
     if (logData.sleepDisturbed) {
         score += 2
         triggers.push('Sleep disturbed due to breathing')
         recommendations.push('Sleep disturbance indicates poor symptom control - review treatment plan')
     }
 
-    // Specific - Fever
-    if (logData.fever && logData.fever > 8) { // VAS > 8 approximates >102°F twice/day
+    if (logData.fever && logData.fever > 8) {
         score += 3
         triggers.push('High fever (>102°F)')
         recommendations.push('High fever with respiratory symptoms - urgent medical evaluation needed')
     }
 
-    // Common - Wheezing
     if (logData.wheezing > 0) {
         score += 2
         triggers.push('Wheezing present')
         recommendations.push('Wheezing indicates airway obstruction - bronchodilator therapy recommended')
     }
 
-    // Vitals - mMRC increase
     if (logData.baselinemMRC && (logData.mMRCScale - logData.baselinemMRC) >= 1) {
         score += 2
         triggers.push(`mMRC increased by +${logData.mMRCScale - logData.baselinemMRC} from baseline`)
         recommendations.push('Worsening breathlessness - review treatment and consider escalation')
     }
 
-    // Vitals - SpO₂
     if (logData.spo2AtRest < 88 ||
         (logData.oxygenRequirement && logData.baselineOxygen &&
             (logData.oxygenRequirement - logData.baselineOxygen) >= 3)) {
@@ -794,31 +707,26 @@ export function calculateCOPDAlert(logData: PatientLogData): AlertResult {
         recommendations.push('Critical respiratory status - immediate medical attention required')
     }
 
-    // Critical - Hemoptysis
     if (logData.hemoptysis) {
         score += 4
         triggers.push('Hemoptysis (blood in sputum) >1 cup')
         recommendations.push('Significant hemoptysis - urgent medical evaluation required')
     }
 
-    // Critical - Chest Pain
     if (logData.chestPain > 8) {
         score += 4
         triggers.push('Severe chest pain')
         recommendations.push('Severe chest pain requires immediate medical assessment')
     }
 
-    // Stability - Exercise tolerance
     if (logData.exerciseTolerance === true) {
         score -= 1
         triggers.push('Good exercise tolerance today')
         recommendations.push('Maintaining good exercise tolerance - continue current activity level')
     }
 
-    // Calculate final weighted score
     const finalScore = calculateWeightedScore(logData.patientId, score)
 
-    // ALERT CLASSIFICATION
     let level: AlertLevel = 'GREEN'
     let dashboardMessage = ''
 
@@ -839,7 +747,6 @@ export function calculateCOPDAlert(logData: PatientLogData): AlertResult {
         recommendations.unshift('Urgent medical attention required - contact doctor or hospital immediately')
     }
 
-    // Add dashboard message to triggers
     if (dashboardMessage) {
         triggers.unshift(`COPD Status: ${dashboardMessage}`)
     }
@@ -859,15 +766,11 @@ export function calculateCOPDAlert(logData: PatientLogData): AlertResult {
     return result
 }
 
-// Bronchiectasis & Post-ICU Recovery Alert System - Shared infection-focused risk scoring
 export function calculateBronchiectasisPostICUAlert(logData: PatientLogData): AlertResult {
     const triggers: string[] = []
     const recommendations: string[] = []
     let score = 0
 
-    // SCORING METRICS
-
-    // Specific - Sputum Color
     if (logData.sputumColor === 'dark-green') {
         score += 5
         triggers.push('Dark green sputum (purulent)')
@@ -878,63 +781,54 @@ export function calculateBronchiectasisPostICUAlert(logData: PatientLogData): Al
         recommendations.push('Sputum color change - monitor for infection signs')
     }
 
-    // Specific - Sputum Volume
     if (logData.sputumVolume === 'large') {
         score += 3
         triggers.push('Much more sputum than usual')
         recommendations.push('Increased sputum production - enhance airway clearance techniques')
     }
 
-    // Systemic - Fever
-    if (logData.fever && logData.fever > 8) { // VAS > 8 approximates >102°F
+    if (logData.fever && logData.fever > 8) {
         score += 4
         triggers.push('High fever (>102°F)')
         recommendations.push('High fever indicates systemic infection - urgent medical evaluation required')
     }
 
-    // Systemic - Malaise
     if (logData.malaise === true || (logData.fatigue && logData.fatigue > 8)) {
         score += 2
         triggers.push('Extreme fatigue/malaise')
         recommendations.push('Severe fatigue may indicate systemic illness - rest and medical review needed')
     }
 
-    // Common - Pedal Edema
     if (logData.pedalEdema > 0) {
         score += 3
         triggers.push('Pedal edema present')
         recommendations.push('Fluid retention detected - may indicate cardiac involvement or severe infection')
     }
 
-    // Common - Wheezing
     if (logData.wheezing > 0) {
         score += 2
         triggers.push('Wheezing present')
         recommendations.push('Airway obstruction - bronchodilator therapy may help')
     }
 
-    // Common - mMRC increase
     if (logData.baselinemMRC && (logData.mMRCScale - logData.baselinemMRC) >= 1) {
         score += 2
         triggers.push(`mMRC increased by +${logData.mMRCScale - logData.baselinemMRC} from baseline`)
         recommendations.push('Worsening breathlessness - review treatment plan')
     }
 
-    // Critical - Hemoptysis
     if (logData.hemoptysis) {
         score += 4
         triggers.push('Hemoptysis (blood in sputum) >1 cup')
         recommendations.push('Significant hemoptysis - immediate medical attention required')
     }
 
-    // Critical - Chest Pain
     if (logData.chestPain > 8) {
         score += 4
         triggers.push('Severe chest pain')
         recommendations.push('Severe chest pain requires emergency evaluation')
     }
 
-    // Vitals - SpO₂
     if (logData.spo2AtRest < 88 ||
         (logData.oxygenRequirement && logData.baselineOxygen &&
             (logData.oxygenRequirement - logData.baselineOxygen) >= 3)) {
@@ -943,10 +837,8 @@ export function calculateBronchiectasisPostICUAlert(logData: PatientLogData): Al
         recommendations.push('Critical respiratory failure - immediate medical intervention required')
     }
 
-    // Calculate final weighted score
     const finalScore = calculateWeightedScore(logData.patientId, score)
 
-    // ALERT STATUS MAPPING
     let level: AlertLevel = 'GREEN'
     let clinicalAction = ''
 
@@ -971,7 +863,6 @@ export function calculateBronchiectasisPostICUAlert(logData: PatientLogData): Al
         recommendations.unshift('Critical infection signs - seek emergency medical care immediately')
     }
 
-    // Add clinical action to triggers
     if (clinicalAction) {
         triggers.unshift(`Clinical Action: ${clinicalAction}`)
     }
@@ -991,7 +882,6 @@ export function calculateBronchiectasisPostICUAlert(logData: PatientLogData): Al
     return result
 }
 
-// Main alert calculation function that routes to disease-specific logic
 export function calculateAlert(logData: PatientLogData): AlertResult {
     switch (logData.diseaseType) {
         case 'ILD':
@@ -1004,12 +894,11 @@ export function calculateAlert(logData: PatientLogData): AlertResult {
         case 'POST_ICU':
             return calculateBronchiectasisPostICUAlert(logData)
         default:
-            // Default generic alert logic
-            return calculateILDAlert(logData) // Use ILD as fallback for now
+
+            return calculateILDAlert(logData)
     }
 }
 
-// Get alert background color for UI
 export function getAlertBackgroundColor(level: AlertLevel): string {
     switch (level) {
         case 'RED': return '#fee2e2'

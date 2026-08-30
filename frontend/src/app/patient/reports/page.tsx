@@ -8,11 +8,11 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { usePatientAuth } from "@/lib/auth-guard"
 import { getPatientDailyLogs, getPatientMedications, getPatientProfile } from "@/lib/database-service"
-import { 
-    TrendingUp, 
-    TrendingDown, 
-    Activity, 
-    Heart, 
+import {
+    TrendingUp,
+    TrendingDown,
+    Activity,
+    Heart,
     Thermometer,
     Calendar,
     Clock,
@@ -29,14 +29,14 @@ import {
 
 interface DailyLog {
     id: string
-    log_date: string
+    logDate: string
     spo2_at_rest: number
     spo2_on_exertion: number
     mmrc_scale: number
-    red_flag_score: number
+    redFlagScore: number
     disease_data: any
     symptoms: any
-    created_at: string
+    createdAt: string
 }
 
 export default function PatientReportsPage() {
@@ -106,7 +106,7 @@ export default function PatientReportsPage() {
 
     if (authState.loading || isLoading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 font-['Matter_Regular',sans-serif]">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
                 <div className="w-16 h-16 bg-slate-50 flex items-center justify-center rounded-[2rem] border border-slate-100 shadow-sm">
                     <Loader2 className="w-8 h-8 animate-spin text-slate-200" />
                 </div>
@@ -120,8 +120,8 @@ export default function PatientReportsPage() {
     }
 
     return (
-        <div className="space-y-12 font-['Matter_Regular',sans-serif] animate-in fade-in duration-1000">
-            {/* Clinical Header */}
+        <div className="space-y-12 animate-in fade-in duration-1000">
+            {}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 border-b border-slate-50 pb-12">
                 <div className="space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 text-slate-400 text-[9px] font-black uppercase tracking-widest border border-slate-100/50">
@@ -130,11 +130,11 @@ export default function PatientReportsPage() {
                     </div>
                     <h1 className="text-5xl font-black text-slate-950 tracking-tighter leading-none">Clinical Reports</h1>
                     <p className="text-[11px] font-black text-emerald-500 uppercase tracking-[0.3em]">
-                        {patientData?.diagnosis?.primaryCategory || authState.profile?.patient_data?.diagnosis?.primaryCategory || 'System Monitoring'} Protocol
+                        {patientData?.diagnosis?.primaryCategory || authState.profile?.patientData?.diagnosis?.primaryCategory || 'System Monitoring'} Protocol
                     </p>
                 </div>
-                <Button 
-                    variant="ghost" 
+                <Button
+                    variant="ghost"
                     onClick={() => router.back()}
                     className="h-14 px-8 rounded-2xl bg-slate-50 border border-slate-100/50 font-black text-[10px] uppercase tracking-widest text-slate-400 hover:text-slate-950 hover:bg-white hover:shadow-xl transition-all gap-3"
                 >
@@ -161,7 +161,7 @@ export default function PatientReportsPage() {
                     </TabsList>
                 </div>
 
-                {/* History Tab */}
+                {}
                 <TabsContent value="history" className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
                     <div className="flex items-center justify-between mb-2">
                         <h3 className="text-xl font-black text-slate-900 tracking-tight">Transmission Logs</h3>
@@ -169,7 +169,7 @@ export default function PatientReportsPage() {
                            Total Entries: {dailyLogs.length}
                         </Badge>
                     </div>
-                    
+
                     {dailyLogs.length === 0 ? (
                         <Card className="p-24 text-center border-none shadow-sm rounded-[3rem] bg-slate-50/50 border border-slate-100 flex flex-col items-center">
                             <Activity className="w-16 h-16 text-slate-100 mb-8" />
@@ -186,15 +186,15 @@ export default function PatientReportsPage() {
                                         </div>
                                         <div>
                                             <div className="text-lg font-black text-slate-950 tracking-tight leading-none mb-2">
-                                                {formatDate(log.log_date)}
+                                                {formatDate(log.logDate)}
                                             </div>
                                             <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                                                 <Clock className="w-3.5 h-3.5 opacity-50" />
-                                                Log: {formatTime(log.created_at)}
+                                                Log: {formatTime(log.createdAt)}
                                             </div>
                                         </div>
                                     </div>
-                                    
+
                                     <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-6 bg-slate-50/50 p-6 rounded-[1.75rem] border border-slate-100/50">
                                         <div className="space-y-1.5">
                                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">SpO₂ at Rest</p>
@@ -210,12 +210,12 @@ export default function PatientReportsPage() {
                                         </div>
                                         <div className="space-y-1.5">
                                             <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Condition Index</p>
-                                            <h4 className="text-xl font-black text-slate-950">{log.red_flag_score}/10</h4>
+                                            <h4 className="text-xl font-black text-slate-950">{log.redFlagScore}/10</h4>
                                         </div>
                                     </div>
 
-                                    <div className={`px-6 py-3 rounded-2xl border text-[9px] font-black uppercase tracking-[0.2em] md:w-52 text-center shrink-0 ${getRedFlagColor(log.red_flag_score)} group-hover:shadow-lg transition-all`}>
-                                        {getRedFlagLabel(log.red_flag_score)}
+                                    <div className={`px-6 py-3 rounded-2xl border text-[9px] font-black uppercase tracking-[0.2em] md:w-52 text-center shrink-0 ${getRedFlagColor(log.redFlagScore)} group-hover:shadow-lg transition-all`}>
+                                        {getRedFlagLabel(log.redFlagScore)}
                                     </div>
                                 </div>
                             ))}
@@ -223,14 +223,14 @@ export default function PatientReportsPage() {
                     )}
                 </TabsContent>
 
-                {/* Trends Tab */}
+                {}
                 <TabsContent value="trends" className="space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* SpO2 Trends */}
+                        {}
                         <Card className="p-12 border-none bg-white shadow-sm border border-slate-50 rounded-[3.5rem] group relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500 opacity-[0.03] rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-all duration-700" />
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500 opacity-[0.03] rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-all duration-700" />
                             <div className="flex items-center gap-4 mb-12">
-                                <div className="w-10 h-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-500 shadow-sm border border-purple-100/50">
+                                <div className="w-10 h-10 bg-teal-50 rounded-xl flex items-center justify-center text-teal-500 shadow-sm border border-teal-100/50">
                                     <TrendingUp className="w-5 h-5" />
                                 </div>
                                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.2em]">SpO₂ Historical Mean</h3>
@@ -246,7 +246,7 @@ export default function PatientReportsPage() {
                                     <div className="grid grid-cols-2 gap-8 pt-8 border-t border-slate-50">
                                         <div>
                                             <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1.5">Latest Sync</p>
-                                            <p className="text-2xl font-black text-purple-600">{dailyLogs[0]?.spo2_at_rest}%</p>
+                                            <p className="text-2xl font-black text-teal-600">{dailyLogs[0]?.spo2_at_rest}%</p>
                                         </div>
                                         <div>
                                             <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1.5">Vector Status</p>
@@ -264,7 +264,7 @@ export default function PatientReportsPage() {
                             )}
                         </Card>
 
-                        {/* Red Flag Score Trends */}
+                        {}
                         <Card className="p-12 border-none bg-white shadow-sm border border-slate-50 rounded-[3.5rem] group relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500 opacity-[0.03] rounded-full -translate-y-16 translate-x-16 group-hover:scale-150 transition-all duration-700" />
                             <div className="flex items-center gap-4 mb-12">
@@ -277,10 +277,10 @@ export default function PatientReportsPage() {
                                 <div className="space-y-12">
                                     <div className="flex items-end gap-3">
                                         <span className={`text-8xl font-black tracking-tighter leading-none ${
-                                            dailyLogs[0]?.red_flag_score >= 7 ? 'text-rose-600' :
-                                            dailyLogs[0]?.red_flag_score >= 4 ? 'text-amber-500' : 'text-emerald-500'
+                                            dailyLogs[0]?.redFlagScore >= 7 ? 'text-rose-600' :
+                                            dailyLogs[0]?.redFlagScore >= 4 ? 'text-amber-500' : 'text-emerald-500'
                                         }`}>
-                                            {dailyLogs[0]?.red_flag_score || 0}<span className="text-4xl opacity-10">/10</span>
+                                            {dailyLogs[0]?.redFlagScore || 0}<span className="text-4xl opacity-10">/10</span>
                                         </span>
                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Current Vector</span>
                                     </div>
@@ -288,16 +288,16 @@ export default function PatientReportsPage() {
                                         <div>
                                             <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1.5">Cumulative Avg</p>
                                             <p className="text-2xl font-black text-slate-950">
-                                                {Math.round(dailyLogs.reduce((sum, log) => sum + (log.red_flag_score || 0), 0) / dailyLogs.length * 10) / 10}/10
+                                                {Math.round(dailyLogs.reduce((sum, log) => sum + (log.redFlagScore || 0), 0) / dailyLogs.length * 10) / 10}/10
                                             </p>
                                         </div>
                                         <div>
                                             <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-1.5">Clinical Grade</p>
                                             <div className={`flex items-center gap-2 ${
-                                                dailyLogs[0]?.red_flag_score >= 7 ? 'text-rose-600' :
-                                                dailyLogs[0]?.red_flag_score >= 4 ? 'text-amber-500' : 'text-emerald-500'
+                                                dailyLogs[0]?.redFlagScore >= 7 ? 'text-rose-600' :
+                                                dailyLogs[0]?.redFlagScore >= 4 ? 'text-amber-500' : 'text-emerald-500'
                                             }`}>
-                                                <span className="text-lg font-black uppercase tracking-tighter">{getRedFlagLabel(dailyLogs[0]?.red_flag_score || 0)}</span>
+                                                <span className="text-lg font-black uppercase tracking-tighter">{getRedFlagLabel(dailyLogs[0]?.redFlagScore || 0)}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -311,15 +311,15 @@ export default function PatientReportsPage() {
                     </div>
                 </TabsContent>
 
-                {/* Medications Tab */}
+                {}
                 <TabsContent value="medications" className="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700">
                     <div className="flex items-center justify-between mb-2">
                         <h3 className="text-xl font-black text-slate-900 tracking-tight">Active Therapeutic Protocols</h3>
-                        <Badge className="bg-purple-50 text-purple-600 border-none font-black text-[9px] uppercase tracking-widest px-4 py-2 rounded-xl">
+                        <Badge className="bg-teal-50 text-teal-600 border-none font-black text-[9px] uppercase tracking-widest px-4 py-2 rounded-xl">
                            {medications.length} Prescriptions Syncing
                         </Badge>
                     </div>
-                    
+
                     {medications.length === 0 ? (
                         <Card className="p-24 text-center border-none shadow-sm rounded-[3rem] bg-slate-50/50 border border-slate-100 flex flex-col items-center">
                             <Pill className="w-16 h-16 text-slate-100 mb-8" />
@@ -346,22 +346,22 @@ export default function PatientReportsPage() {
                                             </h4>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Therapeutic Asset</p>
                                         </div>
-                                        
+
                                         <div className="grid grid-cols-2 gap-y-8 gap-x-4 pt-8 border-t border-slate-50">
                                             <div>
-                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1.5 font-['Matter_Regular']">Dosage Vector</p>
+                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1.5">Dosage Vector</p>
                                                 <p className="text-sm font-black text-slate-950">{med.dose}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1.5 font-['Matter_Regular']">Cycle Freq</p>
+                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1.5">Cycle Freq</p>
                                                 <p className="text-sm font-black text-slate-950">{med.frequency}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1.5 font-['Matter_Regular']">Protocol Start</p>
+                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1.5">Protocol Start</p>
                                                 <p className="text-sm font-black text-slate-950">{formatDate(med.startDate)}</p>
                                             </div>
                                             <div>
-                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1.5 font-['Matter_Regular']">Admin Route</p>
+                                                <p className="text-[8px] font-black text-slate-300 uppercase tracking-widest mb-1.5">Admin Route</p>
                                                 <p className="text-sm font-black text-slate-950 uppercase tracking-tighter">{med.route}</p>
                                             </div>
                                         </div>

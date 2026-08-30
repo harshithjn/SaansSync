@@ -9,18 +9,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-    ArrowLeft, 
-    ArrowRight, 
-    User, 
-    Stethoscope, 
-    Activity, 
-    Wind, 
-    Pill, 
-    ChevronRight, 
-    CheckCircle2, 
-    Trash2, 
-    Plus, 
+import {
+    ArrowLeft,
+    ArrowRight,
+    User,
+    Stethoscope,
+    Activity,
+    Wind,
+    Pill,
+    ChevronRight,
+    CheckCircle2,
+    Trash2,
+    Plus,
     FileText,
     Shield,
     Calendar,
@@ -182,9 +182,9 @@ export default function CreatePatientPage() {
         switch (currentStep) {
             case 1: validation = validateStep1(patientData); break
             case 2: validation = validateStep2(patientData); break
-            case 3: validation = validateStep4(patientData); break // PFT
-            case 4: validation = { isValid: true, errors: [] }; break // Resp Support
-            case 5: validation = validateStep3(patientData); break // Meds
+            case 3: validation = validateStep4(patientData); break
+            case 4: validation = { isValid: true, errors: [] }; break
+            case 5: validation = validateStep3(patientData); break
             default: validation = { isValid: true, errors: [] }
         }
 
@@ -216,7 +216,7 @@ export default function CreatePatientPage() {
         try {
             const { createPatientFolderAsync } = await import('@/lib/doctor-patient-mapping')
             const { createPatientAccount } = await import('@/lib/database-service')
-            
+
             const pathParts = window.location.pathname.split('/')
             const doctorId = pathParts[3]
 
@@ -260,8 +260,8 @@ export default function CreatePatientPage() {
     ]
 
     return (
-        <div className="max-w-5xl mx-auto space-y-10 font-['Matter_Regular',sans-serif] pb-24">
-            {/* Header */}
+        <div className="max-w-5xl mx-auto space-y-10 pb-24">
+            {}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-6">
                     <button onClick={() => router.back()} className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all">
@@ -274,17 +274,17 @@ export default function CreatePatientPage() {
                 </div>
             </div>
 
-            {/* Stepper */}
+            {}
             <div className="bg-white p-6 rounded-[2.5rem] border border-slate-50 shadow-sm overflow-x-auto">
                 <div className="flex items-center justify-between min-w-[700px] px-4">
                     {steps.map((step, idx) => (
                         <div key={step.id} className="flex items-center">
                             <div className="flex flex-col items-center gap-2 group cursor-pointer" onClick={() => step.id < currentStep && setCurrentStep(step.id)}>
                                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 ${
-                                    currentStep === step.id 
-                                        ? 'bg-slate-950 text-white shadow-xl shadow-slate-200 scale-110' 
-                                        : currentStep > step.id 
-                                            ? 'bg-emerald-50 text-emerald-600' 
+                                    currentStep === step.id
+                                        ? 'bg-slate-950 text-white shadow-xl shadow-slate-200 scale-110'
+                                        : currentStep > step.id
+                                            ? 'bg-emerald-50 text-emerald-600'
                                             : 'bg-slate-50 text-slate-300'
                                 }`}>
                                     <step.icon className="w-5 h-5" />
@@ -303,7 +303,7 @@ export default function CreatePatientPage() {
                 </div>
             </div>
 
-            {/* Content Area */}
+            {}
             <div className="transition-all duration-500 animate-in fade-in slide-in-from-bottom-4">
                 {currentStep === 1 && <ProfileStep data={patientData} update={updatePatientData} errors={validationErrors} />}
                 {currentStep === 2 && <DiagnosisStep data={patientData} update={updateDiagnosis} errors={validationErrors} options={getSubtypeOptions()} />}
@@ -313,20 +313,20 @@ export default function CreatePatientPage() {
                 {currentStep === 6 && <ReviewStep data={patientData} />}
             </div>
 
-            {/* Navigation Buttons */}
+            {}
             <div className="flex items-center justify-between pt-8 border-t border-slate-100">
-                <Button 
-                    variant="ghost" 
-                    onClick={handleBack} 
+                <Button
+                    variant="ghost"
+                    onClick={handleBack}
                     disabled={currentStep === 1 || isSubmitting}
                     className="h-14 px-8 rounded-2xl font-bold text-xs uppercase tracking-[0.2em] text-slate-400 hover:text-slate-950"
                 >
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Previous
                 </Button>
-                
+
                 {currentStep < 6 ? (
-                    <Button 
+                    <Button
                         onClick={handleNext}
                         className="h-14 px-10 rounded-[1.5rem] bg-slate-950 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-[0.2em] shadow-2xl shadow-slate-200 transition-all active:scale-[0.98]"
                     >
@@ -334,7 +334,7 @@ export default function CreatePatientPage() {
                         <ArrowRight className="w-4 h-4 ml-2" />
                     </Button>
                 ) : (
-                    <Button 
+                    <Button
                         onClick={handleCreatePatient}
                         disabled={isSubmitting}
                         className="h-14 px-10 rounded-[1.5rem] bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-[0.2em] shadow-2xl shadow-emerald-100 transition-all active:scale-[0.98]"
@@ -348,13 +348,11 @@ export default function CreatePatientPage() {
     )
 }
 
-/* Sub-components for clean structure */
-
 function ProfileStep({ data, update, errors }: any) {
     return (
         <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50">
             <div className="flex items-center gap-4 mb-10">
-                <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-teal-50 text-teal-500 rounded-2xl flex items-center justify-center">
                     <User className="w-6 h-6" />
                 </div>
                 <div>
@@ -365,7 +363,7 @@ function ProfileStep({ data, update, errors }: any) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <InputGroup label="Full Name" error={errors.fullName}>
-                    <Input 
+                    <Input
                         value={data.fullName}
                         onChange={(e) => update("fullName", e.target.value)}
                         placeholder="e.g. Johnathan Smith"
@@ -373,7 +371,7 @@ function ProfileStep({ data, update, errors }: any) {
                     />
                 </InputGroup>
                 <InputGroup label="Email Address" error={errors.emailId}>
-                    <Input 
+                    <Input
                         type="email"
                         value={data.emailId}
                         onChange={(e) => update("emailId", e.target.value)}
@@ -382,7 +380,7 @@ function ProfileStep({ data, update, errors }: any) {
                     />
                 </InputGroup>
                 <InputGroup label="Age" error={errors.age}>
-                    <Input 
+                    <Input
                         type="number"
                         value={data.age}
                         onChange={(e) => update("age", e.target.value)}
@@ -446,7 +444,7 @@ function DiagnosisStep({ data, update, errors, options }: any) {
 
                 <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100">
                    <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-6">Medical History Summary</h4>
-                   <textarea 
+                   <textarea
                      className="w-full h-32 bg-white border-none rounded-2xl p-6 font-bold text-slate-900 resize-none shadow-sm focus:ring-2 ring-slate-100"
                      value={data.medicalHistory}
                      onChange={(e) => update("medicalHistory", e.target.value)}
@@ -521,7 +519,7 @@ function SupportStep({ data, updateConfig }: any) {
     return (
         <Card className="p-10 border-none bg-white rounded-[3rem] shadow-sm border border-slate-50">
             <div className="flex items-center gap-4 mb-10">
-                <div className="w-12 h-12 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-teal-50 text-teal-500 rounded-2xl flex items-center justify-center">
                     <Wind className="w-6 h-6" />
                 </div>
                 <div>
@@ -532,10 +530,10 @@ function SupportStep({ data, updateConfig }: any) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="space-y-6">
-                    <SupportToggle 
-                        label="LTOT (Oxygen Therapy)" 
-                        checked={data.ltot.enabled} 
-                        onChange={(v: boolean) => updateConfig("ltot", "enabled", v)} 
+                    <SupportToggle
+                        label="LTOT (Oxygen Therapy)"
+                        checked={data.ltot.enabled}
+                        onChange={(v: boolean) => updateConfig("ltot", "enabled", v)}
                     />
                     {data.ltot.enabled && (
                         <div className="pl-6 border-l-2 border-slate-100 space-y-4">
@@ -545,12 +543,12 @@ function SupportStep({ data, updateConfig }: any) {
                         </div>
                     )}
                 </div>
-                
+
                 <div className="space-y-6">
-                    <SupportToggle 
-                        label="BiPAP / NILV Support" 
-                        checked={data.bipap.enabled} 
-                        onChange={(v: boolean) => updateConfig("bipap", "enabled", v)} 
+                    <SupportToggle
+                        label="BiPAP / NILV Support"
+                        checked={data.bipap.enabled}
+                        onChange={(v: boolean) => updateConfig("bipap", "enabled", v)}
                     />
                     {data.bipap.enabled && (
                         <div className="pl-6 border-l-2 border-slate-100 grid grid-cols-2 gap-4">
@@ -659,7 +657,7 @@ function ReviewStep({ data }: any) {
                         <ReviewRow label="Email" value={data.emailId} />
                         <ReviewRow label="Age / Sex" value={`${data.age} Y • ${data.sex}`} />
                     </ReviewSection>
-                    
+
                     <ReviewSection title="Medical Diagnosis">
                         <ReviewRow label="Category" value={data.diagnosis.primaryCategory} />
                         <ReviewRow label="Subtype" value={data.diagnosis.subtype || 'Unspecified'} />
@@ -700,8 +698,6 @@ function ReviewStep({ data }: any) {
         </Card>
     )
 }
-
-/* UI Components for steps */
 
 function InputGroup({ label, error, children }: any) {
     return (

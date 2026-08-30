@@ -27,16 +27,16 @@ export default function ContactPage() {
     }
 
     return (
-        <div className="min-h-screen bg-[#fafafa] font-['Matter_Regular',sans-serif]">
+        <div className="min-h-screen bg-[#fafafa]">
             <Header currentPage="contact" />
 
             <main className="container mx-auto px-8 py-32">
                 <div className="max-w-6xl mx-auto">
                     <div className="grid lg:grid-cols-2 gap-32 items-start">
-                        {/* Clinical Information Area */}
+                        {}
                         <div className="space-y-16">
                             <div>
-                                <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-purple-50 text-purple-600 text-[10px] font-bold uppercase tracking-widest mb-10 border border-purple-100 shadow-sm">
+                                <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-teal-50 text-teal-600 text-[10px] font-bold uppercase tracking-widest mb-10 border border-teal-100 shadow-sm">
                                     <MessageCircle className="w-3.5 h-3.5" />
                                     Get in Touch
                                 </div>
@@ -48,20 +48,18 @@ export default function ContactPage() {
                                     Our team is here to help you with any questions about using SaansSync.
                                 </p>
                             </div>
-                            
+
                             <div className="space-y-10">
                                 <div className="group border-b border-slate-100 pb-10 cursor-pointer transition-all hover:translate-x-2">
                                     <div className="flex justify-between items-center mb-3">
                                         <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Email Us</h3>
-                                        <ArrowUpRight className="w-5 h-5 text-slate-200 group-hover:text-purple-600 transition-all" />
+                                        <ArrowUpRight className="w-5 h-5 text-slate-200 group-hover:text-teal-600 transition-all" />
                                     </div>
                                     <p className="text-2xl font-bold text-slate-900 tracking-tight">contact@harshithj.me</p>
                                 </div>
 
-
-
-                                <div className="p-8 bg-purple-600 rounded-[2.5rem] text-white overflow-hidden relative group">
-                                    <h3 className="text-[10px] font-bold text-purple-100 uppercase tracking-widest mb-4 relative z-10">Care HQ</h3>
+                                <div className="p-8 bg-teal-600 rounded-[2.5rem] text-white overflow-hidden relative group">
+                                    <h3 className="text-[10px] font-bold text-teal-100 uppercase tracking-widest mb-4 relative z-10">Care HQ</h3>
                                     <p className="text-lg font-bold tracking-tight leading-snug relative z-10">
                                         Empowering respiratory health<br />
                                         across the nation.
@@ -70,14 +68,14 @@ export default function ContactPage() {
                             </div>
                         </div>
 
-                        {/* Submission Form Area */}
+                        {}
                         <div className="bg-white rounded-[4rem] p-12 md:p-16 shadow-[0_50px_100px_-30px_rgba(0,0,0,0.05)] border border-slate-50 relative">
                              <div className="absolute -top-10 -right-10 w-40 h-40 bg-slate-50 rounded-full blur-3xl opacity-50 pointer-events-none" />
                              <div className="mb-12">
                                 <h2 className="text-3xl font-bold text-slate-900 tracking-tight mb-2">Send a Message</h2>
                                 <p className="text-xs font-bold text-slate-400 uppercase tracking-widest leading-relaxed">Tell us how we can assist you today.</p>
                              </div>
-                            
+
                             <form onSubmit={handleSubmit} className="space-y-10">
                                 <div className="space-y-8">
                                     <div className="space-y-3">

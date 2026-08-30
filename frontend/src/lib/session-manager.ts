@@ -1,4 +1,4 @@
-import api from './api'
+import api, { authApi } from './api'
 
 export interface AppUser {
   id: string
@@ -11,21 +11,21 @@ export interface AppSession {
 
 export interface DoctorProfile {
   id: string
-  auth_user_id: string
+  authUserId: string
   email: string
-  full_name: string
-  approval_status: 'pending' | 'approved' | 'rejected'
-  created_at: string
-  updated_at: string
+  fullName: string
+  approvalStatus: 'pending' | 'approved' | 'rejected'
+  createdAt: string
+  updatedAt: string
 }
 
 export interface PatientProfile {
   id: string
-  auth_user_id: string
-  full_name?: string
-  patient_data: any
-  created_at: string
-  updated_at: string
+  authUserId: string
+  fullName?: string
+  patientData: any
+  createdAt: string
+  updatedAt: string
 }
 
 export interface UserProfile {
@@ -36,7 +36,7 @@ export interface UserProfile {
 
 export async function getCurrentSession(): Promise<AppSession | null> {
   try {
-    const data = await api.get<any>('/auth/me')
+    const data = await authApi.get<any>('/me')
     if (!data?.user) return null
     return { user: data.user }
   } catch (error) {
@@ -51,7 +51,7 @@ export async function getCurrentUser(): Promise<AppUser | null> {
 
 export async function resolveUserProfile(): Promise<UserProfile> {
   try {
-    const data = await api.get<any>('/auth/me')
+    const data = await authApi.get<any>('/me')
     if (!data?.user) return { role: null, profile: null }
     return {
       role: data.role,

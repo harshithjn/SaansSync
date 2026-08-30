@@ -40,11 +40,11 @@ export default function AdminLoginPage() {
     }
 
     return (
-        <div className="min-h-screen bg-linear-to-br from-purple-50 via-white to-purple-50 flex items-center justify-center p-4">
+        <div className="min-h-screen bg-linear-to-br from-teal-50 via-white to-teal-50 flex items-center justify-center p-4">
             <Card className="w-full max-w-md p-8 shadow-xl">
                 <div className="text-center mb-8">
-                    <div className="w-16 h-16 rounded-xl bg-purple-100 flex items-center justify-center mx-auto mb-4">
-                        <Shield className="w-8 h-8 text-purple-600" />
+                    <div className="w-16 h-16 rounded-xl bg-teal-100 flex items-center justify-center mx-auto mb-4">
+                        <Shield className="w-8 h-8 text-teal-600" />
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Login</h1>
                     <p className="text-gray-600">Access the administrative dashboard</p>
@@ -95,12 +95,11 @@ export default function AdminLoginPage() {
                     <Button
                         type="submit"
                         disabled={loading}
-                        className="w-full h-12 bg-purple-600 hover:bg-purple-700"
+                        className="w-full h-12 bg-teal-600 hover:bg-teal-700"
                     >
                         {loading ? 'Signing in...' : 'Sign In as Admin'}
                     </Button>
                 </form>
-
 
                 <div className="mt-4 text-center">
                     <Button
